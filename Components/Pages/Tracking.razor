@@ -1,0 +1,136 @@
+@using Microsoft.EntityFrameworkCore
+@using BusinessLicensing_Practice.Data
+@using BusinessLicensing_Practice.Models
+@inject ApplicationDbContext Db
+
+@page "/tracking/{id:int}"
+
+<div class="tracking-page">
+
+    <div class="d-flex align-items-center mb-4">
+        <a href="/dashboard" class="btn btn-link text-dark me-2">←</a>
+        <h3 class="mb-0 fw-bold">Application Details</h3>
+    </div>
+
+    <div class="card shadow-sm p-4 mb-4">
+
+        <div class="d-flex justify-content-between mb-4">
+            <h5 class="fw-bold">Application ID: @application?.ApplicationNumber</h5>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <p class="text-muted mb-1">Licence Type</p>
+                <strong>@application?.LicenceType</strong>
+            </div>
+
+            <div class="col-md-3">
+                <p class="text-muted mb-1">Status</p>
+                <span class="badge @GetStatusBadge(application?.Status)">
+                @application?.Status
+</span>
+            </div>
+
+            <div class="col-md-3">
+                <p class="text-muted mb-1">Date Submitted</p>
+                <strong>@application?.DateSubmitted.ToString("dd MMMM yyyy")</strong>
+            </div>
+        </div>
+
+        <hr />
+
+        <h5 class="fw-bold mb-4">Application Progress</h5>
+
+<div class="d-flex align-items-start justify-content-between text-center mb-5">
+
+    <div>
+        <div class="rounded-circle bg-success text-white mx-auto mb-2"
+             style="width:35px; height:35px; line-height:35px;">✓</div>
+        <strong class="text-success">Submitted</strong>
+        <p class="small text-muted">10 May 2025</p>
+    </div>
+
+    <div class="flex-grow-1 mt-3 mx-2" style="height:3px; background-color:#d6d6d6;"></div>
+
+    <div>
+        <div class="rounded-circle bg-primary text-white mx-auto mb-2"
+             style="width:35px; height:35px; line-height:35px;">✓</div>
+        <strong class="text-primary">Under Review</strong>
+        <p class="small text-muted">12 May 2025</p>
+    </div>
+
+    <div class="flex-grow-1 mt-3 mx-2" style="height:3px; background-color:#d6d6d6;"></div>
+
+    <div>
+        <div class="rounded-circle border bg-white mx-auto mb-2"
+             style="width:35px; height:35px; line-height:35px;">□</div>
+        <strong>Department Assessment</strong>
+    </div>
+
+    <div class="flex-grow-1 mt-3 mx-2" style="height:3px; background-color:#d6d6d6;"></div>
+
+    <div>
+        <div class="rounded-circle border bg-white mx-auto mb-2"
+             style="width:35px; height:35px; line-height:35px;">□</div>
+        <strong>Final Decision</strong>
+    </div>
+
+    <div class="flex-grow-1 mt-3 mx-2" style="height:3px; background-color:#d6d6d6;"></div>
+
+    <div>
+        <div class="rounded-circle border bg-white mx-auto mb-2"
+             style="width:35px; height:35px; line-height:35px;">□</div>
+        <strong>Licence Issued</strong>
+    </div>
+
+</div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <h5 class="fw-bold mb-3">Timeline</h5>
+
+                <p><strong>Completed:</strong> Application Submitted <span class="float-end">10 May 2025 10:30</span></p>
+
+                <p><strong>Current Step:</strong> Under Review by Licensing Officer <span class="float-end">12 May 2025 09:15</span></p>
+
+                <p><strong>Pending:</strong> Department Assessment</p>
+
+                <p><strong>Pending:</strong> Final Decision</p>
+
+                <p><strong>Pending:</strong> Licence Issued</p>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card p-3 shadow-sm">
+                    <h5 class="fw-bold">Actions</h5>
+                    <button class="btn btn-outline-primary mb-2">View Documents</button>
+                    <button class="btn btn-outline-danger">Withdraw Application</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Application? application;
+
+    protected override async Task OnInitializedAsync()
+    {
+        application = await Db.Applications.FirstOrDefaultAsync(a => a.Id == Id);
+    }
+
+    private string GetStatusBadge(string? status)
+{
+    return status switch
+    {
+        "In Progress" => "bg-warning text-dark",
+        "Approved" => "bg-success",
+        "Rejected" => "bg-danger",
+        _ => "bg-secondary"
+    };
+}
+}
