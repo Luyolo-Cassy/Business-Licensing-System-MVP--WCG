@@ -1,0 +1,70 @@
+@page "/submit-application"
+
+@using BusinessLicensing_Practice.Data
+@using BusinessLicensing_Practice.Models
+@inject ApplicationDbContext db
+@inject NavigationManager Nav
+
+<h3>Submit Application</h3>
+
+<div class="mb-3">
+    <label>Business Name</label>
+    <input class="form-control" @bind="BusinessName" />
+</div>
+
+<div class="mb-3">
+    <label>Licence Type</label>
+
+    <select class="form-control" @bind="LicenceType">
+        <option value="">-- Select Licence Type --</option>
+        <option value="Trading Licence">Trading Licence</option>
+        <option value="Food Licence">Food Licence</option>
+        <option value="Liquor Licence">Liquor Licence</option>
+        <option value="Entertainment Licence">Entertainment Licence</option>
+    </select>
+</div>
+
+<button class="btn btn-success" @onclick="Submit">
+    Submit Application
+</button>
+
+@if (!string.IsNullOrEmpty(Message))
+{
+    <div class="alert alert-info mt-3">
+        @Message
+    </div>
+}
+
+@code {
+    private string BusinessName = "";
+    private string LicenceType = "";
+    private string Message = "";
+
+    private async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(BusinessName) || string.IsNullOrWhiteSpace(LicenceType))
+        {
+            Message = "Please fill in all fields.";
+            return;
+        }
+
+        var application = new Application
+        {
+            ApplicationNumber = $"APP-{DateTime.Now.Ticks}",
+            BusinessName = BusinessName,
+            LicenceType = LicenceType,
+            Status = "Submitted",
+            DateSubmitted = DateTime.Now
+        };
+
+        db.Applications.Add(application);
+        await db.SaveChangesAsync();
+
+        Message = "Application submitted successfully!";
+
+        // small pause so user sees message
+        await Task.Delay(1000);
+
+        Nav.NavigateTo("/dashboard");
+    }
+}

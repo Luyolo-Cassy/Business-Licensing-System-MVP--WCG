@@ -49,7 +49,7 @@ using (var scope = app.Services.CreateScope())
             new Application
             {
                 ApplicationNumber = "APP-2026-002",
-                BusinessName = "Dube Mini Market",
+                BusinessName = "Thembi's Mini Market",
                 LicenceType = "Retail Licence",
                 Status = "Approved",
                 DateSubmitted = new DateTime(2026, 4, 18)
@@ -57,7 +57,7 @@ using (var scope = app.Services.CreateScope())
             new Application
             {
                 ApplicationNumber = "APP-2026-003",
-                BusinessName = "Alec Events",
+                BusinessName = "Thembi Events",
                 LicenceType = "Entertainment Licence",
                 Status = "Rejected",
                 DateSubmitted = new DateTime(2026, 4, 10)

@@ -1,0 +1,94 @@
+@page "/new-application"
+
+@rendermode InteractiveServer
+@using BusinessLicensing_Practice.Data
+@using BusinessLicensing_Practice.Models
+
+@inject ApplicationDbContext db
+@inject NavigationManager Nav
+
+<h3>New Application</h3>
+
+<div class="mb-3">
+    <label>Business Name</label>
+    <input class="form-control" @bind="BusinessName" />
+</div>
+
+<div class="mb-3">
+    <label>Licence Type</label>
+
+    <select class="form-control" @bind="LicenceType">
+        <option value="">-- Select Licence Type --</option>
+        <option value="Trading Licence">Trading Licence</option>
+        <option value="Food Licence">Food Licence</option>
+        <option value="Liquor Licence">Liquor Licence</option>
+        <option value="Entertainment Licence">Entertainment Licence</option>
+        <option value="Health Permit">Health Permit</option>
+    </select>
+</div>
+
+<button class="btn btn-primary" @onclick="SaveApplication">
+    Submit Application
+</button>
+
+@if (!string.IsNullOrEmpty(Message))
+{
+    <div class="alert alert-info mt-3">
+        @Message
+    </div>
+}
+
+@code {
+
+    private string BusinessName = "";
+    private string LicenceType = "";
+    private string Message = "";
+
+    private async Task SaveApplication()
+    {
+        // basic validation so nothing breaks silently
+        if (string.IsNullOrWhiteSpace(BusinessName) || string.IsNullOrWhiteSpace(LicenceType))
+        {
+            Message = "Please enter Business Name and select a Licence Type.";
+            return;
+        }
+
+        var year = DateTime.Now.Year;
+
+        var countThisYear = db.Applications
+            .Count(a => a.DateSubmitted.Year == year);
+
+        var nextNumber = countThisYear + 1;
+
+        var applicationNumber = $"APP-{year}-{nextNumber.ToString("D3")}";
+
+
+
+        try
+        {
+            var application = new Application
+            {
+                ApplicationNumber = applicationNumber,
+                BusinessName = BusinessName,
+                LicenceType = LicenceType,
+                Status = "Submitted",
+                DateSubmitted = DateTime.Now
+            };
+
+            db.Applications.Add(application);
+            await db.SaveChangesAsync();
+
+            Message = "Application submitted successfully!";
+
+            // short delay so user sees confirmation
+            await Task.Delay(800);
+
+            Nav.NavigateTo("/dashboard");
+        }
+        catch (Exception ex)
+        {
+            Message = $"Error: {ex.Message}";
+        }
+    }
+    
+}

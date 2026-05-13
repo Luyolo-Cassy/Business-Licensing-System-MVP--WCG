@@ -7,21 +7,26 @@
 @code {
     private List<BusinessLicensing_Practice.Models.Application> applications = new();
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
+    {
+        applications = await Db.Applications.ToListAsync();
+    }
+
+    private async Task LoadApplications()
     {
         applications = await Db.Applications.ToListAsync();
     }
 
     private string GetStatusBadge(string status)
-{
-    return status switch
     {
-        "In Progress" => "bg-warning text-dark",
-        "Approved" => "bg-success",
-        "Rejected" => "bg-danger",
-        _ => "bg-secondary"
-    };
-}
+        return status switch
+        {
+            "In Progress" => "bg-warning text-dark",
+            "Approved" => "bg-success",
+            "Rejected" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
 }
 
 <div class="mb-4">
@@ -33,28 +38,28 @@
     <div class="col-md-3"> <!--This creates one card column-->
         <div class="card p-3 shadow-sm"> <!--This is the card itself-->
             <h6>Total Applications</h6>
-            <h2 style = "color: blue;";>@applications.Count</h2>
+            <h2 style="color: blue;" ;>@applications.Count</h2>
         </div>
     </div>
 
     <div class="col-md-3">
         <div class="card p-3 shadow-sm">
             <h6>In Progress</h6>
-            <h2 style = "color: blue;";>@applications.Count(a => a.Status == "In Progress")</h2>
+            <h2 style="color: blue;" ;>@applications.Count(a => a.Status == "In Progress")</h2>
         </div>
     </div>
 
     <div class="col-md-3">
         <div class="card p-3 shadow-sm">
             <h6>Approved</h6>
-            <h2 style = "color: green;";>@applications.Count(a => a.Status == "Approved")</h2>
+            <h2 style="color: green;" ;>@applications.Count(a => a.Status == "Approved")</h2>
         </div>
     </div>
 
     <div class="col-md-3">
         <div class="card p-3 shadow-sm">
             <h6>Rejected</h6>
-            <h2 style = "color: red;";>@applications.Count(a => a.Status == "Rejected")</h2>
+            <h2 style="color: red;" ;>@applications.Count(a => a.Status == "Rejected")</h2>
         </div>
     </div>
 </div>
@@ -63,8 +68,8 @@
     <div class="card-header">
         <strong>Recent Applications</strong>
     </div>
-    
 
+    
     <div class="card-body">
         <table class="table"> <!--This creates the table -->
             <thead>
@@ -79,29 +84,30 @@
             </thead>
 
             <tbody>
-    @foreach (var application in applications)
-    {
-        <tr>
-            <td>@application.ApplicationNumber</td>
-            <td>@application.BusinessName</td>
-            <td>@application.LicenceType</td>
-            <td>
-                <span class="badge @GetStatusBadge(application.Status)">
-                    @application.Status
-                </span>
-            </td>
-            <td>@application.DateSubmitted.ToString("yyyy/MM/dd")</td>
-            <td>
-                <a class="btn btn-primary btn-sm" href="/tracking/@application.Id">Track</a>
-            </td>
-        </tr>
-    }
-</tbody>
+                @foreach (var application in applications)
+                {
+                    <tr>
+                        <td>@application.ApplicationNumber</td>
+                        <td>@application.BusinessName</td>
+                        <td>@application.LicenceType</td>
+                        <td>
+                            <span class="badge @GetStatusBadge(application.Status)">
+                                @application.Status
+                            </span>
+                        </td>
+                        <td>@application.DateSubmitted.ToString("yyyy/MM/dd")</td>
+                        <td>
+                            <a class="btn btn-primary btn-sm" href="/tracking/@application.Id">Track</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
         </table>
     </div>
 </div>
 <div class="mt-4">
-    <button class="btn btn-primary btn-lg">
+    <a href="/new-application" class="btn btn-primary btn-lg">
         + New Application
-    </button>
+    </a>
+    
 </div>
