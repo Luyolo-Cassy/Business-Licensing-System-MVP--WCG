@@ -200,3 +200,4 @@ C:\Users\cabra\Desktop\BusinessLicensing Practice\bin\Debug\net10.0\runtimes\win
 C:\Users\cabra\Desktop\BusinessLicensing Practice\bin\Debug\net10.0\runtimes\win-x86\native\e_sqlite3.dll
 C:\Users\cabra\Desktop\BusinessLicensing Practice\obj\Debug\net10.0\BusinessLicensing Practice.csproj.AssemblyReference.cache
 C:\Users\cabra\Desktop\BusinessLicensing Practice\obj\Debug\net10.0\Business.C0A1BFAA.Up2Date
+C:\Users\cabra\Desktop\BusinessLicensing Practice\obj\Debug\net10.0\BusinessLicensing Practice.sourcelink.json
