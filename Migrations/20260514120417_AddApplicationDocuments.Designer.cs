@@ -3,6 +3,7 @@ using System;
 using BusinessLicensing_Practice.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BusinessLicensing_Practice.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260514120417_AddApplicationDocuments")]
+    partial class AddApplicationDocuments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.8");
@@ -27,10 +30,6 @@ namespace BusinessLicensing_Practice.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("BusinessAddress")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("BusinessName")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -42,15 +41,7 @@ namespace BusinessLicensing_Practice.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("RegistrationNumber")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("TaxNumber")
                         .IsRequired()
                         .HasColumnType("TEXT");
 

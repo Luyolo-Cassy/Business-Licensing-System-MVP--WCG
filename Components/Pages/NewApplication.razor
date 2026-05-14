@@ -1,55 +1,187 @@
 @page "/new-application"
-
 @rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Components.Forms
 @using BusinessLicensing_Practice.Data
 @using BusinessLicensing_Practice.Models
 
 @inject ApplicationDbContext db
 @inject NavigationManager Nav
+@inject IWebHostEnvironment Environment
 
-<h3>New Application</h3>
+<h3 class="fw-bold mb-4">New Business Licence Application</h3>
 
-<div class="mb-3">
-    <label>Business Name</label>
-    <input class="form-control" @bind="BusinessName" />
+<div class="mb-4">
+    <span class="badge bg-primary">Step @CurrentStep of 4</span>
 </div>
 
-<div class="mb-3">
-    <label>Licence Type</label>
+@if (CurrentStep == 1)
+{
+    <h5>Business Information</h5>
+
+    <div class="mb-3">
+        <label>Business Name</label>
+        <input class="form-control" @bind="BusinessName" />
+    </div>
+
+    <div class="mb-3">
+        <label>Registration Number</label>
+        <input class="form-control" @bind="RegistrationNumber" />
+    </div>
+
+    <div class="mb-3">
+        <label>Tax Number</label>
+        <input class="form-control" @bind="TaxNumber" />
+    </div>
+
+    <div class="mb-3">
+        <label>Business Address</label>
+        <textarea class="form-control" @bind="BusinessAddress"></textarea>
+    </div>
+}
+
+@if (CurrentStep == 2)
+{
+    <h5>Select Licence Type</h5>
 
     <select class="form-control" @bind="LicenceType">
         <option value="">-- Select Licence Type --</option>
-        <option value="Trading Licence">Trading Licence</option>
+        <option value="Business Licence">Business Licence</option>
         <option value="Food Licence">Food Licence</option>
         <option value="Liquor Licence">Liquor Licence</option>
         <option value="Entertainment Licence">Entertainment Licence</option>
         <option value="Health Permit">Health Permit</option>
     </select>
-</div>
+}
 
-<button class="btn btn-primary" @onclick="SaveApplication">
-    Submit Application
-</button>
+@if (CurrentStep == 3)
+{
+    <h5>Upload Supporting Documents</h5>
+
+    <div class="mb-3">
+        <label>Certificate of Incorporation</label>
+        <InputFile class="form-control" OnChange="@(e => HandleFileSelected(e, "Certificate of Incorporation"))" />
+    </div>
+
+    <div class="mb-3">
+        <label>Proof of Address</label>
+        <InputFile class="form-control" OnChange="@(e => HandleFileSelected(e, "Proof of Address"))" />
+    </div>
+
+    <div class="mb-3">
+        <label>Tax Clearance Certificate</label>
+        <InputFile class="form-control" OnChange="@(e => HandleFileSelected(e, "Tax Clearance Certificate"))" />
+    </div>
+
+    <div class="mb-3">
+        <label>Owner ID Document</label>
+        <InputFile class="form-control" OnChange="@(e => HandleFileSelected(e, "Owner ID Document"))" />
+    </div>
+
+    @if (SelectedDocuments.Any())
+    {
+        <div class="alert alert-secondary">
+            <strong>Selected documents:</strong>
+            <ul class="mb-0">
+                @foreach (var doc in SelectedDocuments)
+                {
+                    <li>@doc.DocumentType: @doc.FileName</li>
+                }
+            </ul>
+        </div>
+    }
+}
+
+@if (CurrentStep == 4)
+{
+    <h5>Review & Submit</h5>
+
+    <p><strong>Business Name:</strong> @BusinessName</p>
+    <p><strong>Registration Number:</strong> @RegistrationNumber</p>
+    <p><strong>Tax Number:</strong> @TaxNumber</p>
+    <p><strong>Business Address:</strong> @BusinessAddress</p>
+    <p><strong>Licence Type:</strong> @LicenceType</p>
+
+    <strong>Documents:</strong>
+    <ul>
+        @foreach (var doc in SelectedDocuments)
+        {
+            <li>@doc.DocumentType: @doc.FileName</li>
+        }
+    </ul>
+}
 
 @if (!string.IsNullOrEmpty(Message))
 {
-    <div class="alert alert-info mt-3">
-        @Message
-    </div>
+    <div class="alert alert-info mt-3">@Message</div>
 }
 
+<div class="mt-4">
+    @if (CurrentStep > 1)
+    {
+        <button class="btn btn-outline-secondary me-2" @onclick="PreviousStep">Back</button>
+    }
+
+    @if (CurrentStep < 4)
+    {
+        <button class="btn btn-primary" @onclick="NextStep">Next</button>
+    }
+    else
+    {
+        <button class="btn btn-success" @onclick="SubmitApplication">Submit Application</button>
+    }
+</div>
+
 @code {
+    private int CurrentStep = 1;
 
     private string BusinessName = "";
+    private string RegistrationNumber = "";
+    private string TaxNumber = "";
+    private string BusinessAddress = "";
     private string LicenceType = "";
     private string Message = "";
 
-    private async Task SaveApplication()
+    private List<SelectedDocument> SelectedDocuments = new();
+
+    private void NextStep()
     {
-        // basic validation so nothing breaks silently
-        if (string.IsNullOrWhiteSpace(BusinessName) || string.IsNullOrWhiteSpace(LicenceType))
+        CurrentStep++;
+    }
+
+    private void PreviousStep()
+    {
+        CurrentStep--;
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e, string documentType)
+    {
+        var file = e.File;
+
+        using var memoryStream = new MemoryStream();
+
+        await file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024)
+            .CopyToAsync(memoryStream);
+
+        SelectedDocuments.RemoveAll(d => d.DocumentType == documentType);
+
+        SelectedDocuments.Add(new SelectedDocument
         {
-            Message = "Please enter Business Name and select a Licence Type.";
+            DocumentType = documentType,
+            FileName = file.Name,
+            FileBytes = memoryStream.ToArray()
+        });
+    }
+
+    private async Task SubmitApplication()
+    {
+        if (string.IsNullOrWhiteSpace(BusinessName) ||
+            string.IsNullOrWhiteSpace(RegistrationNumber) ||
+            string.IsNullOrWhiteSpace(TaxNumber) ||
+            string.IsNullOrWhiteSpace(BusinessAddress) ||
+            string.IsNullOrWhiteSpace(LicenceType))
+        {
+            Message = "Please complete all required fields before submitting.";
             return;
         }
 
@@ -62,33 +194,71 @@
 
         var applicationNumber = $"APP-{year}-{nextNumber.ToString("D3")}";
 
+        var application = new Application
+        {
+            ApplicationNumber = applicationNumber,
+            BusinessName = BusinessName,
+            RegistrationNumber = RegistrationNumber,
+            TaxNumber = TaxNumber,
+            BusinessAddress = BusinessAddress,
+            LicenceType = LicenceType,
+            Status = "Submitted",
+            DateSubmitted = DateTime.Now
+        };
 
+        db.Applications.Add(application);
+
+        await db.SaveChangesAsync();
 
         try
         {
-            var application = new Application
+            var uploadsFolder = Path.Combine(Environment.WebRootPath ?? "wwwroot", "uploads");
+
+            if (!Directory.Exists(uploadsFolder))
             {
-                ApplicationNumber = applicationNumber,
-                BusinessName = BusinessName,
-                LicenceType = LicenceType,
-                Status = "Submitted",
-                DateSubmitted = DateTime.Now
-            };
+                Directory.CreateDirectory(uploadsFolder);
+            }
 
-            db.Applications.Add(application);
-            await db.SaveChangesAsync();
+            foreach (var selectedDoc in SelectedDocuments)
+            {
+                var uniqueFileName = $"{Guid.NewGuid()}_{selectedDoc.FileName}";
 
-            Message = "Application submitted successfully!";
+                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
-            // short delay so user sees confirmation
-            await Task.Delay(800);
+                await File.WriteAllBytesAsync(filePath, selectedDoc.FileBytes);
 
-            Nav.NavigateTo("/dashboard");
+                var document = new ApplicationDocument
+                {
+                    ApplicationId = application.Id,
+                    DocumentType = selectedDoc.DocumentType,
+                    FileName = selectedDoc.FileName,
+                    FilePath = $"/uploads/{uniqueFileName}"
+                };
+
+                db.ApplicationDocuments.Add(document);
+            }
         }
         catch (Exception ex)
         {
-            Message = $"Error: {ex.Message}";
+            Message = "Document upload failed: " + ex.Message;
+            return;
         }
+
+        await db.SaveChangesAsync();
+
+        Message = "Application submitted successfully!";
+
+        await Task.Delay(800);
+
+        Nav.NavigateTo("/dashboard");
     }
-    
+
+    private class SelectedDocument
+    {
+        public string DocumentType { get; set; } = "";
+
+        public string FileName { get; set; } = "";
+
+        public byte[] FileBytes { get; set; } = Array.Empty<byte>();
+    }
 }
