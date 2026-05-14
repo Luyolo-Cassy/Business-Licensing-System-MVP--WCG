@@ -15,10 +15,13 @@
     <div class="card shadow-sm p-4 mb-4">
 
         <div class="d-flex justify-content-between mb-4">
-            <h5 class="fw-bold">Application ID: @application?.ApplicationNumber</h5>
+            <h5 class="fw-bold">
+                Application ID: @application?.ApplicationNumber
+            </h5>
         </div>
 
         <div class="row mb-4">
+
             <div class="col-md-3">
                 <p class="text-muted mb-1">Licence Type</p>
                 <strong>@application?.LicenceType</strong>
@@ -26,93 +29,193 @@
 
             <div class="col-md-3">
                 <p class="text-muted mb-1">Status</p>
+
                 <span class="badge @GetStatusBadge(application?.Status)">
-                @application?.Status
-</span>
+                    @application?.Status
+                </span>
             </div>
 
             <div class="col-md-3">
                 <p class="text-muted mb-1">Date Submitted</p>
-                <strong>@application?.DateSubmitted.ToString("dd MMMM yyyy")</strong>
+
+                <strong>
+                    @application?.DateSubmitted.ToString("dd MMMM yyyy")
+                </strong>
             </div>
+
         </div>
 
         <hr />
 
         <h5 class="fw-bold mb-4">Application Progress</h5>
 
-<div class="d-flex align-items-start justify-content-between text-center mb-5">
+        <div class="d-flex align-items-start justify-content-between text-center mb-5 flex-wrap">
 
-    <div>
-        <div class="rounded-circle bg-success text-white mx-auto mb-2"
-             style="width:35px; height:35px; line-height:35px;">✓</div>
-        <strong class="text-success">Submitted</strong>
-        <p class="small text-muted">10 May 2025</p>
-    </div>
+            <!-- Submitted -->
+            <div class="mx-2 mb-4">
 
-    <div class="flex-grow-1 mt-3 mx-2" style="height:3px; background-color:#d6d6d6;"></div>
+                <div class="@GetStepClass("Submitted")"
+                     style="width:35px; height:35px; line-height:35px; border-radius:50%; margin:auto;">
 
-    <div>
-        <div class="rounded-circle bg-primary text-white mx-auto mb-2"
-             style="width:35px; height:35px; line-height:35px;">✓</div>
-        <strong class="text-primary">Under Review</strong>
-        <p class="small text-muted">12 May 2025</p>
-    </div>
+                    @GetStepIcon("Submitted")
 
-    <div class="flex-grow-1 mt-3 mx-2" style="height:3px; background-color:#d6d6d6;"></div>
+                </div>
 
-    <div>
-        <div class="rounded-circle border bg-white mx-auto mb-2"
-             style="width:35px; height:35px; line-height:35px;">□</div>
-        <strong>Department Assessment</strong>
-    </div>
+                <strong class="@GetStepTextClass("Submitted")">
+                    Submitted
+                </strong>
 
-    <div class="flex-grow-1 mt-3 mx-2" style="height:3px; background-color:#d6d6d6;"></div>
+            </div>
 
-    <div>
-        <div class="rounded-circle border bg-white mx-auto mb-2"
-             style="width:35px; height:35px; line-height:35px;">□</div>
-        <strong>Final Decision</strong>
-    </div>
+            <div class="flex-grow-1 mt-3 mx-2 bg-light" style="height:3px;"></div>
 
-    <div class="flex-grow-1 mt-3 mx-2" style="height:3px; background-color:#d6d6d6;"></div>
+            <!-- Under Review -->
+            <div class="mx-2 mb-4">
 
-    <div>
-        <div class="rounded-circle border bg-white mx-auto mb-2"
-             style="width:35px; height:35px; line-height:35px;">□</div>
-        <strong>Licence Issued</strong>
-    </div>
+                <div class="@GetStepClass("Under Review")"
+                     style="width:35px; height:35px; line-height:35px; border-radius:50%; margin:auto;">
 
-</div>
+                    @GetStepIcon("Under Review")
+
+                </div>
+
+                <strong class="@GetStepTextClass("Under Review")">
+                    Under Review
+                </strong>
+
+            </div>
+
+            <div class="flex-grow-1 mt-3 mx-2 bg-light" style="height:3px;"></div>
+
+            <!-- Department Assessment -->
+            <div class="mx-2 mb-4">
+
+                <div class="@GetStepClass("Department Assessment")"
+                     style="width:35px; height:35px; line-height:35px; border-radius:50%; margin:auto;">
+
+                    @GetStepIcon("Department Assessment")
+
+                </div>
+
+                <strong class="@GetStepTextClass("Department Assessment")">
+                    Department Assessment
+                </strong>
+
+            </div>
+
+            <div class="flex-grow-1 mt-3 mx-2 bg-light" style="height:3px;"></div>
+
+            <!-- Final Decision -->
+            <div class="mx-2 mb-4">
+
+                <div class="@GetStepClass("Final Decision")"
+                     style="width:35px; height:35px; line-height:35px; border-radius:50%; margin:auto;">
+
+                    @GetStepIcon("Final Decision")
+
+                </div>
+
+                <strong class="@GetStepTextClass("Final Decision")">
+                    Final Decision
+                </strong>
+
+            </div>
+
+            <div class="flex-grow-1 mt-3 mx-2 bg-light" style="height:3px;"></div>
+
+            <!-- Licence Issued -->
+            <div class="mx-2 mb-4">
+
+                <div class="@GetStepClass("Licence Issued")"
+                     style="width:35px; height:35px; line-height:35px; border-radius:50%; margin:auto;">
+
+                    @GetStepIcon("Licence Issued")
+
+                </div>
+
+                <strong class="@GetStepTextClass("Licence Issued")">
+                    Licence Issued
+                </strong>
+
+            </div>
+
+        </div>
 
         <div class="row">
+
             <div class="col-md-8">
+
                 <h5 class="fw-bold mb-3">Timeline</h5>
 
-                <p><strong>Completed:</strong> Application Submitted <span class="float-end">10 May 2025 10:30</span></p>
+                <p>
+                    <strong>Completed:</strong>
+                    Application Submitted
 
-                <p><strong>Current Step:</strong> Under Review by Licensing Officer <span class="float-end">12 May 2025 09:15</span></p>
+                    <span class="float-end">
+                        @application?.DateSubmitted.ToString("dd MMM yyyy")
+                    </span>
+                </p>
 
-                <p><strong>Pending:</strong> Department Assessment</p>
+                @if (application?.Status == "Under Review")
+                {
+                    <p>
+                        <strong>Current Step:</strong>
+                        Under Review by Licensing Officer
+                    </p>
+                }
 
-                <p><strong>Pending:</strong> Final Decision</p>
+                @if (application?.Status == "Department Assessment")
+                {
+                    <p>
+                        <strong>Current Step:</strong>
+                        Department Assessment
+                    </p>
+                }
 
-                <p><strong>Pending:</strong> Licence Issued</p>
+                @if (application?.Status == "Final Decision")
+                {
+                    <p>
+                        <strong>Current Step:</strong>
+                        Final Decision
+                    </p>
+                }
+
+                @if (application?.Status == "Licence Issued")
+                {
+                    <p>
+                        <strong>Completed:</strong>
+                        Licence Issued
+                    </p>
+                }
+
             </div>
 
             <div class="col-md-4">
+
                 <div class="card p-3 shadow-sm">
+
                     <h5 class="fw-bold">Actions</h5>
-                    <button class="btn btn-outline-primary mb-2">View Documents</button>
-                    <button class="btn btn-outline-danger">Withdraw Application</button>
+
+                    <button class="btn btn-outline-primary mb-2">
+                        View Documents
+                    </button>
+
+                    <button class="btn btn-outline-danger">
+                        Withdraw Application
+                    </button>
+
                 </div>
+
             </div>
+
         </div>
 
     </div>
 
 </div>
+
 @code {
+
     [Parameter]
     public int Id { get; set; }
 
@@ -120,17 +223,65 @@
 
     protected override async Task OnInitializedAsync()
     {
-        application = await Db.Applications.FirstOrDefaultAsync(a => a.Id == Id);
+        application = await Db.Applications
+            .FirstOrDefaultAsync(a => a.Id == Id);
     }
 
     private string GetStatusBadge(string? status)
-{
-    return status switch
     {
-        "In Progress" => "bg-warning text-dark",
-        "Approved" => "bg-success",
-        "Rejected" => "bg-danger",
-        _ => "bg-secondary"
-    };
-}
+        return status switch
+        {
+            "Submitted" => "bg-secondary",
+
+            "Under Review" => "bg-primary",
+
+            "Department Assessment" => "bg-warning text-dark",
+
+            "Final Decision" => "bg-info text-dark",
+
+            "Licence Issued" => "bg-success",
+
+            "Rejected" => "bg-danger",
+
+            _ => "bg-secondary"
+        };
+    }
+
+    private bool IsCompleted(string step)
+    {
+        var steps = new List<string>
+        {
+            "Submitted",
+            "Under Review",
+            "Department Assessment",
+            "Final Decision",
+            "Licence Issued"
+        };
+
+        if (application?.Status == null)
+            return false;
+
+        return steps.IndexOf(application.Status)
+            >= steps.IndexOf(step);
+    }
+
+    private string GetStepClass(string step)
+    {
+        return IsCompleted(step)
+            ? "bg-success text-white"
+            : "border bg-white";
+    }
+
+    private string GetStepTextClass(string step)
+    {
+        return IsCompleted(step)
+            ? "text-success"
+            : "";
+    }
+
+    private string GetStepIcon(string step)
+    {
+        return IsCompleted(step) ? "✓" : "□";
+    }
+
 }
