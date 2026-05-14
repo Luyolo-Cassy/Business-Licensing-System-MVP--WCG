@@ -1,4 +1,6 @@
 @using Microsoft.EntityFrameworkCore
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
 @using BusinessLicensing_Practice.Data
 @using BusinessLicensing_Practice.Models
 @inject ApplicationDbContext Db
@@ -29,7 +31,6 @@
 
             <div class="col-md-3">
                 <p class="text-muted mb-1">Status</p>
-
                 <span class="badge @GetStatusBadge(application?.Status)">
                     @application?.Status
                 </span>
@@ -37,7 +38,6 @@
 
             <div class="col-md-3">
                 <p class="text-muted mb-1">Date Submitted</p>
-
                 <strong>
                     @application?.DateSubmitted.ToString("dd MMMM yyyy")
                 </strong>
@@ -53,90 +53,65 @@
 
             <!-- Submitted -->
             <div class="mx-2 mb-4">
-
                 <div class="@GetStepClass("Submitted")"
                      style="width:35px; height:35px; line-height:35px; border-radius:50%; margin:auto;">
-
                     @GetStepIcon("Submitted")
-
                 </div>
-
                 <strong class="@GetStepTextClass("Submitted")">
                     Submitted
                 </strong>
-
             </div>
 
             <div class="flex-grow-1 mt-3 mx-2 bg-light" style="height:3px;"></div>
 
             <!-- Under Review -->
             <div class="mx-2 mb-4">
-
                 <div class="@GetStepClass("Under Review")"
                      style="width:35px; height:35px; line-height:35px; border-radius:50%; margin:auto;">
-
                     @GetStepIcon("Under Review")
-
                 </div>
-
                 <strong class="@GetStepTextClass("Under Review")">
                     Under Review
                 </strong>
-
             </div>
 
             <div class="flex-grow-1 mt-3 mx-2 bg-light" style="height:3px;"></div>
 
             <!-- Department Assessment -->
             <div class="mx-2 mb-4">
-
                 <div class="@GetStepClass("Department Assessment")"
                      style="width:35px; height:35px; line-height:35px; border-radius:50%; margin:auto;">
-
                     @GetStepIcon("Department Assessment")
-
                 </div>
-
                 <strong class="@GetStepTextClass("Department Assessment")">
                     Department Assessment
                 </strong>
-
             </div>
 
             <div class="flex-grow-1 mt-3 mx-2 bg-light" style="height:3px;"></div>
 
             <!-- Final Decision -->
             <div class="mx-2 mb-4">
-
                 <div class="@GetStepClass("Final Decision")"
                      style="width:35px; height:35px; line-height:35px; border-radius:50%; margin:auto;">
-
                     @GetStepIcon("Final Decision")
-
                 </div>
-
                 <strong class="@GetStepTextClass("Final Decision")">
                     Final Decision
                 </strong>
-
             </div>
 
             <div class="flex-grow-1 mt-3 mx-2 bg-light" style="height:3px;"></div>
 
             <!-- Licence Issued -->
             <div class="mx-2 mb-4">
-
                 <div class="@GetStepClass("Licence Issued")"
                      style="width:35px; height:35px; line-height:35px; border-radius:50%; margin:auto;">
-
                     @GetStepIcon("Licence Issued")
-
                 </div>
-
                 <strong class="@GetStepTextClass("Licence Issued")">
                     Licence Issued
                 </strong>
-
             </div>
 
         </div>
@@ -150,7 +125,6 @@
                 <p>
                     <strong>Completed:</strong>
                     Application Submitted
-
                     <span class="float-end">
                         @application?.DateSubmitted.ToString("dd MMM yyyy")
                     </span>
@@ -187,7 +161,6 @@
                         Licence Issued
                     </p>
                 }
-                
 
             </div>
 
@@ -197,27 +170,48 @@
 
                     <h5 class="fw-bold">Actions</h5>
 
-                @if (application?.Documents != null && application.Documents.Any())
-                {
-                    @foreach (var doc in application.Documents)
+                    @if (application?.Documents != null && application.Documents.Any())
                     {
-                        <a class="btn btn-outline-primary mb-2 d-block"
-                        href="@doc.FilePath"
-                        target="_blank">
-                        View @doc.DocumentType
-                        </a>
+                        @foreach (var doc in application.Documents)
+                        {
+                            <a class="btn btn-outline-primary mb-2 d-block" href="@doc.FilePath" target="_blank">
+                                View @doc.DocumentType
+                            </a>
+                        }
                     }
-                }
-                else
-                {
-                    <button class="btn btn-outline-secondary mb-2" disabled>
-                        No Documents Uploaded
-                    </button>
-                }
+                    else
+                    {
+                        <button class="btn btn-outline-secondary mb-2" disabled>
+                            No Documents Uploaded
+                        </button>
+                    }
 
-                    <button class="btn btn-outline-danger">
-                        Withdraw Application
-                    </button>
+                    @if (GetNextStatus() != null)
+                    {
+                        <button class="btn btn-outline-success mb-2 d-block w-100" @onclick="AdvanceStatus">
+                            Advance to: @GetNextStatus()
+                        </button>
+                    }
+
+                    @if (application?.Status == "Final Decision")
+                    {
+                        <button class="btn btn-danger mb-2 d-block w-100" @onclick="RejectApplication">
+                            Reject Application
+                        </button>
+                    }
+
+                    @if (application?.Status == "Submitted")
+                    {
+                        <button class="btn btn-outline-danger" @onclick="() => showWithdrawModal = true">
+                            Withdraw Application
+                        </button>
+                    }
+                    @if (application?.Status == "Rejected" || application?.Status == "Withdrawn")
+                    {
+                        <button class="btn btn-outline-primary mb-2 d-block w-100" @onclick="() => showReapplyModal = true">
+                            Reapply
+                        </button>
+                    }
 
                 </div>
 
@@ -226,6 +220,58 @@
         </div>
 
     </div>
+    @if (showReapplyModal)
+    {
+        <div class="modal fade show d-block" style="background:rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold">Reapply for Licence</h5>
+                        <button class="btn-close" @onclick="() => showReapplyModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Would you like to use your previously stored application data or start fresh?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline-secondary" @onclick="() => showReapplyModal = false">
+                            Cancel
+                        </button>
+                        <button class="btn btn-outline-primary" @onclick="ReapplyNew">
+                            Use New Data
+                        </button>
+                        <button class="btn btn-success" @onclick="ReapplyExisting">
+                            Use Stored Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (showWithdrawModal)
+    {
+        <div class="modal fade show d-block" style="background:rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold">Withdraw Application</h5>
+                        <button class="btn-close" @onclick="() => showWithdrawModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to withdraw this application? This action cannot be undone.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline-secondary" @onclick="() => showWithdrawModal = false">
+                            Cancel
+                        </button>
+                        <button class="btn btn-danger" @onclick="WithdrawApplication">
+                            Yes, Withdraw
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 
 </div>
 
@@ -236,11 +282,45 @@
 
     private Application? application;
 
+    private static readonly List<string> StatusOrder = new()
+    {
+        "Submitted",
+        "Under Review",
+        "Department Assessment",
+        "Final Decision",
+        "Licence Issued"
+    };
+
     protected override async Task OnInitializedAsync()
     {
         application = await Db.Applications
-        .Include(a => a.Documents)
-        .FirstOrDefaultAsync(a => a.Id == Id);
+            .Include(a => a.Documents)
+            .FirstOrDefaultAsync(a => a.Id == Id);
+    }
+
+    private bool showWithdrawModal = false;
+
+    private string? GetNextStatus()
+    {
+        if (application?.Status == null) return null;
+        var currentIndex = StatusOrder.IndexOf(application.Status);
+        if (currentIndex == -1 || currentIndex >= StatusOrder.Count - 1) return null;
+        return StatusOrder[currentIndex + 1];
+    }
+
+    private async Task AdvanceStatus()
+    {
+        var next = GetNextStatus();
+        if (application == null || next == null) return;
+
+        application.Status = next;
+        await Db.SaveChangesAsync();
+
+        application = await Db.Applications
+            .Include(a => a.Documents)
+            .FirstOrDefaultAsync(a => a.Id == Id);
+
+        StateHasChanged();
     }
 
     private string GetStatusBadge(string? status)
@@ -248,56 +328,96 @@
         return status switch
         {
             "Submitted" => "bg-secondary",
-
             "Under Review" => "bg-primary",
-
             "Department Assessment" => "bg-warning text-dark",
-
             "Final Decision" => "bg-info text-dark",
-
             "Licence Issued" => "bg-success",
-
             "Rejected" => "bg-danger",
-
             _ => "bg-secondary"
         };
     }
 
+    private async Task RejectApplication()
+    {
+        if (application == null) return;
+
+        application.Status = "Rejected";
+        await Db.SaveChangesAsync();
+
+        application = await Db.Applications
+            .Include(a => a.Documents)
+            .FirstOrDefaultAsync(a => a.Id == Id);
+
+        StateHasChanged();
+    }
+
     private bool IsCompleted(string step)
     {
-        var steps = new List<string>
-        {
-            "Submitted",
-            "Under Review",
-            "Department Assessment",
-            "Final Decision",
-            "Licence Issued"
-        };
+        if (application?.Status == null) return false;
 
-        if (application?.Status == null)
-            return false;
+        var statusToCheck = application.Status == "Rejected" ? "Final Decision" : application.Status;
 
-        return steps.IndexOf(application.Status)
-            >= steps.IndexOf(step);
+        return StatusOrder.IndexOf(statusToCheck) >= StatusOrder.IndexOf(step);
     }
 
     private string GetStepClass(string step)
     {
-        return IsCompleted(step)
-            ? "bg-success text-white"
-            : "border bg-white";
+        if (application?.Status == "Rejected" && step == "Final Decision")
+            return "bg-danger text-white";
+
+        return IsCompleted(step) ? "bg-success text-white" : "border bg-white";
     }
 
     private string GetStepTextClass(string step)
     {
-        return IsCompleted(step)
-            ? "text-success"
-            : "";
+        if (application?.Status == "Rejected" && step == "Final Decision")
+            return "text-danger";
+
+        return IsCompleted(step) ? "text-success" : "";
+    }
+
+    private async Task WithdrawApplication()
+    {
+        if (application == null) return;
+
+        application.Status = "Withdrawn";
+        await Db.SaveChangesAsync();
+
+        application = await Db.Applications
+            .Include(a => a.Documents)
+            .FirstOrDefaultAsync(a => a.Id == Id);
+
+        showWithdrawModal = false;
+        StateHasChanged();
     }
 
     private string GetStepIcon(string step)
     {
         return IsCompleted(step) ? "✓" : "□";
+    }
+
+    private bool showReapplyModal = false;
+
+    private async Task ReapplyExisting()
+    {
+        if (application == null) return;
+
+        application.Status = "Submitted";
+        application.DateSubmitted = DateTime.Now;
+        await Db.SaveChangesAsync();
+
+        application = await Db.Applications
+            .Include(a => a.Documents)
+            .FirstOrDefaultAsync(a => a.Id == Id);
+
+        showReapplyModal = false;
+        StateHasChanged();
+    }
+
+    private void ReapplyNew()
+    {
+        showReapplyModal = false;
+        Navigation.NavigateTo("/new-application");
     }
 
 }
