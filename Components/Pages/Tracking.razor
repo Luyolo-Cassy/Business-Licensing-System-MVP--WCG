@@ -187,6 +187,7 @@
                         Licence Issued
                     </p>
                 }
+                
 
             </div>
 
@@ -196,9 +197,23 @@
 
                     <h5 class="fw-bold">Actions</h5>
 
-                    <button class="btn btn-outline-primary mb-2">
-                        View Documents
+                @if (application?.Documents != null && application.Documents.Any())
+                {
+                    @foreach (var doc in application.Documents)
+                    {
+                        <a class="btn btn-outline-primary mb-2 d-block"
+                        href="@doc.FilePath"
+                        target="_blank">
+                        View @doc.DocumentType
+                        </a>
+                    }
+                }
+                else
+                {
+                    <button class="btn btn-outline-secondary mb-2" disabled>
+                        No Documents Uploaded
                     </button>
+                }
 
                     <button class="btn btn-outline-danger">
                         Withdraw Application
@@ -224,7 +239,8 @@
     protected override async Task OnInitializedAsync()
     {
         application = await Db.Applications
-            .FirstOrDefaultAsync(a => a.Id == Id);
+        .Include(a => a.Documents)
+        .FirstOrDefaultAsync(a => a.Id == Id);
     }
 
     private string GetStatusBadge(string? status)
