@@ -122,35 +122,47 @@
 
                 <h5 class="fw-bold mb-3">Timeline</h5>
 
-                <p>
-                    <strong>Completed:</strong>
-                    Application Submitted
-                    <span class="float-end">
-                        @application?.DateSubmitted.ToString("dd MMM yyyy")
-                    </span>
-                </p>
-
-                @if (application?.Status == "Under Review")
+                @if (IsCompleted("Submitted"))
                 {
                     <p>
-                        <strong>Current Step:</strong>
+                        <strong>Completed:</strong>
+                        Application Submitted
+                        <span class="float-end">
+                            @application?.DateSubmitted.ToString("dd MMM yyyy")
+                        </span>
+                    </p>
+                }
+
+                @if (IsCompleted("Under Review"))
+                {
+                    <p>
+                        <strong>Completed:</strong>
                         Under Review by Licensing Officer
+                        <span class="float-end">
+                            @application?.DateSubmitted.ToString("dd MMM yyyy")
+                        </span>
                     </p>
                 }
 
-                @if (application?.Status == "Department Assessment")
+                @if (IsCompleted("Department Assessment"))
                 {
                     <p>
-                        <strong>Current Step:</strong>
+                        <strong>Completed:</strong>
                         Department Assessment
+                        <span class="float-end">
+                            @application?.DateSubmitted.ToString("dd MMM yyyy")
+                        </span>
                     </p>
                 }
 
-                @if (application?.Status == "Final Decision")
+                @if (IsCompleted("Final Decision"))
                 {
                     <p>
-                        <strong>Current Step:</strong>
+                        <strong>Completed:</strong>
                         Final Decision
+                        <span class="float-end">
+                            @application?.DateSubmitted.ToString("dd MMM yyyy")
+                        </span>
                     </p>
                 }
 
@@ -159,6 +171,36 @@
                     <p>
                         <strong>Completed:</strong>
                         Licence Issued
+                        <span class="float-end">
+                            @application?.DateSubmitted.ToString("dd MMM yyyy")
+                        </span>
+                    </p>
+                }
+                else if (application?.Status == "Rejected")
+                {
+                    <p class="text-danger">
+                        <strong>Rejected:</strong>
+                        Application Rejected
+                        <span class="float-end">
+                            @application?.DateSubmitted.ToString("dd MMM yyyy")
+                        </span>
+                    </p>
+                }
+                else if (application?.Status == "Withdrawn")
+                {
+                    <p class="text-danger">
+                        <strong>Withdrawn:</strong>
+                        Application Withdrawn
+                        <span class="float-end">
+                            @application?.DateSubmitted.ToString("dd MMM yyyy")
+                        </span>
+                    </p>
+                }
+                else
+                {
+                    <p>
+                        <strong>Current Step:</strong>
+                        @application?.Status
                     </p>
                 }
 
