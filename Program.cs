@@ -34,6 +34,38 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
     db.Database.EnsureCreated();
+
+    if (!db.Applications.Any())
+    {
+        db.Applications.AddRange(
+            new Application
+            {
+                ApplicationNumber = "APP-2026-001",
+                BusinessName = "Thembi's Coffee Shop",
+                LicenceType = "Food Licence",
+                Status = "In Progress",
+                DateSubmitted = new DateTime(2026, 5, 1)
+            },
+            new Application
+            {
+                ApplicationNumber = "APP-2026-002",
+                BusinessName = "Dube Mini Market",
+                LicenceType = "Retail Licence",
+                Status = "Approved",
+                DateSubmitted = new DateTime(2026, 4, 18)
+            },
+            new Application
+            {
+                ApplicationNumber = "APP-2026-003",
+                BusinessName = "Alec Events",
+                LicenceType = "Entertainment Licence",
+                Status = "Rejected",
+                DateSubmitted = new DateTime(2026, 4, 10)
+            }
+        );
+
+        db.SaveChanges();
+    }
 }
 
 app.Run();
