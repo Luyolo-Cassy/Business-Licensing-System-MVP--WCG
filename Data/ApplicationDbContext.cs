@@ -12,5 +12,6 @@ namespace BusinessLicensing_Practice.Data
 
         public DbSet<Application> Applications { get; set; }
         public DbSet<ApplicationDocument> ApplicationDocuments { get; set; }
+        
     }
 }

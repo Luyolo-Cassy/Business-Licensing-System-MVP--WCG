@@ -1,3 +1,4 @@
+
 @using Microsoft.EntityFrameworkCore
 @using BusinessLicensing_Practice.Data
 @inject ApplicationDbContext Db
@@ -21,9 +22,13 @@
     {
         return status switch
         {
-            "In Progress" => "bg-warning text-dark",
-            "Approved" => "bg-success",
+            "Submitted" => "bg-secondary",
+            "Under Review" => "bg-primary",
+            "Department Assessment" => "bg-warning text-dark",
+            "Final Decision" => "bg-info text-dark",
+            "Licence Issued" => "bg-success",
             "Rejected" => "bg-danger",
+            "Withdrawn" => "bg-warning text-dark",
             _ => "bg-secondary"
         };
     }
@@ -34,46 +39,45 @@
     <p class="text-muted">Welcome back, Thembi Dube. Track your licence applications and view recent updates.</p>
 </div>
 
-<div class="row mb-4"> <!-- This creates a row of four cards -->
-    <div class="col-md-3"> <!--This creates one card column-->
-        <div class="card p-3 shadow-sm"> <!--This is the card itself-->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card p-3 shadow-sm">
             <h6>Total Applications</h6>
-            <h2 style="color: blue;" ;>@applications.Count</h2>
+            <h2 style="color: blue;">@applications.Count</h2>
         </div>
     </div>
 
     <div class="col-md-3">
         <div class="card p-3 shadow-sm">
             <h6>In Progress</h6>
-            <h2 style="color: blue;" ;>@applications.Count(a => a.Status == "In Progress")</h2>
+            <h2 style="color: blue;">@applications.Count(a => a.Status != "Licence Issued" && a.Status != "Rejected" && a.Status != "Withdrawn")</h2>
         </div>
     </div>
 
     <div class="col-md-3">
         <div class="card p-3 shadow-sm">
             <h6>Approved</h6>
-            <h2 style="color: green;" ;>@applications.Count(a => a.Status == "Approved")</h2>
+            <h2 style="color: green;">@applications.Count(a => a.Status == "Licence Issued")</h2>
         </div>
     </div>
 
     <div class="col-md-3">
         <div class="card p-3 shadow-sm">
             <h6>Rejected</h6>
-            <h2 style="color: red;" ;>@applications.Count(a => a.Status == "Rejected")</h2>
+            <h2 style="color: red;">@applications.Count(a => a.Status == "Rejected" || a.Status == "Withdrawn")</h2>
         </div>
     </div>
 </div>
 
-<div class="card shadow-sm"> <!--This creates the big table card-->
+<div class="card shadow-sm">
     <div class="card-header">
         <strong>Recent Applications</strong>
     </div>
 
-    
     <div class="card-body">
-        <table class="table"> <!--This creates the table -->
+        <table class="table">
             <thead>
-                <tr> <!--This means table row-->
+                <tr>
                     <th>Application ID</th>
                     <th>Business Name</th>
                     <th>Licence Type</th>
@@ -105,9 +109,10 @@
         </table>
     </div>
 </div>
+
 <div class="mt-4">
     <a class="btn btn-primary btn-lg" href="/new-application">
-    + New Application
+        + New Application
     </a>
-    
 </div>
+```

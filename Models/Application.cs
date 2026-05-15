@@ -25,5 +25,7 @@ namespace BusinessLicensing_Practice.Models
         public string BusinessAddress { get; set; } = "";
 
         public DateTime DateSubmitted { get; set; }
+
+        
     }
 }
