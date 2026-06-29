@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BusinessLicensing Practice", "BusinessLicensing Practice.csproj", "{EEC20613-5202-E64B-E850-041BEB3832FB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProvincialBusinessLicensingSystem", "ProvincialBusinessLicensingSystem.csproj", "{EEC20613-5202-E64B-E850-041BEB3832FB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
