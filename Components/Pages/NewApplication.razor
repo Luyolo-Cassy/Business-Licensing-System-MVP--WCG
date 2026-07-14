@@ -12,10 +12,35 @@
 <h3 class="fw-bold mb-4">New Business Licence Application</h3>
 
 <div class="mb-4">
-    <span class="badge bg-primary">Step @CurrentStep of 4</span>
+    <span class="badge bg-primary">Step @CurrentStep of 6</span>
 </div>
 
 @if (CurrentStep == 1)
+{
+    <h5>Select Licence Type</h5>
+
+    <select class="form-control" @bind="LicenceType">
+        <option value="">-- Select Licence Type --</option>
+        <option value="Business Licence">Business Licence</option>
+        <option value="Food Licence">Food Licence</option>
+        <option value="Entertainment Licence">Entertainment Licence</option>
+    </select>
+
+    @if (!string.IsNullOrWhiteSpace(LicenceType))
+    {
+        <div class="alert alert-secondary mt-3">
+            <p class="mb-2"><strong>Selected licence type:</strong> @LicenceType</p>
+            <a class="btn btn-outline-primary btn-sm" href="@GetApplicationFormDownloadPath()" target="_blank">
+                Download @LicenceType Application Form
+            </a>
+            <p class="mb-0 mt-2">
+                Download and complete this form. You can continue with the online application and upload the completed form later.
+            </p>
+        </div>
+    }
+}
+
+@if (CurrentStep == 2)
 {
     <h5>Business Information</h5>
 
@@ -35,26 +60,81 @@
     </div>
 
     <div class="mb-3">
-        <label>Business Address</label>
-        <textarea class="form-control" @bind="BusinessAddress"></textarea>
+        <label>Address Line 1</label>
+        <input class="form-control" @bind="AddressLine1" />
+    </div>
+
+    <div class="mb-3">
+        <label>Address Line 2 (optional)</label>
+        <input class="form-control" @bind="AddressLine2" />
+    </div>
+
+    <div class="mb-3">
+        <label>Suburb</label>
+        <input class="form-control" @bind="Suburb" />
+    </div>
+
+    <div class="mb-3">
+        <label>City</label>
+        <input class="form-control" @bind="City" />
+    </div>
+
+    <div class="mb-3">
+        <label>Postal Code</label>
+        <input class="form-control" @bind="PostalCode" />
     </div>
 }
 
-@if (CurrentStep == 2)
+@if (CurrentStep == 3)
 {
-    <h5>Select Licence Type</h5>
+    <h5>Licence-Specific Information</h5>
 
-    <select class="form-control" @bind="LicenceType">
-        <option value="">-- Select Licence Type --</option>
-        <option value="Business Licence">Business Licence</option>
-        <option value="Food Licence">Food Licence</option>
-        <option value="Liquor Licence">Liquor Licence</option>
-        <option value="Entertainment Licence">Entertainment Licence</option>
-        <option value="Health Permit">Health Permit</option>
-    </select>
+    <div class="mb-3">
+        <label>Trading Name</label>
+        <input class="form-control" @bind="TradingName" />
+    </div>
+
+    @if (LicenceType == "Business Licence")
+    {
+        <div class="mb-3">
+            <label>Business Category</label>
+            <input class="form-control" @bind="BusinessCategory" />
+        </div>
+    }
+    else if (LicenceType == "Food Licence")
+    {
+        <div class="mb-3">
+            <label>Food Handling Type</label>
+            <input class="form-control" @bind="FoodHandlingType" />
+        </div>
+    }
+    else if (LicenceType == "Entertainment Licence")
+    {
+        <div class="mb-3">
+            <label>Entertainment Activity Type</label>
+            <input class="form-control" @bind="EntertainmentActivityType" />
+        </div>
+    }
 }
 
-@if (CurrentStep == 3)
+@if (CurrentStep == 4)
+{
+    <h5>Upload Completed Application Form</h5>
+
+    <div class="mb-3">
+        <label>Completed Application Form</label>
+        <InputFile class="form-control" OnChange="HandleApplicationFormSelected" />
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(ApplicationFormFileName))
+    {
+        <div class="alert alert-secondary">
+            <strong>Selected application form:</strong> @ApplicationFormFileName
+        </div>
+    }
+}
+
+@if (CurrentStep == 5)
 {
     <h5>Upload Supporting Documents</h5>
 
@@ -92,15 +172,35 @@
     }
 }
 
-@if (CurrentStep == 4)
+@if (CurrentStep == 6)
 {
     <h5>Review & Submit</h5>
 
+    <p><strong>Licence Type:</strong> @LicenceType</p>
     <p><strong>Business Name:</strong> @BusinessName</p>
     <p><strong>Registration Number:</strong> @RegistrationNumber</p>
     <p><strong>Tax Number:</strong> @TaxNumber</p>
-    <p><strong>Business Address:</strong> @BusinessAddress</p>
-    <p><strong>Licence Type:</strong> @LicenceType</p>
+    <p><strong>Address Line 1:</strong> @AddressLine1</p>
+    <p><strong>Address Line 2:</strong> @AddressLine2</p>
+    <p><strong>Suburb:</strong> @Suburb</p>
+    <p><strong>City:</strong> @City</p>
+    <p><strong>Postal Code:</strong> @PostalCode</p>
+    <p><strong>Trading Name:</strong> @TradingName</p>
+
+    @if (LicenceType == "Business Licence")
+    {
+        <p><strong>Business Category:</strong> @BusinessCategory</p>
+    }
+    else if (LicenceType == "Food Licence")
+    {
+        <p><strong>Food Handling Type:</strong> @FoodHandlingType</p>
+    }
+    else if (LicenceType == "Entertainment Licence")
+    {
+        <p><strong>Entertainment Activity Type:</strong> @EntertainmentActivityType</p>
+    }
+
+    <p><strong>Completed Application Form:</strong> @ApplicationFormFileName</p>
 
     <strong>Documents:</strong>
     <ul>
@@ -109,6 +209,13 @@
             <li>@doc.DocumentType: @doc.FileName</li>
         }
     </ul>
+
+    <div class="form-check mt-3">
+        <input class="form-check-input" type="checkbox" id="popiaConsent" @bind="PopiaConsentAccepted" />
+        <label class="form-check-label" for="popiaConsent">
+            I consent to the collection and storage of my information for the purpose of processing this business licence application.
+        </label>
+    </div>
 }
 
 @if (!string.IsNullOrEmpty(Message))
@@ -122,7 +229,7 @@
         <button class="btn btn-outline-secondary me-2" @onclick="PreviousStep">Back</button>
     }
 
-    @if (CurrentStep < 4)
+    @if (CurrentStep < 6)
     {
         <button class="btn btn-primary" @onclick="NextStep">Next</button>
     }
@@ -139,19 +246,64 @@
     private string RegistrationNumber = "";
     private string TaxNumber = "";
     private string BusinessAddress = "";
+    private string AddressLine1 = "";
+    private string AddressLine2 = "";
+    private string Suburb = "";
+    private string City = "";
+    private string PostalCode = "";
     private string LicenceType = "";
+    private string TradingName = "";
+    private string BusinessCategory = "";
+    private string FoodHandlingType = "";
+    private string EntertainmentActivityType = "";
+    private string ApplicationFormFileName = "";
+    private byte[] ApplicationFormFileBytes = Array.Empty<byte>();
+    private bool PopiaConsentAccepted;
     private string Message = "";
 
     private List<SelectedDocument> SelectedDocuments = new();
 
     private void NextStep()
     {
+        Message = "";
+
+        if (CurrentStep == 1 && string.IsNullOrWhiteSpace(LicenceType))
+        {
+            Message = "Please select a licence type before continuing.";
+            return;
+        }
+
         CurrentStep++;
     }
 
     private void PreviousStep()
     {
+        Message = "";
         CurrentStep--;
+    }
+
+    private string GetApplicationFormDownloadPath()
+    {
+        return LicenceType switch
+        {
+            "Business Licence" => "/forms/business-licence-application-form.pdf",
+            "Food Licence" => "/forms/food-licence-application-form.pdf",
+            "Entertainment Licence" => "/forms/entertainment-licence-application-form.pdf",
+            _ => "#"
+        };
+    }
+
+    private async Task HandleApplicationFormSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        using var memoryStream = new MemoryStream();
+
+        await file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024)
+            .CopyToAsync(memoryStream);
+
+        ApplicationFormFileName = file.Name;
+        ApplicationFormFileBytes = memoryStream.ToArray();
     }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e, string documentType)
@@ -178,12 +330,30 @@
         if (string.IsNullOrWhiteSpace(BusinessName) ||
             string.IsNullOrWhiteSpace(RegistrationNumber) ||
             string.IsNullOrWhiteSpace(TaxNumber) ||
-            string.IsNullOrWhiteSpace(BusinessAddress) ||
+            string.IsNullOrWhiteSpace(AddressLine1) ||
+            string.IsNullOrWhiteSpace(Suburb) ||
+            string.IsNullOrWhiteSpace(City) ||
+            string.IsNullOrWhiteSpace(PostalCode) ||
             string.IsNullOrWhiteSpace(LicenceType))
         {
             Message = "Please complete all required fields before submitting.";
             return;
         }
+
+        if (ApplicationFormFileBytes.Length == 0)
+        {
+            Message = "Please upload the completed application form before submitting.";
+            return;
+        }
+
+        if (!PopiaConsentAccepted)
+        {
+            Message = "Please accept the POPIA consent before submitting.";
+            return;
+        }
+
+        BusinessAddress = string.Join(", ", new[] { AddressLine1, AddressLine2, Suburb, City, PostalCode }
+            .Where(value => !string.IsNullOrWhiteSpace(value)));
 
         var year = DateTime.Now.Year;
 
@@ -201,7 +371,18 @@
             RegistrationNumber = RegistrationNumber,
             TaxNumber = TaxNumber,
             BusinessAddress = BusinessAddress,
+            AddressLine1 = AddressLine1,
+            AddressLine2 = AddressLine2,
+            Suburb = Suburb,
+            City = City,
+            PostalCode = PostalCode,
             LicenceType = LicenceType,
+            TradingName = TradingName,
+            BusinessCategory = BusinessCategory,
+            FoodHandlingType = FoodHandlingType,
+            EntertainmentActivityType = EntertainmentActivityType,
+            ApplicationFormFileName = ApplicationFormFileName,
+            PopiaConsentAccepted = PopiaConsentAccepted,
             Status = "Submitted",
             DateSubmitted = DateTime.Now
         };
@@ -218,6 +399,13 @@
             {
                 Directory.CreateDirectory(uploadsFolder);
             }
+
+            var uniqueApplicationFormFileName = $"{Guid.NewGuid()}_{ApplicationFormFileName}";
+            var applicationFormPath = Path.Combine(uploadsFolder, uniqueApplicationFormFileName);
+
+            await File.WriteAllBytesAsync(applicationFormPath, ApplicationFormFileBytes);
+
+            application.ApplicationFormFilePath = $"/uploads/{uniqueApplicationFormFileName}";
 
             foreach (var selectedDoc in SelectedDocuments)
             {
