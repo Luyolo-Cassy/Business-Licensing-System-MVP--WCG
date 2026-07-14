@@ -33,7 +33,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-    db.Database.EnsureCreated();
+    db.Database.Migrate();
 
     if (!db.Applications.Any())
     {

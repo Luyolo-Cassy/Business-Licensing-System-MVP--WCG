@@ -24,6 +24,30 @@ namespace BusinessLicensing_Practice.Models
 
         public string BusinessAddress { get; set; } = "";
 
+        public string AddressLine1 { get; set; } = "";
+
+        public string AddressLine2 { get; set; } = "";
+
+        public string Suburb { get; set; } = "";
+
+        public string City { get; set; } = "";
+
+        public string PostalCode { get; set; } = "";
+
+        public string TradingName { get; set; } = "";
+
+        public string BusinessCategory { get; set; } = "";
+
+        public string FoodHandlingType { get; set; } = "";
+
+        public string EntertainmentActivityType { get; set; } = "";
+
+        public string ApplicationFormFileName { get; set; } = "";
+
+        public string ApplicationFormFilePath { get; set; } = "";
+
+        public bool PopiaConsentAccepted { get; set; }
+
         public DateTime DateSubmitted { get; set; }
 
         
