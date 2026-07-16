@@ -4,20 +4,43 @@ using BusinessLicensing_Practice.Data;
 using BusinessLicensing_Practice.Models;
 using Microsoft.AspNetCore.Identity;
 using BusinessLicensing_Practice.Models;
+using Microsoft.AspNetCore.Components.Authorization;
+using BusinessLicensing_Practice.Components.Account;
+using Microsoft.AspNetCore.Identity.UI.Services;
+using BusinessLicensing_Practice.Data;
+using BusinessLicensing_Practice.Components.Account;
+using BusinessLicensing_Practice.Data;
 
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite("Data Source=businesslicensing.db"));
-    builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
+   builder.Services.AddCascadingAuthenticationState();
 
-builder.Services.AddAuthentication();
-builder.Services.AddAuthorization();
+builder.Services.AddScoped<IdentityRedirectManager>();
 
+builder.Services.AddScoped<
+    AuthenticationStateProvider,
+    IdentityRevalidatingAuthenticationStateProvider>();
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+})
+.AddIdentityCookies();
+
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
+{
+    options.SignIn.RequireConfirmedAccount = false;
+})
+.AddRoles<IdentityRole>()
+.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddSignInManager()
+.AddDefaultTokenProviders();
 
 // Add services to the container.
+builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -41,6 +64,8 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
+app.MapAdditionalIdentityEndpoints();
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -50,7 +75,12 @@ using (var scope = app.Services.CreateScope())
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-string[] roles = { "BusinessOwner", "MunicipalOfficial" };
+string[] roles =
+{
+    "BusinessOwner",
+    "MunicipalOfficial",
+    "DEDATAdmin"
+};
 
 foreach (var role in roles)
 {
