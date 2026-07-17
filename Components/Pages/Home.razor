@@ -1,4 +1,5 @@
 @page "/"
+@using Microsoft.AspNetCore.Components.Authorization
 
 <PageTitle>Home</PageTitle>
 
@@ -9,10 +10,49 @@
             <p class="lead text-muted mb-4">
                 Apply for, manage and track business licence applications online across the Western Cape.
             </p>
-            <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
-                <a class="btn btn-primary btn-lg px-4" href="/new-application">Apply for a Licence</a>
-                <a class="btn btn-outline-primary btn-lg px-4" href="/tracking">Track Existing Application</a>
-            </div>
+            <AuthorizeView>
+
+    <Authorized>
+
+        <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
+
+            <a class="btn btn-primary btn-lg px-4"
+               href="/new-application">
+                Apply for a Licence
+            </a>
+
+            <a class="btn btn-outline-primary btn-lg px-4"
+               href="/Tracking">
+                Track Existing Application
+            </a>
+
+        </div>
+
+        <p class="text-success mt-3">
+            Welcome back, @context.User.Identity?.Name!
+        </p>
+
+    </Authorized>
+
+    <NotAuthorized>
+
+        <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
+
+            <a class="btn btn-primary btn-lg px-4"
+               href="/Account/Login">
+                Login to Apply
+            </a>
+
+            <a class="btn btn-outline-primary btn-lg px-4"
+               href="/Account/Register">
+                Create Account
+            </a>
+
+        </div>
+
+    </NotAuthorized>
+
+</AuthorizeView>
         </div>
     </div>
 </section>
