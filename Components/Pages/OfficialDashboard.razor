@@ -1,0 +1,188 @@
+@page "/official-Dashboard"
+
+@attribute [Authorize(Roles = "MunicipalOfficial")]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using BusinessLicensing_Practice.Data
+@using BusinessLicensing_Practice.Models
+
+@inject ApplicationDbContext Db
+
+<div class="mb-4">
+
+    <h1 class="fw-bold">
+        Municipal Official Dashboard
+    </h1>
+
+    <p class="text-muted">
+        Review and process business licence applications submitted by applicants.
+    </p>
+
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card p-3 shadow-sm">
+            <h6>Total Applications</h6>
+            <h2 style="color: blue;">@applications.Count</h2>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 shadow-sm">
+            <h6>In Progress</h6>
+            <h2 style="color: blue;">@applications.Count(a => a.Status != "Licence Issued" && a.Status != "Rejected" && a.Status != "Withdrawn")</h2>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 shadow-sm">
+            <h6>Approved</h6>
+            <h2 style="color: green;">@applications.Count(a => a.Status == "Licence Issued")</h2>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 shadow-sm">
+            <h6>Rejected</h6>
+            <h2 style="color: red;">@applications.Count(a => a.Status == "Rejected" || a.Status == "Withdrawn")</h2>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+
+    <div class="card-header">
+
+        <strong>
+            Applications Awaiting Processing
+        </strong>
+
+    </div>
+
+    <div class="card-body">
+
+        <table class="table table-hover">
+
+            <thead>
+
+                <tr>
+
+                    <th>ID</th>
+
+                    <th>Business</th>
+
+                    <th>Licence</th>
+
+                    <th>Status</th>
+
+                    <th>Submitted</th>
+
+                    <th></th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                @foreach (var app in applications)
+                {
+                    <tr>
+
+                        <td>@app.ApplicationNumber</td>
+
+                        <td>@app.BusinessName</td>
+
+                        <td>@app.LicenceType</td>
+
+                        <td>
+
+                            <span class="badge @GetBadge(app.Status)">
+                                @app.Status
+                            </span>
+
+                        </td>
+
+                        <td>
+                            @app.DateSubmitted.ToString("yyyy/MM/dd")
+                        </td>
+
+                        <td>
+
+                            <a class="btn btn-primary btn-sm"
+                               href="/review-application/@app.Id">
+
+                                Review
+
+                            </a>
+
+                        </td>
+
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<div class="row mt-4">
+
+    <div class="col-md-3">
+
+        <a class="btn btn-primary w-100">
+            Review Applications
+        </a>
+
+    </div>
+
+    <div class="col-md-3">
+
+        <a class="btn btn-outline-primary w-100">
+            Generate Report
+        </a>
+
+    </div>
+
+    <div class="col-md-3">
+
+        <a class="btn btn-dark w-100">
+            Search Applications
+        </a>
+
+    </div>
+
+</div>
+
+@code{
+
+    private List<Application> applications = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        applications = await Db.Applications
+            .OrderByDescending(a => a.DateSubmitted)
+            .ToListAsync();
+    }
+
+    private string GetBadge(string status)
+    {
+        return status switch
+        {
+            "Submitted" => "bg-secondary",
+            "Under Review" => "bg-primary",
+            "Department Assessment" => "bg-warning text-dark",
+            "Final Decision" => "bg-info text-dark",
+            "Licence Issued" => "bg-success",
+            "Rejected" => "bg-danger",
+            "Withdrawn" => "bg-dark",
+            _ => "bg-secondary"
+        };
+    }
+
+}
+

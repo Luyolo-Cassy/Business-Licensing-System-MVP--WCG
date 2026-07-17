@@ -13,11 +13,11 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
 
-    <AuthorizeView>
+    <nav class="nav flex-column">
 
-        <Authorized>
-
-            <nav class="nav flex-column">
+        <!-- Business Owner Menu -->
+        <AuthorizeView Roles="BusinessOwner">
+            <Authorized>
 
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
@@ -46,6 +46,35 @@
                         Application Tracking
                     </NavLink>
                 </div>
+
+            </Authorized>
+        </AuthorizeView>
+
+        <!-- Municipal Official Menu -->
+        <AuthorizeView Roles="MunicipalOfficial">
+            <Authorized>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="official-dashboard">
+                        <span class="bi bi-speedometer-nav-menu"></span>
+                        Dashboard
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="reports">
+                        <span class="bi bi-bar-chart"></span>
+                        Reports
+                    </NavLink>
+                </div>
+
+            </Authorized>
+        </AuthorizeView>
+
+        <!-- Logout (all logged-in users) -->
+        <AuthorizeView>
+            <Authorized Context="authContext">
+
                 <div class="nav-item px-3 mt-4">
                     <NavLink class="nav-link text-danger" href="logout">
                         <span class="bi bi-box-arrow-right"></span>
@@ -53,10 +82,9 @@
                     </NavLink>
                 </div>
 
-            </nav>
+            </Authorized>
+        </AuthorizeView>
 
-        </Authorized>
-
-    </AuthorizeView>
+    </nav>
 
 </div>

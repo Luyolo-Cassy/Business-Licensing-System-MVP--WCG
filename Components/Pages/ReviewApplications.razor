@@ -1,0 +1,213 @@
+@page "/review-application/{Id:int}"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "MunicipalOfficial")]
+
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@using BusinessLicensing_Practice.Data
+@using BusinessLicensing_Practice.Models
+
+@inject ApplicationDbContext Db
+@inject NavigationManager Navigation
+
+<PageTitle>Review Application</PageTitle>
+
+@if (application == null)
+{
+    <div class="alert alert-danger">
+        Application not found.
+    </div>
+}
+else
+{
+    <h2 class="mb-4">Review Business Licence Application</h2>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header fw-bold">
+            Application Details
+        </div>
+
+        <div class="card-body">
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Application Number</strong><br />
+                    @application.ApplicationNumber
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Date Submitted</strong><br />
+                    @application.DateSubmitted.ToString("yyyy/MM/dd")
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Business Name</strong><br />
+                    @application.BusinessName
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Trading Name</strong><br />
+                    @application.TradingName
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Licence Type</strong><br />
+                    @application.LicenceType
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Business Category</strong><br />
+                    @application.BusinessCategory
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Registration Number</strong><br />
+                    @application.RegistrationNumber
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Tax Number</strong><br />
+                    @application.TaxNumber
+                </div>
+            </div>
+
+            <hr />
+
+            <h5>Business Address</h5>
+
+            <p>
+                @application.AddressLine1 <br />
+                @application.AddressLine2 <br />
+                @application.Suburb <br />
+                @application.City <br />
+                @application.PostalCode
+            </p>
+
+            @if (!string.IsNullOrWhiteSpace(application.FoodHandlingType))
+            {
+                <p>
+                    <strong>Food Handling Type:</strong>
+                    @application.FoodHandlingType
+                </p>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(application.EntertainmentActivityType))
+            {
+                <p>
+                    <strong>Entertainment Activity:</strong>
+                    @application.EntertainmentActivityType
+                </p>
+            }
+
+            <hr />
+
+            <h5>Supporting Documents</h5>
+
+            @if (application.Documents.Any())
+            {
+                <ul class="list-group mb-4">
+                    @foreach (var doc in application.Documents)
+                    {
+                        <li class="list-group-item d-flex justify-content-between">
+                            @doc.FileName
+                            <a class="btn btn-primary btn-sm" href="@doc.FilePath" target="_blank">
+                                View
+                            </a>
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <div class="alert alert-warning">
+                    No supporting documents uploaded.
+                </div>
+            }
+
+            <hr />
+
+            <h5>Review Decision</h5>
+
+            <div class="mb-3">
+
+                <label class="form-label">Application Status</label>
+
+                <InputSelect class="form-select" @bind-Value="application.Status">
+                    <option value="Submitted">Submitted</option>
+                    <option value="Under Review">Under Review</option>
+                    <option value="Department Assessment">Department Assessment</option>
+                    <option value="Final Decision">Final Decision</option>
+                    <option value="Licence Issued">Licence Issued</option>
+                    <option value="Rejected">Rejected</option>
+                    <option value="Withdrawn">Withdrawn</option>
+                </InputSelect>
+
+            </div>
+
+            <div class="mt-4">
+
+                <button class="btn btn-success me-2" @onclick="SaveReview">
+                    Save Review
+                </button>
+
+                @if (application?.Status == "Final Decision")
+                {
+                    <button class="btn btn-primary me-2" @onclick="ApproveApplication">
+                        Approve
+                    </button>
+
+                    <button class="btn btn-danger" @onclick="RejectApplication">
+                        Reject
+                    </button>
+                }
+
+            </div>
+
+        </div>
+    </div>
+}
+
+@code {
+
+    [Parameter]
+    public int Id { get; set; }
+
+    private Application? application;
+
+    protected override async Task OnInitializedAsync()
+    {
+        application = await Db.Applications
+            .Include(a => a.Documents)
+            .FirstOrDefaultAsync(a => a.Id == Id);
+    }
+
+    private async Task SaveReview()
+{
+    if (application != null)
+    {
+        Db.Update(application);
+        await Db.SaveChangesAsync();
+
+        Navigation.NavigateTo("/official-dashboard");
+    }
+}
+
+    private async Task ApproveApplication()
+    {
+        application!.Status = "Licence Issued";
+        await Db.SaveChangesAsync();
+    }
+
+    private async Task RejectApplication()
+    {
+        application!.Status = "Rejected";
+        await Db.SaveChangesAsync();
+    }
+
+}

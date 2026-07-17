@@ -1,13 +1,19 @@
 @page "/new-application"
 @rendermode InteractiveServer
+@attribute [Authorize(Roles = "BusinessOwner")]
 
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authorization
 @using BusinessLicensing_Practice.Data
 @using BusinessLicensing_Practice.Models
 
 @inject ApplicationDbContext db
 @inject NavigationManager Nav
 @inject IWebHostEnvironment Environment
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <h3 class="fw-bold mb-4">New Business Licence Application</h3>
 
@@ -36,12 +42,8 @@
                                 <span class="licence-type-icon" aria-hidden="true">
                                     <i class="bi @option.IconClass"></i>
                                 </span>
-                                <input class="form-check-input licence-type-radio"
-                                       type="radio"
-                                       name="licenceType"
-                                       value="@option.Name"
-                                       checked="@isSelected"
-                                       @onchange="@(() => LicenceType = option.Name)"
+                                <input class="form-check-input licence-type-radio" type="radio" name="licenceType"
+                                       value="@option.Name" checked="@isSelected" @onchange="@(() => LicenceType = option.Name)"
                                        aria-describedby="@($"{option.Id}-description")" />
                             </div>
 
@@ -76,7 +78,8 @@
                 Download @LicenceType Application Form
             </a>
             <p class="mb-0 mt-2">
-                Download and complete this form. You can continue with the online application and upload the completed form later.
+                Download and complete this form. You can continue with the online application and upload the completed form
+                later.
             </p>
         </div>
     }
@@ -130,7 +133,8 @@
                 </div>
 
                 <p class="text-muted small mb-4">
-                    The municipality responsible for processing your application will be determined from your business address.
+                    The municipality responsible for processing your application will be determined from your business
+                    address.
                 </p>
 
                 <div class="row g-3">
@@ -140,184 +144,366 @@
                     </div>
 
                     <div class="col-12">
-                        <label class="form-label fw-semibold" for="addressLine2">Address Line 2 <span class="text-muted fw-normal">(optional)</span></label>
-                        <input id="addressLine2" class="form-control" @bind="AddressLine2" />
-                    </div>
+                        <label class="form-label fw-semibold" for="addressLine2">Address Line 2 <span
+                            class="text-muted fw-normal">(optional)</span></label>
+                            <input id="addressLine2" class="form-control" @bind="AddressLine2" />
+                        </div>
 
-                    <div class="col-12 col-md-6">
-                        <label class="form-label fw-semibold" for="suburb">Suburb</label>
-                        <input id="suburb" class="form-control" @bind="Suburb" />
-                    </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold" for="suburb">Suburb</label>
+                            <input id="suburb" class="form-control" @bind="Suburb" />
+                        </div>
 
-                    <div class="col-12 col-md-6">
-                        <label class="form-label fw-semibold" for="city">City</label>
-                        <input id="city" class="form-control" @bind="City" />
-                    </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold" for="city">City</label>
+                            <input id="city" class="form-control" @bind="City" />
+                        </div>
 
-                    <div class="col-12 col-md-4">
-                        <label class="form-label fw-semibold" for="postalCode">Postal Code</label>
-                        <input id="postalCode" class="form-control" @bind="PostalCode" />
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-}
-
-@if (CurrentStep == 3)
-{
-    <section class="licence-info-step" aria-labelledby="licence-info-heading">
-        <div class="licence-info-header">
-            <h4 id="licence-info-heading" class="fw-bold mb-2">Licence-Specific Information</h4>
-            <p class="text-muted mb-0">
-                Review the information requirements for your selected business licence.
-            </p>
-        </div>
-
-        <div class="card licence-info-card licence-summary-card mb-4">
-            <div class="card-body">
-                <div class="d-flex flex-column flex-md-row align-items-start gap-3">
-                    <span class="licence-info-card-icon" aria-hidden="true">
-                        <i class="bi bi-patch-check"></i>
-                    </span>
-
-                    <div>
-                        <p class="licence-info-eyebrow mb-1">Selected Licence</p>
-                        <h5 class="mb-2">@LicenceType</h5>
-                        <p class="text-muted mb-0">
-                            The requirements for this licence type are shown below.
-                        </p>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fw-semibold" for="postalCode">Postal Code</label>
+                            <input id="postalCode" class="form-control" @bind="PostalCode" />
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
+    }
 
-        <div class="card licence-info-card mb-4">
-            <div class="card-body">
-                <div class="licence-info-card-heading mb-2">
-                    <span class="licence-info-card-icon" aria-hidden="true">
-                        <i class="bi bi-card-checklist"></i>
-                    </span>
-                    <h5 class="mb-0">Additional Business Information</h5>
-                </div>
-
-                <p class="text-muted mb-4">
-                    Any additional online information required for this licence type will appear here.
+    @if (CurrentStep == 3)
+    {
+        <section class="licence-info-step" aria-labelledby="licence-info-heading">
+            <div class="licence-info-header">
+                <h4 id="licence-info-heading" class="fw-bold mb-2">Licence-Specific Information</h4>
+                <p class="text-muted mb-0">
+                    Review the information requirements for your selected business licence.
                 </p>
+            </div>
 
-                <div class="licence-info-empty-state d-flex align-items-start gap-3">
-                    <i class="bi bi-check-circle mt-1" aria-hidden="true"></i>
-                    <p class="mb-0">
-                        No additional online information is required for this licence type at this stage.
-                    </p>
+            <div class="card licence-info-card licence-summary-card mb-4">
+                <div class="card-body">
+                    <div class="d-flex flex-column flex-md-row align-items-start gap-3">
+                        <span class="licence-info-card-icon" aria-hidden="true">
+                            <i class="bi bi-patch-check"></i>
+                        </span>
+
+                        <div>
+                            <p class="licence-info-eyebrow mb-1">Selected Licence</p>
+                            <h5 class="mb-2">@LicenceType</h5>
+                            <p class="text-muted mb-0">
+                                The requirements for this licence type are shown below.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="licence-info-notice d-flex align-items-start gap-3">
-            <i class="bi bi-info-circle-fill mt-1" aria-hidden="true"></i>
-            <p class="mb-0">
-                You will upload your completed application form in Step 4 and your supporting documents in Step 5.
-            </p>
-        </div>
-    </section>
-}
+            <div class="card licence-info-card mb-4">
+                <div class="card-body">
+                    <div class="licence-info-card-heading mb-2">
+                        <span class="licence-info-card-icon" aria-hidden="true">
+                            <i class="bi bi-card-checklist"></i>
+                        </span>
+                        <h5 class="mb-0">Additional Business Information</h5>
+                    </div>
 
-@if (CurrentStep == 4)
-{
-    <section class="application-form-step" aria-labelledby="application-form-heading">
-        <div class="application-form-header">
-            <h4 id="application-form-heading" class="fw-bold mb-2">Upload Completed Application Form</h4>
-            <p class="text-muted mb-0">
-                Download the official form for your selected licence, complete it offline and upload the completed document below.
-            </p>
-        </div>
+                    <p class="text-muted mb-4">
+                        Any additional online information required for this licence type will appear here.
+                    </p>
 
-        <div class="card application-form-card application-form-summary-card mb-4">
-            <div class="card-body">
-                <div class="d-flex flex-column flex-md-row align-items-start gap-3">
-                    <span class="application-form-card-icon" aria-hidden="true">
-                        <i class="bi bi-file-earmark-text"></i>
-                    </span>
-
-                    <div>
-                        <p class="application-form-eyebrow mb-1">Selected Licence</p>
-                        <h5 class="mb-2">@LicenceType</h5>
-                        <p class="text-muted mb-0">
-                            Use the official application form provided for this licence type.
+                    <div class="licence-info-empty-state d-flex align-items-start gap-3">
+                        <i class="bi bi-check-circle mt-1" aria-hidden="true"></i>
+                        <p class="mb-0">
+                            No additional online information is required for this licence type at this stage.
                         </p>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="card application-form-card mb-4">
-            <div class="card-body">
-                <div class="application-form-card-heading">
-                    <span class="application-form-card-icon" aria-hidden="true">
-                        <i class="bi bi-list-check"></i>
-                    </span>
-                    <h5 class="mb-0">Application Form Process</h5>
-                </div>
+            <div class="licence-info-notice d-flex align-items-start gap-3">
+                <i class="bi bi-info-circle-fill mt-1" aria-hidden="true"></i>
+                <p class="mb-0">
+                    You will upload your completed application form in Step 4 and your supporting documents in Step 5.
+                </p>
+            </div>
+        </section>
+    }
 
-                <div class="row g-4">
-                    <div class="col-12 col-lg-4">
-                        <div class="application-form-stage h-100">
-                            <span class="application-form-stage-number" aria-hidden="true">1</span>
-                            <h6 class="fw-bold mb-2">Download the application form</h6>
-                            <p class="text-muted mb-3">
-                                Download the official form for your selected licence.
-                            </p>
-                            <a class="btn btn-primary" href="@GetApplicationFormDownloadPath()" target="_blank">
-                                <i class="bi bi-download me-2" aria-hidden="true"></i>
-                                Download @LicenceType Form
-                            </a>
-                        </div>
-                    </div>
+    @if (CurrentStep == 4)
+    {
+        <section class="application-form-step" aria-labelledby="application-form-heading">
+            <div class="application-form-header">
+                <h4 id="application-form-heading" class="fw-bold mb-2">Upload Completed Application Form</h4>
+                <p class="text-muted mb-0">
+                    Download the official form for your selected licence, complete it offline and upload the completed document
+                    below.
+                </p>
+            </div>
 
-                    <div class="col-12 col-lg-4">
-                        <div class="application-form-stage h-100">
-                            <span class="application-form-stage-number" aria-hidden="true">2</span>
-                            <h6 class="fw-bold mb-2">Complete the form</h6>
+            <div class="card application-form-card application-form-summary-card mb-4">
+                <div class="card-body">
+                    <div class="d-flex flex-column flex-md-row align-items-start gap-3">
+                        <span class="application-form-card-icon" aria-hidden="true">
+                            <i class="bi bi-file-earmark-text"></i>
+                        </span>
+
+                        <div>
+                            <p class="application-form-eyebrow mb-1">Selected Licence</p>
+                            <h5 class="mb-2">@LicenceType</h5>
                             <p class="text-muted mb-0">
-                                Complete all required sections and save the finished form on your device.
+                                Use the official application form provided for this licence type.
                             </p>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <div class="col-12 col-lg-4">
-                        <div class="application-form-stage h-100">
-                            <span class="application-form-stage-number" aria-hidden="true">3</span>
-                            <h6 class="fw-bold mb-2">Upload the completed form</h6>
-                            <p id="applicationFormHelp" class="text-muted mb-3">
-                                Upload the completed application form before continuing.
-                            </p>
+            <div class="card application-form-card mb-4">
+                <div class="card-body">
+                    <div class="application-form-card-heading">
+                        <span class="application-form-card-icon" aria-hidden="true">
+                            <i class="bi bi-list-check"></i>
+                        </span>
+                        <h5 class="mb-0">Application Form Process</h5>
+                    </div>
 
-                            <div class="application-form-upload-area">
-                                <div class="d-flex align-items-start gap-3 mb-3">
-                                    <span class="application-form-upload-icon" aria-hidden="true">
-                                        <i class="bi bi-cloud-arrow-up"></i>
-                                    </span>
-                                    <div>
-                                        <label class="form-label fw-semibold mb-1" for="applicationFormFile">
-                                            Completed Application Form
-                                        </label>
-                                        <p class="text-muted small mb-0">
-                                            Select the completed form from your device.
-                                        </p>
+                    <div class="row g-4">
+                        <div class="col-12 col-lg-4">
+                            <div class="application-form-stage h-100">
+                                <span class="application-form-stage-number" aria-hidden="true">1</span>
+                                <h6 class="fw-bold mb-2">Download the application form</h6>
+                                <p class="text-muted mb-3">
+                                    Download the official form for your selected licence.
+                                </p>
+                                <a class="btn btn-primary" href="@GetApplicationFormDownloadPath()" target="_blank">
+                                    <i class="bi bi-download me-2" aria-hidden="true"></i>
+                                    Download @LicenceType Form
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-4">
+                            <div class="application-form-stage h-100">
+                                <span class="application-form-stage-number" aria-hidden="true">2</span>
+                                <h6 class="fw-bold mb-2">Complete the form</h6>
+                                <p class="text-muted mb-0">
+                                    Complete all required sections and save the finished form on your device.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-4">
+                            <div class="application-form-stage h-100">
+                                <span class="application-form-stage-number" aria-hidden="true">3</span>
+                                <h6 class="fw-bold mb-2">Upload the completed form</h6>
+                                <p id="applicationFormHelp" class="text-muted mb-3">
+                                    Upload the completed application form before continuing.
+                                </p>
+
+                                <div class="application-form-upload-area">
+                                    <div class="d-flex align-items-start gap-3 mb-3">
+                                        <span class="application-form-upload-icon" aria-hidden="true">
+                                            <i class="bi bi-cloud-arrow-up"></i>
+                                        </span>
+                                        <div>
+                                            <label class="form-label fw-semibold mb-1" for="applicationFormFile">
+                                                Completed Application Form
+                                            </label>
+                                            <p class="text-muted small mb-0">
+                                                Select the completed form from your device.
+                                            </p>
+                                        </div>
                                     </div>
+
+                                    <InputFile id="applicationFormFile" class="form-control"
+                                               aria-describedby="applicationFormHelp" OnChange="HandleApplicationFormSelected" />
+
+                                    @if (!string.IsNullOrWhiteSpace(ApplicationFormFileName))
+                                    {
+                                        <div class="application-form-selected-file mt-3">
+                                            <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+                                            <span><strong>Selected application form:</strong> @ApplicationFormFileName</span>
+                                        </div>
+                                    }
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                                <InputFile id="applicationFormFile"
-                                           class="form-control"
-                                           aria-describedby="applicationFormHelp"
-                                           OnChange="HandleApplicationFormSelected" />
+            <div class="application-form-notice d-flex align-items-start gap-3">
+                <i class="bi bi-info-circle-fill mt-1" aria-hidden="true"></i>
+                <p class="mb-0">
+                    Make sure the uploaded form is complete and clearly readable. Supporting documents will be uploaded in Step
+                    5.
+                </p>
+            </div>
+        </section>
+    }
 
-                                @if (!string.IsNullOrWhiteSpace(ApplicationFormFileName))
+    @if (CurrentStep == 5)
+    {
+        <section class="supporting-documents-step" aria-labelledby="supporting-documents-heading">
+            <div class="supporting-documents-header">
+                <h4 id="supporting-documents-heading" class="fw-bold mb-2">Upload Supporting Documents</h4>
+                <p class="text-muted mb-0">
+                    Upload the documents needed to support your business licence application.
+                </p>
+            </div>
+
+            <div class="card supporting-documents-card supporting-documents-summary-card mb-4">
+                <div class="card-body">
+                    <div class="d-flex flex-column flex-md-row align-items-start gap-3">
+                        <span class="supporting-documents-card-icon" aria-hidden="true">
+                            <i class="bi bi-folder-check"></i>
+                        </span>
+
+                        <div>
+                            <p class="supporting-documents-eyebrow mb-1">Selected Licence</p>
+                            <h5 class="mb-2">@LicenceType</h5>
+                            <p class="text-muted mb-0">
+                                The supporting documents shown below apply to the current application process.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card supporting-documents-card mb-4">
+                <div class="card-body">
+                    <div class="supporting-documents-card-heading">
+                        <span class="supporting-documents-card-icon" aria-hidden="true">
+                            <i class="bi bi-files"></i>
+                        </span>
+                        <h5 class="mb-0">Required Supporting Documents</h5>
+                    </div>
+
+                    <p class="text-muted mb-4">
+                        Upload each document in a clear and readable format.
+                    </p>
+
+                    <div class="supporting-document-list">
+                        <div class="supporting-document-item">
+                            <div class="supporting-document-details">
+                                <span class="supporting-document-icon" aria-hidden="true">
+                                    <i class="bi bi-file-earmark-text"></i>
+                                </span>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Certificate of Incorporation</h6>
+                                    <p id="certificateOfIncorporationHelp" class="text-muted mb-0">
+                                        Proof that the business is legally registered.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="supporting-document-upload">
+                                <label class="form-label fw-semibold" for="certificateOfIncorporationFile">
+                                    Upload Certificate of Incorporation
+                                </label>
+                                <InputFile id="certificateOfIncorporationFile" class="form-control"
+                                           aria-describedby="certificateOfIncorporationHelp"
+                                           OnChange="@(e => HandleFileSelected(e, "Certificate of Incorporation"))" />
+
+                                @if (SelectedDocuments.FirstOrDefault(d => d.DocumentType == "Certificate of Incorporation") is
+                                    { } certificateDocument)
                                 {
-                                    <div class="application-form-selected-file mt-3">
+                                    <div class="supporting-document-selected-file mt-3">
                                         <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
-                                        <span><strong>Selected application form:</strong> @ApplicationFormFileName</span>
+                                        <span><strong>Selected file:</strong> @certificateDocument.FileName</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="supporting-document-item">
+                            <div class="supporting-document-details">
+                                <span class="supporting-document-icon" aria-hidden="true">
+                                    <i class="bi bi-house-door"></i>
+                                </span>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Proof of Address</h6>
+                                    <p id="proofOfAddressHelp" class="text-muted mb-0">
+                                        A recent document confirming the business address.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="supporting-document-upload">
+                                <label class="form-label fw-semibold" for="proofOfAddressFile">
+                                    Upload Proof of Address
+                                </label>
+                                <InputFile id="proofOfAddressFile" class="form-control" aria-describedby="proofOfAddressHelp"
+                                           OnChange="@(e => HandleFileSelected(e, "Proof of Address"))" />
+
+                                @if (SelectedDocuments.FirstOrDefault(d => d.DocumentType == "Proof of Address") is { }
+                            proofOfAddressDocument)
+                                {
+                                    <div class="supporting-document-selected-file mt-3">
+                                        <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+                                        <span><strong>Selected file:</strong> @proofOfAddressDocument.FileName</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="supporting-document-item">
+                            <div class="supporting-document-details">
+                                <span class="supporting-document-icon" aria-hidden="true">
+                                    <i class="bi bi-receipt"></i>
+                                </span>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Tax Clearance Certificate</h6>
+                                    <p id="taxClearanceCertificateHelp" class="text-muted mb-0">
+                                        Current proof of the business's tax compliance status.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="supporting-document-upload">
+                                <label class="form-label fw-semibold" for="taxClearanceCertificateFile">
+                                    Upload Tax Clearance Certificate
+                                </label>
+                                <InputFile id="taxClearanceCertificateFile" class="form-control"
+                                           aria-describedby="taxClearanceCertificateHelp"
+                                           OnChange="@(e => HandleFileSelected(e, "Tax Clearance Certificate"))" />
+
+                                @if (SelectedDocuments.FirstOrDefault(d => d.DocumentType == "Tax Clearance Certificate") is { }
+                            taxClearanceDocument)
+                                {
+                                    <div class="supporting-document-selected-file mt-3">
+                                        <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+                                        <span><strong>Selected file:</strong> @taxClearanceDocument.FileName</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="supporting-document-item">
+                            <div class="supporting-document-details">
+                                <span class="supporting-document-icon" aria-hidden="true">
+                                    <i class="bi bi-person-vcard"></i>
+                                </span>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Owner ID Document</h6>
+                                    <p id="ownerIdDocumentHelp" class="text-muted mb-0">
+                                        A clear copy of the business owner's identification document.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="supporting-document-upload">
+                                <label class="form-label fw-semibold" for="ownerIdDocumentFile">
+                                    Upload Owner ID Document
+                                </label>
+                                <InputFile id="ownerIdDocumentFile" class="form-control" aria-describedby="ownerIdDocumentHelp"
+                                           OnChange="@(e => HandleFileSelected(e, "Owner ID Document"))" />
+
+                                @if (SelectedDocuments.FirstOrDefault(d => d.DocumentType == "Owner ID Document") is { }
+                            ownerIdDocument)
+                                {
+                                    <div class="supporting-document-selected-file mt-3">
+                                        <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+                                        <span><strong>Selected file:</strong> @ownerIdDocument.FileName</span>
                                     </div>
                                 }
                             </div>
@@ -325,442 +511,265 @@
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="application-form-notice d-flex align-items-start gap-3">
-            <i class="bi bi-info-circle-fill mt-1" aria-hidden="true"></i>
-            <p class="mb-0">
-                Make sure the uploaded form is complete and clearly readable. Supporting documents will be uploaded in Step 5.
-            </p>
-        </div>
-    </section>
-}
-
-@if (CurrentStep == 5)
-{
-    <section class="supporting-documents-step" aria-labelledby="supporting-documents-heading">
-        <div class="supporting-documents-header">
-            <h4 id="supporting-documents-heading" class="fw-bold mb-2">Upload Supporting Documents</h4>
-            <p class="text-muted mb-0">
-                Upload the documents needed to support your business licence application.
-            </p>
-        </div>
-
-        <div class="card supporting-documents-card supporting-documents-summary-card mb-4">
-            <div class="card-body">
-                <div class="d-flex flex-column flex-md-row align-items-start gap-3">
-                    <span class="supporting-documents-card-icon" aria-hidden="true">
-                        <i class="bi bi-folder-check"></i>
-                    </span>
-
-                    <div>
-                        <p class="supporting-documents-eyebrow mb-1">Selected Licence</p>
-                        <h5 class="mb-2">@LicenceType</h5>
-                        <p class="text-muted mb-0">
-                            The supporting documents shown below apply to the current application process.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card supporting-documents-card mb-4">
-            <div class="card-body">
-                <div class="supporting-documents-card-heading">
-                    <span class="supporting-documents-card-icon" aria-hidden="true">
-                        <i class="bi bi-files"></i>
-                    </span>
-                    <h5 class="mb-0">Required Supporting Documents</h5>
-                </div>
-
-                <p class="text-muted mb-4">
-                    Upload each document in a clear and readable format.
+            <div class="supporting-documents-notice d-flex align-items-start gap-3">
+                <i class="bi bi-info-circle-fill mt-1" aria-hidden="true"></i>
+                <p class="mb-0">
+                    Document requirements may differ by licence type. Additional licence-specific requirements can be introduced
+                    once they are confirmed.
                 </p>
-
-                <div class="supporting-document-list">
-                    <div class="supporting-document-item">
-                        <div class="supporting-document-details">
-                            <span class="supporting-document-icon" aria-hidden="true">
-                                <i class="bi bi-file-earmark-text"></i>
-                            </span>
-                            <div>
-                                <h6 class="fw-bold mb-1">Certificate of Incorporation</h6>
-                                <p id="certificateOfIncorporationHelp" class="text-muted mb-0">
-                                    Proof that the business is legally registered.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="supporting-document-upload">
-                            <label class="form-label fw-semibold" for="certificateOfIncorporationFile">
-                                Upload Certificate of Incorporation
-                            </label>
-                            <InputFile id="certificateOfIncorporationFile"
-                                       class="form-control"
-                                       aria-describedby="certificateOfIncorporationHelp"
-                                       OnChange="@(e => HandleFileSelected(e, "Certificate of Incorporation"))" />
-
-                            @if (SelectedDocuments.FirstOrDefault(d => d.DocumentType == "Certificate of Incorporation") is { } certificateDocument)
-                            {
-                                <div class="supporting-document-selected-file mt-3">
-                                    <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
-                                    <span><strong>Selected file:</strong> @certificateDocument.FileName</span>
-                                </div>
-                            }
-                        </div>
-                    </div>
-
-                    <div class="supporting-document-item">
-                        <div class="supporting-document-details">
-                            <span class="supporting-document-icon" aria-hidden="true">
-                                <i class="bi bi-house-door"></i>
-                            </span>
-                            <div>
-                                <h6 class="fw-bold mb-1">Proof of Address</h6>
-                                <p id="proofOfAddressHelp" class="text-muted mb-0">
-                                    A recent document confirming the business address.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="supporting-document-upload">
-                            <label class="form-label fw-semibold" for="proofOfAddressFile">
-                                Upload Proof of Address
-                            </label>
-                            <InputFile id="proofOfAddressFile"
-                                       class="form-control"
-                                       aria-describedby="proofOfAddressHelp"
-                                       OnChange="@(e => HandleFileSelected(e, "Proof of Address"))" />
-
-                            @if (SelectedDocuments.FirstOrDefault(d => d.DocumentType == "Proof of Address") is { } proofOfAddressDocument)
-                            {
-                                <div class="supporting-document-selected-file mt-3">
-                                    <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
-                                    <span><strong>Selected file:</strong> @proofOfAddressDocument.FileName</span>
-                                </div>
-                            }
-                        </div>
-                    </div>
-
-                    <div class="supporting-document-item">
-                        <div class="supporting-document-details">
-                            <span class="supporting-document-icon" aria-hidden="true">
-                                <i class="bi bi-receipt"></i>
-                            </span>
-                            <div>
-                                <h6 class="fw-bold mb-1">Tax Clearance Certificate</h6>
-                                <p id="taxClearanceCertificateHelp" class="text-muted mb-0">
-                                    Current proof of the business's tax compliance status.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="supporting-document-upload">
-                            <label class="form-label fw-semibold" for="taxClearanceCertificateFile">
-                                Upload Tax Clearance Certificate
-                            </label>
-                            <InputFile id="taxClearanceCertificateFile"
-                                       class="form-control"
-                                       aria-describedby="taxClearanceCertificateHelp"
-                                       OnChange="@(e => HandleFileSelected(e, "Tax Clearance Certificate"))" />
-
-                            @if (SelectedDocuments.FirstOrDefault(d => d.DocumentType == "Tax Clearance Certificate") is { } taxClearanceDocument)
-                            {
-                                <div class="supporting-document-selected-file mt-3">
-                                    <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
-                                    <span><strong>Selected file:</strong> @taxClearanceDocument.FileName</span>
-                                </div>
-                            }
-                        </div>
-                    </div>
-
-                    <div class="supporting-document-item">
-                        <div class="supporting-document-details">
-                            <span class="supporting-document-icon" aria-hidden="true">
-                                <i class="bi bi-person-vcard"></i>
-                            </span>
-                            <div>
-                                <h6 class="fw-bold mb-1">Owner ID Document</h6>
-                                <p id="ownerIdDocumentHelp" class="text-muted mb-0">
-                                    A clear copy of the business owner's identification document.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="supporting-document-upload">
-                            <label class="form-label fw-semibold" for="ownerIdDocumentFile">
-                                Upload Owner ID Document
-                            </label>
-                            <InputFile id="ownerIdDocumentFile"
-                                       class="form-control"
-                                       aria-describedby="ownerIdDocumentHelp"
-                                       OnChange="@(e => HandleFileSelected(e, "Owner ID Document"))" />
-
-                            @if (SelectedDocuments.FirstOrDefault(d => d.DocumentType == "Owner ID Document") is { } ownerIdDocument)
-                            {
-                                <div class="supporting-document-selected-file mt-3">
-                                    <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
-                                    <span><strong>Selected file:</strong> @ownerIdDocument.FileName</span>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                </div>
             </div>
-        </div>
+        </section>
+    }
 
-        <div class="supporting-documents-notice d-flex align-items-start gap-3">
-            <i class="bi bi-info-circle-fill mt-1" aria-hidden="true"></i>
-            <p class="mb-0">
-                Document requirements may differ by licence type. Additional licence-specific requirements can be introduced once they are confirmed.
-            </p>
-        </div>
-    </section>
-}
-
-@if (CurrentStep == 6)
-{
-    <section class="review-submit-step" aria-labelledby="review-submit-heading">
-        <div class="review-submit-header">
-            <h4 id="review-submit-heading" class="fw-bold mb-2">Review & Submit</h4>
-            <p class="text-muted mb-0">
-                Review your application carefully before submitting it for processing.
-            </p>
-        </div>
-
-        <div class="card review-submit-card review-submit-summary-card mb-4">
-            <div class="card-body">
-                <div class="d-flex flex-column flex-md-row align-items-start gap-3">
-                    <span class="review-submit-card-icon" aria-hidden="true">
-                        <i class="bi bi-clipboard-check"></i>
-                    </span>
-
-                    <div>
-                        <p class="review-submit-eyebrow mb-1">Application Summary</p>
-                        <h5 class="mb-2">@LicenceType</h5>
-                        <p class="text-muted mb-0">
-                            Confirm the information below before submitting your application.
-                        </p>
-                    </div>
-                </div>
+    @if (CurrentStep == 6)
+    {
+        <section class="review-submit-step" aria-labelledby="review-submit-heading">
+            <div class="review-submit-header">
+                <h4 id="review-submit-heading" class="fw-bold mb-2">Review & Submit</h4>
+                <p class="text-muted mb-0">
+                    Review your application carefully before submitting it for processing.
+                </p>
             </div>
-        </div>
 
-        <div class="row g-4">
-            <div class="col-12 col-lg-6">
-                <div class="card review-submit-card h-100">
-                    <div class="card-body">
-                        <div class="review-submit-card-heading">
-                            <span class="review-submit-card-icon" aria-hidden="true">
-                                <i class="bi bi-patch-check"></i>
-                            </span>
-                            <h5 class="mb-0">Licence Details</h5>
-                        </div>
+            <div class="card review-submit-card review-submit-summary-card mb-4">
+                <div class="card-body">
+                    <div class="d-flex flex-column flex-md-row align-items-start gap-3">
+                        <span class="review-submit-card-icon" aria-hidden="true">
+                            <i class="bi bi-clipboard-check"></i>
+                        </span>
 
-                        <div class="review-item">
-                            <span class="review-label">Licence Type</span>
-                            <span class="review-value">@LicenceType</span>
+                        <div>
+                            <p class="review-submit-eyebrow mb-1">Application Summary</p>
+                            <h5 class="mb-2">@LicenceType</h5>
+                            <p class="text-muted mb-0">
+                                Confirm the information below before submitting your application.
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="col-12 col-lg-6">
-                <div class="card review-submit-card h-100">
-                    <div class="card-body">
-                        <div class="review-submit-card-heading">
-                            <span class="review-submit-card-icon" aria-hidden="true">
-                                <i class="bi bi-building"></i>
-                            </span>
-                            <h5 class="mb-0">Business Details</h5>
-                        </div>
+            <div class="row g-4">
+                <div class="col-12 col-lg-6">
+                    <div class="card review-submit-card h-100">
+                        <div class="card-body">
+                            <div class="review-submit-card-heading">
+                                <span class="review-submit-card-icon" aria-hidden="true">
+                                    <i class="bi bi-patch-check"></i>
+                                </span>
+                                <h5 class="mb-0">Licence Details</h5>
+                            </div>
 
-                        <div class="review-item">
-                            <span class="review-label">Business Name</span>
-                            <span class="review-value">@BusinessName</span>
-                        </div>
-                        <div class="review-item">
-                            <span class="review-label">Registration Number</span>
-                            <span class="review-value">@RegistrationNumber</span>
-                        </div>
-                        <div class="review-item">
-                            <span class="review-label">Tax Number</span>
-                            <span class="review-value">@TaxNumber</span>
+                            <div class="review-item">
+                                <span class="review-label">Licence Type</span>
+                                <span class="review-value">@LicenceType</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="col-12">
-                <div class="card review-submit-card">
-                    <div class="card-body">
-                        <div class="review-submit-card-heading">
-                            <span class="review-submit-card-icon" aria-hidden="true">
-                                <i class="bi bi-geo-alt"></i>
-                            </span>
-                            <h5 class="mb-0">Business Address</h5>
-                        </div>
-
-                        <div class="row g-3">
-                            <div class="col-12 col-md-6">
-                                <div class="review-item">
-                                    <span class="review-label">Address Line 1</span>
-                                    <span class="review-value">@AddressLine1</span>
-                                </div>
+                <div class="col-12 col-lg-6">
+                    <div class="card review-submit-card h-100">
+                        <div class="card-body">
+                            <div class="review-submit-card-heading">
+                                <span class="review-submit-card-icon" aria-hidden="true">
+                                    <i class="bi bi-building"></i>
+                                </span>
+                                <h5 class="mb-0">Business Details</h5>
                             </div>
 
-                            @if (!string.IsNullOrWhiteSpace(AddressLine2))
-                            {
+                            <div class="review-item">
+                                <span class="review-label">Business Name</span>
+                                <span class="review-value">@BusinessName</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">Registration Number</span>
+                                <span class="review-value">@RegistrationNumber</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">Tax Number</span>
+                                <span class="review-value">@TaxNumber</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="card review-submit-card">
+                        <div class="card-body">
+                            <div class="review-submit-card-heading">
+                                <span class="review-submit-card-icon" aria-hidden="true">
+                                    <i class="bi bi-geo-alt"></i>
+                                </span>
+                                <h5 class="mb-0">Business Address</h5>
+                            </div>
+
+                            <div class="row g-3">
                                 <div class="col-12 col-md-6">
                                     <div class="review-item">
-                                        <span class="review-label">Address Line 2</span>
-                                        <span class="review-value">@AddressLine2</span>
+                                        <span class="review-label">Address Line 1</span>
+                                        <span class="review-value">@AddressLine1</span>
                                     </div>
                                 </div>
-                            }
 
-                            <div class="col-12 col-md-4">
-                                <div class="review-item">
-                                    <span class="review-label">Suburb</span>
-                                    <span class="review-value">@Suburb</span>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <div class="review-item">
-                                    <span class="review-label">City</span>
-                                    <span class="review-value">@City</span>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <div class="review-item">
-                                    <span class="review-label">Postal Code</span>
-                                    <span class="review-value">@PostalCode</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12 col-lg-6">
-                <div class="card review-submit-card h-100">
-                    <div class="card-body">
-                        <div class="review-submit-card-heading">
-                            <span class="review-submit-card-icon" aria-hidden="true">
-                                <i class="bi bi-file-earmark-text"></i>
-                            </span>
-                            <h5 class="mb-0">Completed Application Form</h5>
-                        </div>
-
-                        <div class="review-file-item">
-                            <span class="review-label">Selected File</span>
-                            <span class="review-value">
-                                @if (!string.IsNullOrWhiteSpace(ApplicationFormFileName))
+                                @if (!string.IsNullOrWhiteSpace(AddressLine2))
                                 {
-                                    @ApplicationFormFileName
+                                    <div class="col-12 col-md-6">
+                                        <div class="review-item">
+                                            <span class="review-label">Address Line 2</span>
+                                            <span class="review-value">@AddressLine2</span>
+                                        </div>
+                                    </div>
                                 }
-                                else
-                                {
-                                    <span class="text-muted">No completed application form selected.</span>
-                                }
-                            </span>
+
+                                <div class="col-12 col-md-4">
+                                    <div class="review-item">
+                                        <span class="review-label">Suburb</span>
+                                        <span class="review-value">@Suburb</span>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <div class="review-item">
+                                        <span class="review-label">City</span>
+                                        <span class="review-value">@City</span>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <div class="review-item">
+                                        <span class="review-label">Postal Code</span>
+                                        <span class="review-value">@PostalCode</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-6">
+                    <div class="card review-submit-card h-100">
+                        <div class="card-body">
+                            <div class="review-submit-card-heading">
+                                <span class="review-submit-card-icon" aria-hidden="true">
+                                    <i class="bi bi-file-earmark-text"></i>
+                                </span>
+                                <h5 class="mb-0">Completed Application Form</h5>
+                            </div>
+
+                            <div class="review-file-item">
+                                <span class="review-label">Selected File</span>
+                                <span class="review-value">
+                                    @if (!string.IsNullOrWhiteSpace(ApplicationFormFileName))
+                                    {
+                                        @ApplicationFormFileName
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">No completed application form selected.</span>
+                                    }
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-6">
+                    <div class="card review-submit-card h-100">
+                        <div class="card-body">
+                            <div class="review-submit-card-heading">
+                                <span class="review-submit-card-icon" aria-hidden="true">
+                                    <i class="bi bi-folder-check"></i>
+                                </span>
+                                <h5 class="mb-0">Supporting Documents</h5>
+                            </div>
+
+                            <div class="review-document-list">
+                                <div class="review-file-item">
+                                    <span class="review-label">Certificate of Incorporation</span>
+                                    <span class="review-value">
+                                        @(SelectedDocuments.FirstOrDefault(d => d.DocumentType == "Certificate of Incorporation")?.FileName ?? "No file selected.")
+                                    </span>
+                                </div>
+                                <div class="review-file-item">
+                                    <span class="review-label">Proof of Address</span>
+                                    <span class="review-value">
+                                        @(SelectedDocuments.FirstOrDefault(d => d.DocumentType == "Proof of Address")?.FileName
+                                    ?? "No file selected.")
+                                    </span>
+                                </div>
+                                <div class="review-file-item">
+                                    <span class="review-label">Tax Clearance Certificate</span>
+                                    <span class="review-value">
+                                        @(SelectedDocuments.FirstOrDefault(d => d.DocumentType == "Tax Clearance Certificate")?.FileName ?? "No file selected.")
+                                    </span>
+                                </div>
+                                <div class="review-file-item">
+                                    <span class="review-label">Owner ID Document</span>
+                                    <span class="review-value">
+                                        @(SelectedDocuments.FirstOrDefault(d => d.DocumentType == "Owner ID Document")?.FileName
+                                    ?? "No file selected.")
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="col-12 col-lg-6">
-                <div class="card review-submit-card h-100">
-                    <div class="card-body">
-                        <div class="review-submit-card-heading">
-                            <span class="review-submit-card-icon" aria-hidden="true">
-                                <i class="bi bi-folder-check"></i>
-                            </span>
-                            <h5 class="mb-0">Supporting Documents</h5>
-                        </div>
+            <div class="card review-submit-card review-consent-card mt-4">
+                <div class="card-body">
+                    <div class="review-submit-card-heading">
+                        <span class="review-submit-card-icon" aria-hidden="true">
+                            <i class="bi bi-shield-check"></i>
+                        </span>
+                        <h5 class="mb-0">Consent and Declaration</h5>
+                    </div>
 
-                        <div class="review-document-list">
-                            <div class="review-file-item">
-                                <span class="review-label">Certificate of Incorporation</span>
-                                <span class="review-value">
-                                    @(SelectedDocuments.FirstOrDefault(d => d.DocumentType == "Certificate of Incorporation")?.FileName ?? "No file selected.")
-                                </span>
-                            </div>
-                            <div class="review-file-item">
-                                <span class="review-label">Proof of Address</span>
-                                <span class="review-value">
-                                    @(SelectedDocuments.FirstOrDefault(d => d.DocumentType == "Proof of Address")?.FileName ?? "No file selected.")
-                                </span>
-                            </div>
-                            <div class="review-file-item">
-                                <span class="review-label">Tax Clearance Certificate</span>
-                                <span class="review-value">
-                                    @(SelectedDocuments.FirstOrDefault(d => d.DocumentType == "Tax Clearance Certificate")?.FileName ?? "No file selected.")
-                                </span>
-                            </div>
-                            <div class="review-file-item">
-                                <span class="review-label">Owner ID Document</span>
-                                <span class="review-value">
-                                    @(SelectedDocuments.FirstOrDefault(d => d.DocumentType == "Owner ID Document")?.FileName ?? "No file selected.")
-                                </span>
-                            </div>
-                        </div>
+                    <p class="text-muted mb-3">
+                        By submitting this application, you confirm that the information provided is accurate and consent to the
+                        collection and storage of the information required to process the application.
+                    </p>
+
+                    <div class="form-check review-consent-check">
+                        <input class="form-check-input" type="checkbox" id="popiaConsent" @bind="PopiaConsentAccepted" />
+                        <label class="form-check-label" for="popiaConsent">
+                            I consent to the collection and storage of my information for the purpose of processing this
+                            business licence application.
+                        </label>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="card review-submit-card review-consent-card mt-4">
-            <div class="card-body">
-                <div class="review-submit-card-heading">
-                    <span class="review-submit-card-icon" aria-hidden="true">
-                        <i class="bi bi-shield-check"></i>
-                    </span>
-                    <h5 class="mb-0">Consent and Declaration</h5>
-                </div>
-
-                <p class="text-muted mb-3">
-                    By submitting this application, you confirm that the information provided is accurate and consent to the collection and storage of the information required to process the application.
+            <div class="review-submit-notice d-flex align-items-start gap-3 mt-4">
+                <i class="bi bi-info-circle-fill mt-1" aria-hidden="true"></i>
+                <p class="mb-0">
+                    Once submitted, your application will be sent for review. You will be able to track its progress from your
+                    dashboard.
                 </p>
-
-                <div class="form-check review-consent-check">
-                    <input class="form-check-input" type="checkbox" id="popiaConsent" @bind="PopiaConsentAccepted" />
-                    <label class="form-check-label" for="popiaConsent">
-                        I consent to the collection and storage of my information for the purpose of processing this business licence application.
-                    </label>
-                </div>
             </div>
-        </div>
-
-        <div class="review-submit-notice d-flex align-items-start gap-3 mt-4">
-            <i class="bi bi-info-circle-fill mt-1" aria-hidden="true"></i>
-            <p class="mb-0">
-                Once submitted, your application will be sent for review. You will be able to track its progress from your dashboard.
-            </p>
-        </div>
-    </section>
-}
-
-@if (!string.IsNullOrEmpty(Message))
-{
-    <div class="alert alert-info mt-3">@Message</div>
-}
-
-<div class="mt-5 d-flex flex-wrap gap-2">
-    @if (CurrentStep > 1)
-    {
-        <button class="btn btn-outline-secondary" @onclick="PreviousStep">Back</button>
+        </section>
     }
 
-    @if (CurrentStep < 6)
+    @if (!string.IsNullOrEmpty(Message))
     {
-        <button class="btn btn-primary" @onclick="NextStep">Next</button>
+        <div class="alert alert-info mt-3">@Message</div>
     }
-    else
-    {
-        <button class="btn btn-success" @onclick="SubmitApplication">Submit Application</button>
-    }
-</div>
+
+    <div class="mt-5 d-flex flex-wrap gap-2">
+        @if (CurrentStep > 1)
+        {
+            <button class="btn btn-outline-secondary" @onclick="PreviousStep">Back</button>
+        }
+
+        @if (CurrentStep < 6)
+        {
+            <button class="btn btn-primary" @onclick="NextStep">Next</button>
+        }
+        else
+        {
+            <button class="btn btn-success" @onclick="SubmitApplication">Submit Application</button>
+        }
+    </div>
 
 @code {
     private int CurrentStep = 1;
@@ -791,7 +800,8 @@
         new("sale-of-meals", "Sale of Meals Licence", "Prepare and sell meals for immediate consumption.", "bi-shop"),
         new("sale-of-perishable-foodstuffs", "Sale of Perishable Foodstuffs Licence", "Sell food requiring refrigeration or controlled storage.", "bi-basket"),
         new("health-facility", "Health Facility Licence", "Operate facilities such as saunas, massage establishments or Turkish baths.", "bi-heart-pulse"),
-        new("entertainment-venue", "Entertainment Venue Licence", "Operate venues such as cinemas, theatres or nightclubs.", "bi-music-note-beamed"),
+        new("entertainment-venue", "Entertainment Venue Licence", "Operate venues such as cinemas, theatres or nightclubs.",
+"bi-music-note-beamed"),
         new("gaming-amusement", "Gaming / Amusement Licence", "Operate gaming or amusement activities such as billiards or slot machines.", "bi-controller"),
         new("adult-premises-escort-services", "Adult Premises / Escort Services Licence", "Operate regulated adult entertainment or escort service businesses.", "bi-shield-lock"),
         new("hawker-street-trading", "Hawker / Street Trading Licence", "Operate a street trading or mobile food vending business.", "bi-shop-window")
@@ -921,9 +931,15 @@
             DateSubmitted = DateTime.Now
         };
 
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(authState.User);
+
+        application.UserId = user!.Id;
+
         db.Applications.Add(application);
 
         await db.SaveChangesAsync();
+        
 
         try
         {

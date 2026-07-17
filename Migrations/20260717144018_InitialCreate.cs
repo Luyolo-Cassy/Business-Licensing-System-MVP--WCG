@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace BusinessLicensing_Practice.Migrations
 {
     /// <inheritdoc />
-    public partial class AddIdentity : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -31,6 +31,7 @@ namespace BusinessLicensing_Practice.Migrations
                 {
                     Id = table.Column<string>(type: "TEXT", nullable: false),
                     FullName = table.Column<string>(type: "TEXT", nullable: false),
+                    Municipality = table.Column<string>(type: "TEXT", nullable: true),
                     UserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
@@ -68,6 +69,47 @@ namespace BusinessLicensing_Practice.Migrations
                         name: "FK_AspNetRoleClaims_AspNetRoles_RoleId",
                         column: x => x.RoleId,
                         principalTable: "AspNetRoles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Applications",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    ApplicationNumber = table.Column<string>(type: "TEXT", nullable: false),
+                    BusinessName = table.Column<string>(type: "TEXT", nullable: false),
+                    LicenceType = table.Column<string>(type: "TEXT", nullable: false),
+                    Status = table.Column<string>(type: "TEXT", nullable: false),
+                    UploadedDocumentName = table.Column<string>(type: "TEXT", nullable: false),
+                    UploadedDocumentPath = table.Column<string>(type: "TEXT", nullable: false),
+                    RegistrationNumber = table.Column<string>(type: "TEXT", nullable: false),
+                    TaxNumber = table.Column<string>(type: "TEXT", nullable: false),
+                    BusinessAddress = table.Column<string>(type: "TEXT", nullable: false),
+                    AddressLine1 = table.Column<string>(type: "TEXT", nullable: false),
+                    AddressLine2 = table.Column<string>(type: "TEXT", nullable: false),
+                    Suburb = table.Column<string>(type: "TEXT", nullable: false),
+                    City = table.Column<string>(type: "TEXT", nullable: false),
+                    PostalCode = table.Column<string>(type: "TEXT", nullable: false),
+                    TradingName = table.Column<string>(type: "TEXT", nullable: false),
+                    BusinessCategory = table.Column<string>(type: "TEXT", nullable: false),
+                    FoodHandlingType = table.Column<string>(type: "TEXT", nullable: false),
+                    EntertainmentActivityType = table.Column<string>(type: "TEXT", nullable: false),
+                    ApplicationFormFileName = table.Column<string>(type: "TEXT", nullable: false),
+                    ApplicationFormFilePath = table.Column<string>(type: "TEXT", nullable: false),
+                    PopiaConsentAccepted = table.Column<bool>(type: "INTEGER", nullable: false),
+                    DateSubmitted = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UserId = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Applications", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Applications_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -157,6 +199,38 @@ namespace BusinessLicensing_Practice.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "ApplicationDocuments",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    ApplicationId = table.Column<int>(type: "INTEGER", nullable: false),
+                    DocumentType = table.Column<string>(type: "TEXT", nullable: false),
+                    FileName = table.Column<string>(type: "TEXT", nullable: false),
+                    FilePath = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ApplicationDocuments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ApplicationDocuments_Applications_ApplicationId",
+                        column: x => x.ApplicationId,
+                        principalTable: "Applications",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ApplicationDocuments_ApplicationId",
+                table: "ApplicationDocuments",
+                column: "ApplicationId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Applications_UserId",
+                table: "Applications",
+                column: "UserId");
+
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
                 table: "AspNetRoleClaims",
@@ -199,6 +273,9 @@ namespace BusinessLicensing_Practice.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "ApplicationDocuments");
+
+            migrationBuilder.DropTable(
                 name: "AspNetRoleClaims");
 
             migrationBuilder.DropTable(
@@ -212,6 +289,9 @@ namespace BusinessLicensing_Practice.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetUserTokens");
+
+            migrationBuilder.DropTable(
+                name: "Applications");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");

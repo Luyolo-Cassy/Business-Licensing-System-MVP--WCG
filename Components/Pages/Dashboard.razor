@@ -1,6 +1,9 @@
 
 @using Microsoft.EntityFrameworkCore
+@rendermode InteractiveServer
 @using BusinessLicensing_Practice.Data
+@attribute [Authorize(Roles = "BusinessOwner")]
+@using Microsoft.AspNetCore.Authorization
 @inject ApplicationDbContext Db
 
 @page "/dashboard"

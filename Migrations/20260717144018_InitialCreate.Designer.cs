@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BusinessLicensing_Practice.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260716160126_AddIdentitySetup")]
-    partial class AddIdentitySetup
+    [Migration("20260717144018_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -112,7 +112,13 @@ namespace BusinessLicensing_Practice.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Applications");
                 });
@@ -342,6 +348,17 @@ namespace BusinessLicensing_Practice.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("BusinessLicensing_Practice.Models.Application", b =>
+                {
+                    b.HasOne("BusinessLicensing_Practice.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("BusinessLicensing_Practice.Models.ApplicationDocument", b =>
