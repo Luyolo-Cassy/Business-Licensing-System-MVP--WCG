@@ -3,13 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using BusinessLicensing_Practice.Data;
 using BusinessLicensing_Practice.Models;
 using Microsoft.AspNetCore.Identity;
-using BusinessLicensing_Practice.Models;
 using Microsoft.AspNetCore.Components.Authorization;
 using BusinessLicensing_Practice.Components.Account;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using BusinessLicensing_Practice.Data;
-using BusinessLicensing_Practice.Components.Account;
-using BusinessLicensing_Practice.Data;
 
 
 var builder = WebApplication.CreateBuilder(args);
