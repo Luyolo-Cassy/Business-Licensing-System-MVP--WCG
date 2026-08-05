@@ -10,26 +10,43 @@
             <p class="lead text-muted mb-4">
                 Apply for, manage and track business licence applications online across the Western Cape.
             </p>
-            <AuthorizeView>
+<AuthorizeView Context="auth">
 
     <Authorized>
 
         <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
 
-            <a class="btn btn-primary btn-lg px-4"
-               href="/new-application">
-                Apply for a Licence
-            </a>
+            @if (auth.User.IsInRole("BusinessOwner"))
+            {
+                <a class="btn btn-primary btn-lg px-4"
+                   href="/new-application">
+                    Apply for a Licence
+                </a>
 
-            <a class="btn btn-outline-primary btn-lg px-4"
-               href="/Tracking">
-                Track Existing Application
-            </a>
+                <a class="btn btn-outline-primary btn-lg px-4"
+                   href="/dashboard">
+                    Review My Applications
+                </a>
+            }
+            else if (auth.User.IsInRole("MunicipalOfficial"))
+            {
+                <a class="btn btn-primary btn-lg px-4"
+                   href="/official-dashboard">
+                    Review Applications
+                </a>
+            }
+            else if (auth.User.IsInRole("DEDATAdmin"))
+            {
+                <a class="btn btn-primary btn-lg px-4"
+                   href="/admin-dashboard">
+                    Review Applications
+                </a>
+            }
 
         </div>
 
         <p class="text-success mt-3">
-            Welcome back, @context.User.Identity?.Name!
+            Welcome back, @auth.User.Identity?.Name!
         </p>
 
     </Authorized>
@@ -40,10 +57,15 @@
 
             <a class="btn btn-primary btn-lg px-4"
                href="/Account/Login">
-                Login to Apply
+                Apply for a Licence
             </a>
 
             <a class="btn btn-outline-primary btn-lg px-4"
+               href="/Account/Login">
+                Review Applications
+            </a>
+
+            <a class="btn btn-outline-secondary btn-lg px-4"
                href="/Account/Register">
                 Create Account
             </a>

@@ -17,6 +17,13 @@
 
 <h3 class="fw-bold mb-4">New Business Licence Application</h3>
 
+<div class="progress mb-3">
+    <div class="progress-bar bg-success" role="progressbar" style="width:@((CurrentStep * 100) / 6)%"
+         aria-valuenow="@CurrentStep" aria-valuemin="1" aria-valuemax="6">
+        Step @CurrentStep of 6
+    </div>
+</div>
+
 <div class="mb-4">
     <span class="badge bg-primary">Step @CurrentStep of 6</span>
 </div>
@@ -95,6 +102,10 @@
             </p>
         </div>
 
+        <div class="alert alert-light border mb-4">
+            <span class="text-danger">*</span> indicates a required field.
+        </div>
+
         <div class="card business-info-card mb-4">
             <div class="card-body">
                 <div class="business-info-card-heading">
@@ -106,18 +117,24 @@
 
                 <div class="row g-3">
                     <div class="col-12 col-md-6">
-                        <label class="form-label fw-semibold" for="businessName">Business Name</label>
-                        <input id="businessName" class="form-control" @bind="BusinessName" />
+                        <label class="form-label fw-semibold" for="businessName">
+                            Business Name <span class="text-danger">*</span>
+                        </label>
+                        <input id="businessName" class="form-control" @bind="BusinessName" required />
                     </div>
 
                     <div class="col-12 col-md-6">
-                        <label class="form-label fw-semibold" for="registrationNumber">Registration Number</label>
-                        <input id="registrationNumber" class="form-control" @bind="RegistrationNumber" />
+                        <label class="form-label fw-semibold" for="registrationNumber">
+                            Registration Number <span class="text-danger">*</span>
+                        </label>
+                        <input id="registrationNumber" class="form-control" @bind="RegistrationNumber" required />
                     </div>
 
                     <div class="col-12 col-md-6">
-                        <label class="form-label fw-semibold" for="taxNumber">Tax Number</label>
-                        <input id="taxNumber" class="form-control" @bind="TaxNumber" />
+                        <label class="form-label fw-semibold" for="taxNumber">
+                            Tax Number <span class="text-danger">*</span>
+                        </label>
+                        <input id="taxNumber" class="form-control" @bind="TaxNumber" required />
                     </div>
                 </div>
             </div>
@@ -139,8 +156,10 @@
 
                 <div class="row g-3">
                     <div class="col-12">
-                        <label class="form-label fw-semibold" for="addressLine1">Address Line 1</label>
-                        <input id="addressLine1" class="form-control" @bind="AddressLine1" />
+                        <label class="form-label fw-semibold" for="addressLine1">
+                            Address Line 1 <span class="text-danger">*</span>
+                        </label>
+                        <input id="addressLine1" class="form-control" @bind="AddressLine1" required />
                     </div>
 
                     <div class="col-12">
@@ -150,18 +169,24 @@
                         </div>
 
                         <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold" for="suburb">Suburb</label>
-                            <input id="suburb" class="form-control" @bind="Suburb" />
+                            <label class="form-label fw-semibold" for="suburb">
+                                Suburb <span class="text-danger">*</span>
+                            </label>
+                            <input id="suburb" class="form-control" @bind="Suburb" required />
                         </div>
 
                         <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold" for="city">City</label>
-                            <input id="city" class="form-control" @bind="City" />
+                            <label class="form-label fw-semibold" for="city">
+                                City <span class="text-danger">*</span>
+                            </label>
+                            <input id="city" class="form-control" @bind="City" required />
                         </div>
 
                         <div class="col-12 col-md-4">
-                            <label class="form-label fw-semibold" for="postalCode">Postal Code</label>
-                            <input id="postalCode" class="form-control" @bind="PostalCode" />
+                            <label class="form-label fw-semibold" for="postalCode">
+                                Postal Code <span class="text-danger">*</span>
+                            </label>
+                            <input id="postalCode" class="form-control" @bind="PostalCode" required />
                         </div>
                     </div>
                 </div>
@@ -811,10 +836,58 @@
     {
         Message = "";
 
-        if (CurrentStep == 1 && string.IsNullOrWhiteSpace(LicenceType))
+        switch (CurrentStep)
         {
-            Message = "Please select a licence type before continuing.";
-            return;
+            case 1:
+                if (string.IsNullOrWhiteSpace(LicenceType))
+                {
+                    Message = "Please select a licence type before continuing.";
+                    return;
+                }
+                break;
+
+            case 2:
+                if (string.IsNullOrWhiteSpace(BusinessName) ||
+                    string.IsNullOrWhiteSpace(RegistrationNumber) ||
+                    string.IsNullOrWhiteSpace(TaxNumber) ||
+                    string.IsNullOrWhiteSpace(AddressLine1) ||
+                    string.IsNullOrWhiteSpace(Suburb) ||
+                    string.IsNullOrWhiteSpace(City) ||
+                    string.IsNullOrWhiteSpace(PostalCode))
+                {
+                    Message = "Please complete all required business information before continuing.";
+                    return;
+                }
+                break;
+
+            case 3:
+                // Add validation here later if licence-specific fields become required.
+                break;
+
+            case 4:
+                if (ApplicationFormFileBytes.Length == 0)
+                {
+                    Message = "Please upload the completed application form before continuing.";
+                    return;
+                }
+                break;
+
+            case 5:
+                if (SelectedDocuments.Count < 4)
+                {
+                    Message = "Please upload all required supporting documents before continuing.";
+                    return;
+                }
+
+                if (!SelectedDocuments.Any(d => d.DocumentType == "Certificate of Incorporation") ||
+                    !SelectedDocuments.Any(d => d.DocumentType == "Proof of Address") ||
+                    !SelectedDocuments.Any(d => d.DocumentType == "Tax Clearance Certificate") ||
+                    !SelectedDocuments.Any(d => d.DocumentType == "Owner ID Document"))
+                {
+                    Message = "Please upload every required supporting document.";
+                    return;
+                }
+                break;
         }
 
         CurrentStep++;
@@ -934,13 +1007,19 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = await UserManager.GetUserAsync(authState.User);
 
-        application.UserId = user!.Id;
+        if (user == null)
+        {
+            Message = "You must be logged in to submit an application.";
+            return;
+        }
 
+
+        application.UserId = user!.Id;
         db.Applications.Add(application);
 
         await db.SaveChangesAsync();
-        
 
+        
         try
         {
             var uploadsFolder = Path.Combine(Environment.WebRootPath ?? "wwwroot", "uploads");
