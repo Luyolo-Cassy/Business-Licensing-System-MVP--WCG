@@ -1,6 +1,8 @@
 @page "/official-Dashboard"
+@rendermode InteractiveServer
 
 @attribute [Authorize(Roles = "MunicipalOfficial")]
+
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
 @using BusinessLicensing_Practice.Data
@@ -21,33 +23,90 @@
 </div>
 
 <div class="row mb-4">
+
     <div class="col-md-3">
-        <div class="card p-3 shadow-sm">
+        <div class="card shadow-sm p-3">
             <h6>Total Applications</h6>
-            <h2 style="color: blue;">@applications.Count</h2>
+            <h2 class="text-primary fw-bold">@applications.Count</h2>
         </div>
     </div>
 
     <div class="col-md-3">
-        <div class="card p-3 shadow-sm">
+        <div class="card shadow-sm p-3">
             <h6>In Progress</h6>
-            <h2 style="color: blue;">@applications.Count(a => a.Status != "Licence Issued" && a.Status != "Rejected" && a.Status != "Withdrawn")</h2>
+            <h2 class="text-info fw-bold">
+                @applications.Count(a =>
+                    a.Status != "Licence Issued" &&
+                    a.Status != "Rejected" &&
+                    a.Status != "Withdrawn")
+            </h2>
         </div>
     </div>
 
     <div class="col-md-3">
-        <div class="card p-3 shadow-sm">
+        <div class="card shadow-sm p-3">
             <h6>Approved</h6>
-            <h2 style="color: green;">@applications.Count(a => a.Status == "Licence Issued")</h2>
+            <h2 class="text-success fw-bold">
+                @applications.Count(a => a.Status == "Licence Issued")
+            </h2>
         </div>
     </div>
 
     <div class="col-md-3">
-        <div class="card p-3 shadow-sm">
+        <div class="card shadow-sm p-3">
             <h6>Rejected</h6>
-            <h2 style="color: red;">@applications.Count(a => a.Status == "Rejected" || a.Status == "Withdrawn")</h2>
+            <h2 class="text-danger fw-bold">
+                @applications.Count(a =>
+                    a.Status == "Rejected" ||
+                    a.Status == "Withdrawn")
+            </h2>
         </div>
     </div>
+
+</div>
+
+<div class="alert alert-warning d-flex justify-content-between align-items-center mb-4">
+
+    <div>
+        <i class="bi bi-bell-fill me-2"></i>
+
+        <strong>
+            @applications.Count(a => a.Status == "Submitted")
+        </strong>
+
+        applications are awaiting review.
+    </div>
+
+</div>
+
+<div class="row mb-4">
+
+    <div class="col-md-6">
+
+        <input class="form-control"
+               placeholder="Search by Business Name or Application Number..."
+               @bind="SearchText"
+               @bind:event="oninput" />
+
+    </div>
+
+    <div class="col-md-3">
+
+        <select class="form-select" @bind="SelectedStatus">
+
+            <option value="All">All Statuses</option>
+            <option value="Submitted">Submitted</option>
+            <option value="Under Review">Under Review</option>
+            <option value="Department Assessment">Department Assessment</option>
+            <option value="Final Decision">Final Decision</option>
+            <option value="Licence Issued">Licence Issued</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Withdrawn">Withdrawn</option>
+
+        </select>
+
+    </div>
+
 </div>
 
 <div class="card shadow-sm">
@@ -62,23 +121,19 @@
 
     <div class="card-body">
 
-        <table class="table table-hover">
+        <table class="table table-hover align-middle">
 
             <thead>
 
                 <tr>
 
-                    <th>ID</th>
-
+                    <th>Application No.</th>
                     <th>Business</th>
-
                     <th>Licence</th>
-
                     <th>Status</th>
-
-                    <th>Submitted</th>
-
-                    <th></th>
+                    <th>Date Submitted</th>
+                    <th>Time Submitted</th>
+                    <th>Action</th>
 
                 </tr>
 
@@ -86,7 +141,7 @@
 
             <tbody>
 
-                @foreach (var app in applications)
+                @foreach (var app in FilteredApplications)
                 {
                     <tr>
 
@@ -97,11 +152,9 @@
                         <td>@app.LicenceType</td>
 
                         <td>
-
                             <span class="badge @GetBadge(app.Status)">
                                 @app.Status
                             </span>
-
                         </td>
 
                         <td>
@@ -109,9 +162,15 @@
                         </td>
 
                         <td>
+                            @app.DateSubmitted.ToString("HH:mm")
+                        </td>
+
+                        <td>
 
                             <a class="btn btn-primary btn-sm"
                                href="/review-application/@app.Id">
+
+                                <i class="bi bi-eye-fill me-1"></i>
 
                                 Review
 
@@ -130,37 +189,15 @@
 
 </div>
 
-<div class="row mt-4">
 
-    <div class="col-md-3">
 
-        <a class="btn btn-primary w-100">
-            Review Applications
-        </a>
-
-    </div>
-
-    <div class="col-md-3">
-
-        <a class="btn btn-outline-primary w-100">
-            Generate Report
-        </a>
-
-    </div>
-
-    <div class="col-md-3">
-
-        <a class="btn btn-dark w-100">
-            Search Applications
-        </a>
-
-    </div>
-
-</div>
-
-@code{
+@code {
 
     private List<Application> applications = new();
+
+    private string SearchText = "";
+
+    private string SelectedStatus = "All";
 
     protected override async Task OnInitializedAsync()
     {
@@ -168,6 +205,15 @@
             .OrderByDescending(a => a.DateSubmitted)
             .ToListAsync();
     }
+
+    private IEnumerable<Application> FilteredApplications =>
+        applications.Where(a =>
+            (string.IsNullOrWhiteSpace(SearchText)
+            || a.BusinessName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+            || a.ApplicationNumber.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
+            &&
+            (SelectedStatus == "All"
+            || a.Status == SelectedStatus));
 
     private string GetBadge(string status)
     {
@@ -185,4 +231,3 @@
     }
 
 }
-

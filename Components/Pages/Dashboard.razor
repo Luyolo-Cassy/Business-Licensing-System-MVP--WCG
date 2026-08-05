@@ -11,22 +11,27 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
+
 @page "/dashboard"
 
 @code {
 
+
     
     private List<BusinessLicensing_Practice.Models.Application> applications = new();
+
+    private ApplicationUser? currentUser;
 
     protected override async Task OnParametersSetAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = await UserManager.GetUserAsync(authState.User);
 
-        if (user != null)
+        currentUser = await UserManager.GetUserAsync(authState.User);
+
+        if (currentUser != null)
         {
             applications = await Db.Applications
-                .Where(a => a.UserId == user.Id)
+                .Where(a => a.UserId == currentUser.Id)
                 .ToListAsync();
         }
     }
@@ -58,12 +63,14 @@
         };
     }
 }
-
-<div class="mb-4">
-    <h1 class="fw-bold">Business Owner Dashboard</h1>
-    <p class="text-muted">Welcome back, Thembi Dube. Track your licence applications and view recent updates.</p>
-</div>
-
+<AuthorizeView>
+    <Authorized>
+        <h1 class="fw-bold">Business Owner Dashboard</h1>
+        <p class="text-muted">
+            Welcome back @currentUser?.FullName, Track your licence applications and view recent updates.
+        </p>
+    </Authorized>
+</AuthorizeView>
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="card p-3 shadow-sm">
@@ -76,7 +83,7 @@
         <div class="card p-3 shadow-sm">
             <h6>In Progress</h6>
             <h2 style="color: blue;">@applications.Count(a => a.Status != "Licence Issued" && a.Status != "Rejected" &&
-                                                a.Status != "Withdrawn")</h2>
+                                                                a.Status != "Withdrawn")</h2>
             </div>
         </div>
 

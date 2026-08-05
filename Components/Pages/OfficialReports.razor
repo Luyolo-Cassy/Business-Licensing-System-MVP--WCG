@@ -1,0 +1,181 @@
+@page "/generate-report"
+@rendermode InteractiveServer
+
+@attribute [Authorize(Roles = "MunicipalOfficial")]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using BusinessLicensing_Practice.Data
+@using BusinessLicensing_Practice.Models
+@using Microsoft.JSInterop
+
+@inject ApplicationDbContext Db
+@inject IJSRuntime JS
+
+<h1 class="fw-bold mb-4">
+    Municipal Reports
+</h1>
+
+<p class="text-muted mb-4">
+    View reports and analytics for business licence applications.
+</p>
+
+<div class="row g-4 mb-5">
+
+    <div class="col-md-2">
+        <div class="card shadow-sm text-center p-3">
+            <h6>Total</h6>
+            <h2 class="text-primary">@Total</h2>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card shadow-sm text-center p-3">
+            <h6>Submitted</h6>
+            <h2 class="text-secondary">@Submitted</h2>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card shadow-sm text-center p-3">
+            <h6>Under Review</h6>
+            <h2 class="text-info">@UnderReview</h2>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card shadow-sm text-center p-3">
+            <h6>Approved</h6>
+            <h2 class="text-success">@Approved</h2>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card shadow-sm text-center p-3">
+            <h6>Rejected</h6>
+            <h2 class="text-danger">@Rejected</h2>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card shadow-sm text-center p-3">
+            <h6>Withdrawn</h6>
+            <h2 class="text-dark">@Withdrawn</h2>
+        </div>
+    </div>
+
+</div>
+
+<div class="row g-4">
+
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <strong>Application Status Distribution</strong>
+            </div>
+
+            <div class="card-body">
+                <div style="height:350px;">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <strong>Applications Per Month</strong>
+            </div>
+
+            <div class="card-body">
+                <div style="height:350px;">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="card shadow-sm mt-4">
+
+    <div class="card-header">
+        <strong>Applications by Licence Type</strong>
+    </div>
+
+    <div class="card-body">
+        <div style="height:350px;">
+            <canvas id="licenceChart"></canvas>
+        </div>
+    </div>
+
+</div>
+
+@code{
+
+private List<Application> applications = new();
+
+private int Total;
+private int Submitted;
+private int UnderReview;
+private int Approved;
+private int Rejected;
+private int Withdrawn;
+
+protected override async Task OnInitializedAsync()
+{
+    applications = await Db.Applications.ToListAsync();
+
+    Total = applications.Count;
+
+    Submitted = applications.Count(a => a.Status=="Submitted");
+
+    UnderReview = applications.Count(a => a.Status=="Under Review");
+
+    Approved = applications.Count(a => a.Status=="Licence Issued");
+
+    Rejected = applications.Count(a => a.Status=="Rejected");
+
+    Withdrawn = applications.Count(a => a.Status=="Withdrawn");
+}
+
+protected override async Task OnAfterRenderAsync(bool firstRender)
+{
+    if (!firstRender)
+        return;
+
+    // Status Pie Chart
+    await JS.InvokeVoidAsync(
+        "drawStatusChart",
+        Submitted,
+        UnderReview,
+        Approved,
+        Rejected,
+        Withdrawn
+    );
+
+    // Monthly Bar Chart
+    var monthly = applications
+        .GroupBy(a => a.DateSubmitted.ToString("MMM"))
+        .OrderBy(g => g.First().DateSubmitted.Month)
+        .ToList();
+
+    await JS.InvokeVoidAsync(
+        "drawMonthlyChart",
+        monthly.Select(m => m.Key).ToArray(),
+        monthly.Select(m => m.Count()).ToArray()
+    );
+
+    // Licence Type Pie Chart
+    var licences = applications
+        .GroupBy(a => a.LicenceType)
+        .ToList();
+
+    await JS.InvokeVoidAsync(
+        "drawLicenceChart",
+        licences.Select(l => l.Key).ToArray(),
+        licences.Select(l => l.Count()).ToArray()
+    );
+}
+
+}
