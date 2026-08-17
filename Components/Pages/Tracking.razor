@@ -3,6 +3,7 @@
 @rendermode InteractiveServer
 @using BusinessLicensing_Practice.Data
 @using BusinessLicensing_Practice.Models
+@using Microsoft.AspNetCore.Components.Authorization
 @inject ApplicationDbContext Db
 
 @page "/tracking/{id:int}"
@@ -16,10 +17,30 @@
 
     <div class="card shadow-sm p-4 mb-4">
 
+        <div class="alert alert-info mb-4">
+
+            <i class="bi bi-info-circle-fill me-2"></i>
+
+            Review your application progress below. You can monitor each stage until the licence is issued.
+
+        </div>
+
         <div class="d-flex justify-content-between mb-4">
-            <h5 class="fw-bold">
-                Application ID: @application?.ApplicationNumber
-            </h5>
+            <div>
+
+                <h5 class="fw-bold mb-1">
+
+                    Application ID: @application?.ApplicationNumber
+
+                </h5>
+
+                <span class="badge @GetStatusBadge(application?.Status)">
+
+                    @application?.Status
+
+                </span>
+
+            </div>
         </div>
 
         <div class="row mb-4">
@@ -43,11 +64,39 @@
                 </strong>
             </div>
 
+            <div class="col-md-3">
+
+                <p class="text-muted mb-1">
+                    Days Waiting
+                </p>
+
+                <strong>
+
+                    @((DateTime.Now - application!.DateSubmitted).Days)
+
+                    days
+
+                </strong>
+
+            </div>
+
         </div>
 
         <hr />
 
-        <h5 class="fw-bold mb-4">Application Progress</h5>
+        <h5 class="fw-bold mb-3">
+            Application Progress
+        </h5>
+
+        <div class="progress mb-4">
+
+            <div class="progress-bar @GetProgressColour()" role="progressbar" style="width:@ProgressPercentage()%">
+
+                @application?.Status
+
+            </div>
+
+        </div>
 
         <div class="d-flex align-items-start justify-content-between text-center mb-5 flex-wrap">
 
@@ -116,11 +165,27 @@
 
         </div>
 
+        @if (showSuccess)
+        {
+            <div class="alert alert-success alert-dismissible fade show mb-4">
+
+                <i class="bi bi-check-circle-fill me-2"></i>
+
+                Application status updated successfully.
+
+                <button class="btn-close" @onclick="() => showSuccess = false">
+                </button>
+
+            </div>
+        }
+
         <div class="row">
 
+   
             <div class="col-md-8">
 
                 <h5 class="fw-bold mb-3">Timeline</h5>
+               
 
                 @if (IsCompleted("Submitted"))
                 {
@@ -217,7 +282,11 @@
                         @foreach (var doc in application.Documents)
                         {
                             <a class="btn btn-outline-primary mb-2 d-block" href="@doc.FilePath" target="_blank">
+
+                                <i class="bi bi-file-earmark-pdf me-2"></i>
+
                                 View @doc.DocumentType
+
                             </a>
                         }
                     }
@@ -228,32 +297,31 @@
                         </button>
                     }
 
-                    @if (GetNextStatus() != null)
-                    {
-                        <button class="btn btn-outline-success mb-2 d-block w-100" @onclick="AdvanceStatus">
-                            Advance to: @GetNextStatus()
-                        </button>
-                    }
+                   
 
-                    @if (application?.Status == "Final Decision")
-                    {
-                        <button class="btn btn-danger mb-2 d-block w-100" @onclick="RejectApplication">
-                            Reject Application
-                        </button>
-                    }
+                    <AuthorizeView Roles="BusinessOwner">
 
-                    @if (application?.Status == "Submitted")
-                    {
-                        <button class="btn btn-outline-danger" @onclick="() => showWithdrawModal = true">
-                            Withdraw Application
-                        </button>
-                    }
-                    @if (application?.Status == "Rejected" || application?.Status == "Withdrawn")
-                    {
-                        <button class="btn btn-outline-primary mb-2 d-block w-100" @onclick="() => showReapplyModal = true">
-                            Reapply
-                        </button>
-                    }
+                        @if (application?.Status == "Submitted")
+                        {
+                            <button class="btn btn-outline-danger w-100" @onclick="() => showWithdrawModal = true">
+
+                                Withdraw Application
+
+                            </button>
+                        }
+
+                        @if (application?.Status == "Rejected" ||
+                             application?.Status == "Withdrawn")
+                        {
+                            <button class="btn btn-outline-primary mt-2 d-block w-100"
+                                    @onclick="() => showReapplyModal = true">
+
+                                Reapply
+
+                            </button>
+                        }
+
+                    </AuthorizeView>
 
                 </div>
 
@@ -315,6 +383,18 @@
         </div>
     }
 
+    <div class="mt-4">
+
+        <a class="btn btn-secondary" href="/dashboard">
+
+            <i class="bi bi-arrow-left"></i>
+
+            Back to Dashboard
+
+        </a>
+
+    </div>
+
 </div>
 
 @code {
@@ -323,6 +403,12 @@
     public int Id { get; set; }
 
     private Application? application;
+    private bool businessVerified;
+    private bool taxVerified;
+    private bool documentsVerified;
+    private bool addressVerified;
+    private string reviewNotes = "";
+    private bool showSuccess;
 
     private static readonly List<string> StatusOrder = new()
     {
@@ -357,6 +443,7 @@
 
         application.Status = next;
         await Db.SaveChangesAsync();
+        showSuccess = true;
 
         application = await Db.Applications
             .Include(a => a.Documents)
@@ -364,6 +451,8 @@
 
         StateHasChanged();
     }
+
+    
 
     private string GetStatusBadge(string? status)
     {
@@ -440,6 +529,21 @@
 
     private bool showReapplyModal = false;
 
+    private int ProgressPercentage()
+    {
+        return application?.Status switch
+        {
+            "Submitted" => 20,
+            "Under Review" => 40,
+            "Department Assessment" => 60,
+            "Final Decision" => 80,
+            "Licence Issued" => 100,
+            "Rejected" => 100,
+            "Withdrawn" => 100,
+            _ => 0
+        };
+    }
+
     private async Task ReapplyExisting()
     {
         if (application == null) return;
@@ -461,5 +565,15 @@
         showReapplyModal = false;
         Navigation.NavigateTo("/new-application");
     }
+
+   private string GetProgressColour()
+{
+    return application?.Status switch
+    {
+        "Rejected" => "bg-danger",
+        "Withdrawn" => "bg-dark",
+        _ => "bg-success"
+    };
+}
 
 }

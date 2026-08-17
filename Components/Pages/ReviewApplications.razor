@@ -22,12 +22,35 @@ else
 {
     <h2 class="mb-4">Review Business Licence Application</h2>
 
+    <div class="alert alert-info d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <strong>Current Status:</strong>
+            <span class="badge @GetBadge(application?.Status)">
+                @application?.Status
+            </span>
+        </div>
+
+        <div>
+            Submitted:
+            <strong>@application?.DateSubmitted.ToString("dd MMM yyyy")</strong>
+        </div>
+    </div>
+
     <div class="card shadow-sm mb-4">
         <div class="card-header fw-bold">
             Application Details
         </div>
 
         <div class="card-body">
+            <h5 class="mb-3">Application Progress</h5>
+
+            <div class="progress mb-4" style="height:25px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width:@GetProgressPercentage()%">
+
+                    @application?.Status
+
+                </div>
+            </div>
 
             <div class="row mb-3">
                 <div class="col-md-6">
@@ -47,10 +70,7 @@ else
                     @application.BusinessName
                 </div>
 
-                <div class="col-md-6">
-                    <strong>Trading Name</strong><br />
-                    @application.TradingName
-                </div>
+               
             </div>
 
             <div class="row mb-3">
@@ -59,10 +79,7 @@ else
                     @application.LicenceType
                 </div>
 
-                <div class="col-md-6">
-                    <strong>Business Category</strong><br />
-                    @application.BusinessCategory
-                </div>
+               
             </div>
 
             <div class="row mb-3">
@@ -107,6 +124,49 @@ else
 
             <hr />
 
+                        <h5>Application Form</h5>
+
+            @if (!string.IsNullOrWhiteSpace(application.ApplicationFormFilePath))
+            {
+                <div class="card p-3">
+
+                    <div class="d-flex justify-content-between align-items-center">
+
+                        <div>
+
+                            <strong>Official Application Form</strong><br />
+
+                            <small class="text-muted">
+                                Submitted by <strong>@application?.User?.FullName</strong>
+                            </small>
+
+                        </div>
+
+                        <a class="btn btn-primary" href="@application.ApplicationFormFilePath" target="_blank">
+
+                            <i class="bi bi-file-earmark-pdf-fill me-1"></i>
+
+                            Open Form
+
+                        </a>
+
+                    </div>
+
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning">
+
+                    No application form was uploaded.
+
+                </div>
+            }
+
+            
+
+            <hr />
+
             <h5>Supporting Documents</h5>
 
             @if (application.Documents.Any())
@@ -132,6 +192,18 @@ else
 
             <hr />
 
+
+            <h5>Officer Review Notes</h5>
+
+            <div class="mb-3">
+                <label class="form-label">
+                    Comments
+                </label>
+
+                <InputTextArea class="form-control" @bind-Value="ReviewComments" rows="4">
+                </InputTextArea>
+            </div>
+
             <h5>Review Decision</h5>
 
             <div class="mb-3">
@@ -150,10 +222,25 @@ else
 
             </div>
 
+            @if (ShowSuccess)
+            {
+                <div class="alert alert-success">
+                    Review saved successfully.
+                </div>
+            }
+
             <div class="mt-4">
 
                 <button class="btn btn-success me-2" @onclick="SaveReview">
+                    <i class="bi bi-check-circle-fill me-1"></i>
                     Save Review
+                </button>
+
+                <button class="btn btn-secondary me-2" @onclick="@(() => Navigation.NavigateTo("/official-dashboard"))">
+
+                    <i class="bi bi-arrow-left me-1"></i>
+
+                    Back
                 </button>
 
                 @if (application?.Status == "Final Decision")
@@ -179,24 +266,31 @@ else
     public int Id { get; set; }
 
     private Application? application;
+    private string ReviewComments = "";
+    private bool ShowSuccess = false;
 
     protected override async Task OnInitializedAsync()
     {
         application = await Db.Applications
-            .Include(a => a.Documents)
-            .FirstOrDefaultAsync(a => a.Id == Id);
+    .Include(a => a.Documents)
+    .Include(a => a.User)
+    .FirstOrDefaultAsync(a => a.Id == Id);
     }
 
     private async Task SaveReview()
-{
-    if (application != null)
     {
-        Db.Update(application);
-        await Db.SaveChangesAsync();
+        if (application != null)
+        {
+            Db.Update(application);
+            await Db.SaveChangesAsync();
 
-        Navigation.NavigateTo("/official-dashboard");
+            ShowSuccess = true;
+
+            await Task.Delay(1500);
+
+            Navigation.NavigateTo("/official-dashboard");
+        }
     }
-}
 
     private async Task ApproveApplication()
     {
@@ -208,6 +302,36 @@ else
     {
         application!.Status = "Rejected";
         await Db.SaveChangesAsync();
+    }
+
+    private string GetBadge(string? status)
+    {
+        return status switch
+        {
+            "Submitted" => "bg-secondary",
+            "Under Review" => "bg-primary",
+            "Department Assessment" => "bg-warning text-dark",
+            "Final Decision" => "bg-info text-dark",
+            "Licence Issued" => "bg-success",
+            "Rejected" => "bg-danger",
+            "Withdrawn" => "bg-dark",
+            _ => "bg-secondary"
+        };
+    }
+
+    private int GetProgressPercentage()
+    {
+        return application?.Status switch
+        {
+            "Submitted" => 20,
+            "Under Review" => 40,
+            "Department Assessment" => 60,
+            "Final Decision" => 80,
+            "Licence Issued" => 100,
+            "Rejected" => 100,
+            "Withdrawn" => 100,
+            _ => 0
+        };
     }
 
 }
