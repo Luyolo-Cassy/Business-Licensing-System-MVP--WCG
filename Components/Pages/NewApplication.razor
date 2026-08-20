@@ -903,9 +903,27 @@
     {
         return LicenceType switch
         {
-            "Business Licence" => "/forms/business-licence-application-form.pdf",
-            "Food Licence" => "/forms/food-licence-application-form.pdf",
-            "Entertainment Licence" => "/forms/entertainment-licence-application-form.pdf",
+            "Sale of Meals Licence" =>
+                "/forms/sale-of-meals-licence-application-form.pdf",
+
+            "Sale of Perishable Foodstuffs Licence" =>
+                "/forms/sale-of-perishable-foodstuffs-licence-application-form.pdf",
+
+            "Health Facility Licence" =>
+                "/forms/health-facility-licence-application-form.pdf",
+
+            "Entertainment Venue Licence" =>
+                "/forms/entertainment-venue-licence-application-form.pdf",
+
+            "Gaming / Amusement Licence" =>
+                "/forms/gaming-amusement-licence-application-form.pdf",
+
+            "Adult Premises / Escort Services Licence" =>
+                "/forms/adult-premises-escort-services-licence-application-form.pdf",
+
+            "Hawker / Street Trading Licence" =>
+                "/forms/hawker-street-trading-licence-application-form.pdf",
+
             _ => "#"
         };
     }
