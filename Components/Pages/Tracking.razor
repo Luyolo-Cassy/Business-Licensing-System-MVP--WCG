@@ -4,9 +4,14 @@
 @using BusinessLicensing_Practice.Data
 @using BusinessLicensing_Practice.Models
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
 @inject ApplicationDbContext Db
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
 
 @page "/tracking/{id:int}"
+@attribute [Authorize(Roles = "BusinessOwner")]
 
 <div class="tracking-page">
 
@@ -277,6 +282,21 @@
 
                     <h5 class="fw-bold">Actions</h5>
 
+                    @if (application?.Details != null && !string.IsNullOrWhiteSpace(application.ApplicationFormFilePath))
+                    {
+                        <a class="btn btn-primary mb-2 d-block" href="/applications/@application.Id/official-pdf" target="_blank">
+                            <i class="bi bi-file-earmark-pdf-fill me-2"></i>
+                            Download Official Application PDF
+                        </a>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(application?.ApplicationFormFilePath))
+                    {
+                        <a class="btn btn-outline-primary mb-2 d-block" href="@application.ApplicationFormFilePath" target="_blank">
+                            <i class="bi bi-file-earmark-pdf me-2"></i>
+                            View Legacy Application Form
+                        </a>
+                    }
+
                     @if (application?.Documents != null && application.Documents.Any())
                     {
                         @foreach (var doc in application.Documents)
@@ -403,12 +423,8 @@
     public int Id { get; set; }
 
     private Application? application;
-    private bool businessVerified;
-    private bool taxVerified;
-    private bool documentsVerified;
-    private bool addressVerified;
-    private string reviewNotes = "";
     private bool showSuccess;
+    private string currentUserId = "";
 
     private static readonly List<string> StatusOrder = new()
     {
@@ -421,9 +437,14 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(authState.User);
+        currentUserId = user?.Id ?? "";
+
         application = await Db.Applications
             .Include(a => a.Documents)
-            .FirstOrDefaultAsync(a => a.Id == Id);
+            .Include(a => a.Details)
+            .FirstOrDefaultAsync(a => a.Id == Id && a.UserId == currentUserId);
     }
 
     private bool showWithdrawModal = false;
@@ -447,7 +468,8 @@
 
         application = await Db.Applications
             .Include(a => a.Documents)
-            .FirstOrDefaultAsync(a => a.Id == Id);
+            .Include(a => a.Details)
+            .FirstOrDefaultAsync(a => a.Id == Id && a.UserId == currentUserId);
 
         StateHasChanged();
     }
@@ -477,7 +499,8 @@
 
         application = await Db.Applications
             .Include(a => a.Documents)
-            .FirstOrDefaultAsync(a => a.Id == Id);
+            .Include(a => a.Details)
+            .FirstOrDefaultAsync(a => a.Id == Id && a.UserId == currentUserId);
 
         StateHasChanged();
     }
@@ -516,7 +539,8 @@
 
         application = await Db.Applications
             .Include(a => a.Documents)
-            .FirstOrDefaultAsync(a => a.Id == Id);
+            .Include(a => a.Details)
+            .FirstOrDefaultAsync(a => a.Id == Id && a.UserId == currentUserId);
 
         showWithdrawModal = false;
         StateHasChanged();
@@ -554,7 +578,8 @@
 
         application = await Db.Applications
             .Include(a => a.Documents)
-            .FirstOrDefaultAsync(a => a.Id == Id);
+            .Include(a => a.Details)
+            .FirstOrDefaultAsync(a => a.Id == Id && a.UserId == currentUserId);
 
         showReapplyModal = false;
         StateHasChanged();

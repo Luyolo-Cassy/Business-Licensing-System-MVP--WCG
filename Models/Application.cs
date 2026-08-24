@@ -46,6 +46,10 @@ namespace BusinessLicensing_Practice.Models
 
         public string ApplicationFormFilePath { get; set; } = "";
 
+        public string? Municipality { get; set; }
+
+        public ApplicationDetails? Details { get; set; }
+
         public bool PopiaConsentAccepted { get; set; }
 
         public DateTime DateSubmitted { get; set; }

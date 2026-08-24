@@ -7,8 +7,12 @@
 @using Microsoft.EntityFrameworkCore
 @using BusinessLicensing_Practice.Data
 @using BusinessLicensing_Practice.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
 
 @inject ApplicationDbContext Db
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
 
 <div class="mb-4">
 
@@ -201,7 +205,17 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var official = await UserManager.GetUserAsync(authState.User);
+
+        if (official == null || string.IsNullOrWhiteSpace(official.Municipality))
+        {
+            applications = new();
+            return;
+        }
+
         applications = await Db.Applications
+            .Where(application => application.Municipality == official.Municipality || application.Municipality == null)
             .OrderByDescending(a => a.DateSubmitted)
             .ToListAsync();
     }
