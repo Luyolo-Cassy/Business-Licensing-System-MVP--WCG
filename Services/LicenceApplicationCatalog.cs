@@ -79,14 +79,10 @@ namespace BusinessLicensing_Practice.Services
 
         public static readonly IReadOnlyList<string> Municipalities =
         [
-            "Beaufort West Municipality", "Bergrivier Municipality", "Bitou Municipality",
-            "Breede Valley Municipality", "Cape Agulhas Municipality", "Cederberg Municipality",
-            "City of Cape Town", "Drakenstein Municipality", "George Municipality",
-            "Hessequa Municipality", "Kannaland Municipality", "Knysna Municipality",
-            "Laingsburg Municipality", "Langeberg Municipality", "Matzikama Municipality",
-            "Mossel Bay Municipality", "Oudtshoorn Municipality", "Overstrand Municipality",
-            "Prince Albert Municipality", "Saldanha Bay Municipality", "Stellenbosch Municipality",
-            "Swartland Municipality", "Swellendam Municipality", "Theewaterskloof Municipality",
+            "Hessequa Municipality",
+            "Bergrivier Municipality",
+            "Cederberg Municipality",
+            "Swartland Municipality",
             "Witzenberg Municipality"
         ];
 

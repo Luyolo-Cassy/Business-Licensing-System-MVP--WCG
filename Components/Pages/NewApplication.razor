@@ -71,7 +71,6 @@
             <div class="business-info-card-heading"><span class="business-info-card-icon"><i class="bi bi-building"></i></span><h5 class="mb-0">Business Information</h5></div>
             <div class="row g-3">
                 <div class="col-12 col-md-6">@FieldLabel("businessName", "Business Name")<input id="businessName" class="form-control" @bind="BusinessName" /></div>
-                <div class="col-12 col-md-6"><label class="form-label fw-semibold" for="tradingName">Trading Name</label><input id="tradingName" class="form-control" @bind="TradingName" /></div>
                 <div class="col-12 col-md-6">@FieldLabel("registrationNumber", "Registration Number")<input id="registrationNumber" class="form-control" @bind="RegistrationNumber" /></div>
                 <div class="col-12 col-md-6">@FieldLabel("taxNumber", "Tax Number")<input id="taxNumber" class="form-control" @bind="TaxNumber" /></div>
                 <div class="col-12">@FieldLabel("businessCategory", "Nature of Business")<textarea id="businessCategory" class="form-control" rows="2" @bind="BusinessCategory"></textarea></div>
@@ -89,10 +88,8 @@
                 <div class="col-12 col-md-6">@FieldLabel("suburb", "Suburb")<input id="suburb" class="form-control" @bind="Suburb" /></div>
                 <div class="col-12 col-md-6">@FieldLabel("city", "Town / City")<input id="city" class="form-control" @bind="City" /></div>
                 <div class="col-12 col-md-4">@FieldLabel("postalCode", "Postal Code")<input id="postalCode" class="form-control" @bind="PostalCode" /></div>
-                <div class="col-12 col-md-8">@FieldLabel("municipality", "Responsible Municipality")<select id="municipality" class="form-select" @bind="Municipality"><option value="">Select municipality</option>@foreach (var municipality in LicenceApplicationCatalog.Municipalities) { <option value="@municipality">@municipality</option> }</select></div>
+                <div class="col-12 col-md-8">@FieldLabel("municipality", "Responsible Municipality")<select id="municipality" class="form-select" @bind="Municipality"><option value="">Select municipality</option>@foreach (var municipality in LicenceApplicationCatalog.Municipalities) { <option value="@municipality">@municipality.Replace(" Municipality", "")</option> }</select></div>
                 <div class="col-12">@FieldLabel("postalAddress", "Postal Address")<textarea id="postalAddress" class="form-control" rows="2" @bind="PostalAddress"></textarea></div>
-                <div class="col-12 col-md-6">@FieldLabel("erfNumber", "ERF Number")<input id="erfNumber" class="form-control" @bind="ErfNumber" /></div>
-                <div class="col-12 col-md-6">@FieldLabel("zoning", "Zoning")<input id="zoning" class="form-control" @bind="Zoning" /></div>
             </div>
         </div></div>
     </section>
@@ -128,8 +125,8 @@
     <section class="review-submit-step" aria-labelledby="review-heading">
         <div class="review-submit-header"><h4 id="review-heading" class="fw-bold mb-2">Review & Declaration</h4><p class="text-muted mb-0">Verify all information before making the declaration.</p></div>
         <div class="row g-4">
-            <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Applicant</h5>@ReviewItem("Application type", ApplicationType)@ReviewItem("Applicant", ApplicantName)@ReviewItem("Address", ApplicantAddress)@ReviewItem("Telephone", ApplicantTelephone)@ReviewItem("Email", ApplicantEmail)</div></div></div>
-            <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Business</h5>@ReviewItem("Business", BusinessName)@ReviewItem("Trading name", TradingName)@ReviewItem("Nature", BusinessCategory)@ReviewItem("Address", FormattedBusinessAddress)@ReviewItem("Municipality", Municipality)@ReviewItem("Trading hours", TradingHours)</div></div></div>
+            <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Applicant</h5>@ReviewItem("Application Type", ApplicationType)@ReviewItem("Licence Type", LicenceType)@ReviewItem("Applicant Name", ApplicantName)@ReviewItem("Address", ApplicantAddress)@ReviewItem("Telephone", ApplicantTelephone)@ReviewItem("Email", ApplicantEmail)</div></div></div>
+            <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Business</h5>@ReviewItem("Business Name", BusinessName)@ReviewItem("Nature", BusinessCategory)@ReviewItem("Address", FormattedBusinessAddress)@ReviewItem("Responsible Municipality", Municipality.Replace(" Municipality", ""))@ReviewItem("Trading Hours", TradingHours)</div></div></div>
             <div class="col-12"><div class="card review-submit-card"><div class="card-body"><h5 class="mb-3">@LicenceType Details</h5>@foreach (var question in SelectedLicence?.Questions ?? []) { @ReviewItem(question.Label, GetAnswer(question.Key)) }</div></div></div>
             <div class="col-12"><div class="card review-submit-card"><div class="card-body"><h5 class="mb-3">Supporting Documents</h5>@foreach (var document in SelectedDocuments) { @ReviewItem(document.DocumentType, document.FileName) }</div></div></div>
         </div>
@@ -151,8 +148,8 @@
     private int CurrentStep = 1;
     private bool IsSubmitting, MessageIsError, DeclarationAccepted, PopiaConsentAccepted;
     private string Message = "", LicenceType = "", ApplicationType = "", ApplicantName = "", ApplicantAddress = "", ApplicantTelephone = "", ApplicantEmail = "";
-    private string BusinessName = "", TradingName = "", RegistrationNumber = "", TaxNumber = "", BusinessCategory = "", ContactPerson = "", BusinessTelephone = "", BusinessEmail = "", TradingHours = "";
-    private string AddressLine1 = "", AddressLine2 = "", Suburb = "", City = "", PostalCode = "", Municipality = "", PostalAddress = "", ErfNumber = "", Zoning = "";
+    private string BusinessName = "", RegistrationNumber = "", TaxNumber = "", BusinessCategory = "", ContactPerson = "", BusinessTelephone = "", BusinessEmail = "", TradingHours = "";
+    private string AddressLine1 = "", AddressLine2 = "", Suburb = "", City = "", PostalCode = "", Municipality = "", PostalAddress = "";
     private readonly Dictionary<string, string> LicenceAnswers = new();
     private readonly List<SelectedDocument> SelectedDocuments = new();
 
@@ -185,7 +182,7 @@
         {
             1 when SelectedLicence == null => "Please select a licence type before continuing.",
             2 when AnyBlank(ApplicationType, ApplicantName, ApplicantAddress, ApplicantTelephone, ApplicantEmail) => "Please complete all required applicant details.",
-            3 when AnyBlank(BusinessName, RegistrationNumber, TaxNumber, BusinessCategory, ContactPerson, BusinessTelephone, BusinessEmail, TradingHours, AddressLine1, Suburb, City, PostalCode, Municipality, PostalAddress, ErfNumber, Zoning) => "Please complete all required business and routing details.",
+            3 when AnyBlank(BusinessName, RegistrationNumber, TaxNumber, BusinessCategory, ContactPerson, BusinessTelephone, BusinessEmail, TradingHours, AddressLine1, Suburb, City, PostalCode, Municipality, PostalAddress) => "Please complete all required business and routing details.",
             4 when SelectedLicence?.Questions.Any(question => question.Required && string.IsNullOrWhiteSpace(GetAnswer(question.Key))) == true => "Please answer every required licence-specific question.",
             5 when SelectedLicence?.Documents.Any(requirement => requirement.Required && !SelectedDocuments.Any(document => document.DocumentType == requirement.DocumentType)) == true => "Please upload every required supporting document.",
             6 when !DeclarationAccepted || !PopiaConsentAccepted => "Please accept both the declaration and POPIA consent before continuing.",
@@ -218,10 +215,10 @@
             var now = DateTime.Now; var count = await Db.Applications.CountAsync(item => item.DateSubmitted.Year == now.Year);
             var application = new Application
             {
-                ApplicationNumber = $"APP-{now.Year}-{count + 1:D3}", BusinessName = BusinessName.Trim(), TradingName = TradingName.Trim(), RegistrationNumber = RegistrationNumber.Trim(), TaxNumber = TaxNumber.Trim(), BusinessCategory = BusinessCategory.Trim(),
+                ApplicationNumber = $"APP-{now.Year}-{count + 1:D3}", BusinessName = BusinessName.Trim(), RegistrationNumber = RegistrationNumber.Trim(), TaxNumber = TaxNumber.Trim(), BusinessCategory = BusinessCategory.Trim(),
                 BusinessAddress = FormattedBusinessAddress, AddressLine1 = AddressLine1.Trim(), AddressLine2 = AddressLine2.Trim(), Suburb = Suburb.Trim(), City = City.Trim(), PostalCode = PostalCode.Trim(), LicenceType = LicenceType, Municipality = Municipality,
                 PopiaConsentAccepted = true, Status = "Submitted", DateSubmitted = now, UserId = user.Id,
-                Details = new ApplicationDetails { ApplicationType = ApplicationType, ApplicantName = ApplicantName.Trim(), ApplicantAddress = ApplicantAddress.Trim(), ApplicantTelephone = ApplicantTelephone.Trim(), ApplicantEmail = ApplicantEmail.Trim(), PostalAddress = PostalAddress.Trim(), ContactPerson = ContactPerson.Trim(), BusinessTelephone = BusinessTelephone.Trim(), BusinessEmail = BusinessEmail.Trim(), ErfNumber = ErfNumber.Trim(), Zoning = Zoning.Trim(), TradingHours = TradingHours.Trim(), LicenceSpecificDetailsJson = JsonSerializer.Serialize(LicenceAnswers), DeclarationAccepted = true, DeclarationAcceptedAt = now }
+                Details = new ApplicationDetails { ApplicationType = ApplicationType, ApplicantName = ApplicantName.Trim(), ApplicantAddress = ApplicantAddress.Trim(), ApplicantTelephone = ApplicantTelephone.Trim(), ApplicantEmail = ApplicantEmail.Trim(), PostalAddress = PostalAddress.Trim(), ContactPerson = ContactPerson.Trim(), BusinessTelephone = BusinessTelephone.Trim(), BusinessEmail = BusinessEmail.Trim(), TradingHours = TradingHours.Trim(), LicenceSpecificDetailsJson = JsonSerializer.Serialize(LicenceAnswers), DeclarationAccepted = true, DeclarationAcceptedAt = now }
             };
             var uploads = Path.Combine(Environment.WebRootPath ?? "wwwroot", "uploads"); Directory.CreateDirectory(uploads);
             foreach (var selected in SelectedDocuments) { var storedName = $"{Guid.NewGuid():N}{Path.GetExtension(selected.FileName).ToLowerInvariant()}"; await File.WriteAllBytesAsync(Path.Combine(uploads, storedName), selected.FileBytes); application.Documents.Add(new ApplicationDocument { DocumentType = selected.DocumentType, FileName = selected.FileName, FilePath = $"/uploads/{storedName}" }); }
@@ -243,7 +240,7 @@
     private RenderFragment ReviewItem(string label, string? value) => builder =>
     {
         builder.OpenElement(0, "div"); builder.AddAttribute(1, "class", "review-item");
-        builder.OpenElement(2, "span"); builder.AddAttribute(3, "class", "review-label"); builder.AddContent(4, label); builder.CloseElement();
+        builder.OpenElement(2, "span"); builder.AddAttribute(3, "class", "review-label"); builder.AddContent(4, label + ":"); builder.CloseElement();
         builder.OpenElement(5, "span"); builder.AddAttribute(6, "class", "review-value"); builder.AddContent(7, string.IsNullOrWhiteSpace(value) ? "Not provided" : value); builder.CloseElement(); builder.CloseElement();
     };
     private sealed record SelectedDocument(string DocumentType, string FileName, byte[] FileBytes);

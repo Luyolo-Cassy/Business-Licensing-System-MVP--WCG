@@ -37,7 +37,6 @@ namespace BusinessLicensing_Practice.Services
             renderer.AddRows(
             [
                 ("Business name", application.BusinessName),
-                ("Trading name", application.TradingName),
                 ("Registration number", application.RegistrationNumber),
                 ("Tax number", application.TaxNumber),
                 ("Nature of business", application.BusinessCategory),
@@ -48,8 +47,6 @@ namespace BusinessLicensing_Practice.Services
                 ("Contact person", application.Details?.ContactPerson),
                 ("Business telephone", application.Details?.BusinessTelephone),
                 ("Business email", application.Details?.BusinessEmail),
-                ("ERF number", application.Details?.ErfNumber),
-                ("Zoning", application.Details?.Zoning),
                 ("Trading hours", application.Details?.TradingHours)
             ]);
 
