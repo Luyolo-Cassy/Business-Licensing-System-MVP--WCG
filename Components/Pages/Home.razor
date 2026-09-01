@@ -26,22 +26,26 @@
                         @if (auth.User.IsInRole("BusinessOwner"))
                         {
                             <a class="btn btn-primary btn-lg px-4" href="/new-application">
+                                <PhosphorIcon Name="file-plus" />
                                 Apply for a Licence
                             </a>
 
                             <a class="btn btn-outline-primary btn-lg px-4" href="/dashboard">
+                                <PhosphorIcon Name="clipboard-text" />
                                 Review My Applications
                             </a>
                         }
                         else if (auth.User.IsInRole("MunicipalOfficial"))
                         {
                             <a class="btn btn-primary btn-lg px-4" href="/official-dashboard">
+                                <PhosphorIcon Name="eye" />
                                 Review Applications
                             </a>
                         }
                         else if (auth.User.IsInRole("DEDATAdmin"))
                         {
                             <a class="btn btn-primary btn-lg px-4" href="/admin-dashboard">
+                                <PhosphorIcon Name="eye" />
                                 Review Applications
                             </a>
                         }
@@ -59,14 +63,17 @@
                     <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
 
                         <a class="btn btn-primary btn-lg px-4" href="/Account/Login">
+                            <PhosphorIcon Name="file-plus" />
                             Apply for a Licence
                         </a>
 
                         <a class="btn btn-outline-primary btn-lg px-4" href="/Account/Login">
+                            <PhosphorIcon Name="eye" />
                             Review Applications
                         </a>
 
                         <a class="btn btn-outline-secondary btn-lg px-4" href="/Account/Register">
+                            <PhosphorIcon Name="user" />
                             Create Account
                         </a>
 
@@ -85,11 +92,7 @@
             <div class="col-md-6 col-xl-3">
                 <div class="card h-100 border-light shadow-sm">
                     <div class="card-body">
-                        <svg class="bi text-primary mb-3" width="32" height="32" fill="currentColor" viewBox="0 0 16 16"
-                             aria-hidden="true">
-                            <path
-                            d="M6.5 1A1.5 1.5 0 0 0 5 2.5V3H1.5A1.5 1.5 0 0 0 0 4.5v8A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 14.5 3H11v-.5A1.5 1.5 0 0 0 9.5 1h-3Zm0 1h3a.5.5 0 0 1 .5.5V3H6v-.5a.5.5 0 0 1 .5-.5Z" />
-                        </svg>
+                        <PhosphorIcon Name="briefcase" CssClass="ph-icon-lg mb-3" />
                         <h5 class="card-title">Apply Online</h5>
                         <p class="card-text text-muted">Submit new business licence applications digitally.</p>
                     </div>
@@ -98,13 +101,7 @@
             <div class="col-md-6 col-xl-3">
                 <div class="card h-100 border-light shadow-sm">
                     <div class="card-body">
-                        <svg class="bi text-primary mb-3" width="32" height="32" fill="currentColor" viewBox="0 0 16 16"
-                             aria-hidden="true">
-                            <path
-                            d="M.5 9.9a.5.5 0 0 1 .5.5v2.1A1.5 1.5 0 0 0 2.5 14h11a1.5 1.5 0 0 0 1.5-1.5v-2.1a.5.5 0 0 1 1 0v2.1a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5v-2.1a.5.5 0 0 1 .5-.5Z" />
-                            <path
-                            d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3Z" />
-                        </svg>
+                        <PhosphorIcon Name="upload-simple" CssClass="ph-icon-lg mb-3" />
                         <h5 class="card-title">Upload Documents</h5>
                         <p class="card-text text-muted">Securely upload supporting documentation.</p>
                     </div>
@@ -113,12 +110,7 @@
             <div class="col-md-6 col-xl-3">
                 <div class="card h-100 border-light shadow-sm">
                     <div class="card-body">
-                        <svg class="bi text-primary mb-3" width="32" height="32" fill="currentColor" viewBox="0 0 16 16"
-                             aria-hidden="true">
-                            <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1Z" />
-                            <path
-                            d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466Z" />
-                        </svg>
+                        <PhosphorIcon Name="clock-clockwise" CssClass="ph-icon-lg mb-3" />
                         <h5 class="card-title">Track Progress</h5>
                         <p class="card-text text-muted">Monitor your application from submission to approval.</p>
                     </div>
@@ -127,11 +119,7 @@
             <div class="col-md-6 col-xl-3">
                 <div class="card h-100 border-light shadow-sm">
                     <div class="card-body">
-                        <svg class="bi text-primary mb-3" width="32" height="32" fill="currentColor" viewBox="0 0 16 16"
-                             aria-hidden="true">
-                            <path
-                            d="M8 0c-.69 0-1.843.265-2.928.56-1.11.3-2.229.655-2.887.87A1.54 1.54 0 0 0 1.134 2.9c.06 4.23 1.515 7.46 3.735 9.475A9.85 9.85 0 0 0 8 14.5a9.85 9.85 0 0 0 3.131-2.125c2.22-2.015 3.674-5.245 3.735-9.475a1.54 1.54 0 0 0-1.051-1.47A44.8 44.8 0 0 0 10.928.56C9.843.265 8.69 0 8 0Zm2.854 5.146a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7 8.293l3.146-3.147a.5.5 0 0 1 .708 0Z" />
-                        </svg>
+                        <PhosphorIcon Name="file-pdf" CssClass="ph-icon-lg mb-3" />
                         <h5 class="card-title">Automatic Official PDF</h5>
                         <p class="card-text text-muted">Your completed official application PDF is generated when you submit.</p>
                     </div>

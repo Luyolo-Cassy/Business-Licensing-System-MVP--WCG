@@ -149,3 +149,55 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+.ph-icon {
+    display: inline-block;
+    width: 1.2em;
+    height: 1.2em;
+    flex: 0 0 auto;
+    vertical-align: -0.2em;
+    object-fit: contain;
+    filter: brightness(0) saturate(100%) invert(11%) sepia(87%) saturate(6137%) hue-rotate(242deg) brightness(57%) contrast(126%);
+}
+
+.ph-icon-lg {
+    width: 2rem;
+    height: 2rem;
+}
+
+.nav-menu-icon {
+    width: 1.2rem;
+    height: 1.2rem;
+    margin-right: 0.7rem;
+}
+
+.nav-brand-icon {
+    width: 1.7rem;
+    height: 1.7rem;
+}
+
+.btn .ph-icon {
+    margin-right: 0.35rem;
+}
+
+.btn-primary .ph-icon,
+.btn-success .ph-icon,
+.btn-danger .ph-icon,
+.btn-secondary .ph-icon {
+    filter: brightness(0) invert(1);
+}
+
+.text-danger .ph-icon,
+.btn-outline-danger .ph-icon {
+    filter: brightness(0) saturate(100%) invert(19%) sepia(93%) saturate(2836%) hue-rotate(344deg) brightness(91%) contrast(88%);
+}
+
+.text-success .ph-icon,
+.alert-success .ph-icon {
+    filter: brightness(0) saturate(100%) invert(35%) sepia(89%) saturate(655%) hue-rotate(100deg) brightness(88%) contrast(91%);
+}
+
+.text-warning .ph-icon,
+.alert-warning .ph-icon {
+    filter: brightness(0) saturate(100%) invert(63%) sepia(96%) saturate(868%) hue-rotate(359deg) brightness(101%) contrast(104%);
+}

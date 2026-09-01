@@ -24,26 +24,26 @@ namespace BusinessLicensing_Practice.Services
 
         public static readonly IReadOnlyList<LicenceDefinition> Licences =
         [
-            new("sale-of-meals", "Sale of Meals Licence", "Prepare and sell meals for immediate consumption.", "bi-shop",
+            new("sale-of-meals", "Sale of Meals Licence", "Prepare and sell meals for immediate consumption.", "storefront",
             [
                 Text("foodDescription", "Description of food or meals sold"),
                 Choice("foodHandling", "How will food be handled?", "Pre-packed", "Packed on premises", "Processed", "Prepared on premises"),
                 Text("tradingInformation", "Trading arrangements and service method")
             ], FoodDocuments),
-            new("sale-of-perishable-foodstuffs", "Sale of Perishable Foodstuffs Licence", "Sell food requiring refrigeration or controlled storage.", "bi-basket",
+            new("sale-of-perishable-foodstuffs", "Sale of Perishable Foodstuffs Licence", "Sell food requiring refrigeration or controlled storage.", "basket",
             [
                 Text("foodDescription", "Description of perishable foodstuffs sold"),
                 Choice("foodHandling", "How will food be handled?", "Pre-packed", "Packed on premises", "Processed", "Prepared on premises"),
                 Text("coldStorage", "Cold-storage and temperature-control arrangements")
             ], FoodDocuments),
-            new("health-facility", "Health Facility Licence", "Operate facilities such as saunas, massage establishments or Turkish baths.", "bi-heart-pulse",
+            new("health-facility", "Health Facility Licence", "Operate facilities such as saunas, massage establishments or Turkish baths.", "first-aid",
             [
                 YesNo("firstAidKit", "Is a first-aid kit available?"),
                 YesNo("firstAidKnowledge", "Is a person with first-aid knowledge present?"),
                 Text("sterilisation", "Describe equipment sterilisation procedures"),
                 Text("wastewaterDisposal", "Describe wastewater disposal arrangements")
             ], StandardDocuments),
-            new("entertainment-venue", "Entertainment Venue Licence", "Operate venues such as cinemas, theatres or nightclubs.", "bi-music-note-beamed",
+            new("entertainment-venue", "Entertainment Venue Licence", "Operate venues such as cinemas, theatres or nightclubs.", "music-notes",
             [
                 Choice("entertainmentType", "Type of entertainment", "Cinema", "Theatre", "Disco / club", "Karaoke", "Live performance", "Other"),
                 Text("machinesAndTables", "Machines, games or pool tables and quantities"),
@@ -53,21 +53,21 @@ namespace BusinessLicensing_Practice.Services
                 Text("toiletFacilities", "Toilet facilities"),
                 YesNo("smokingArea", "Is there a designated smoking area?")
             ], EntertainmentDocuments),
-            new("gaming-amusement", "Gaming / Amusement Licence", "Operate gaming or amusement activities such as billiards or slot machines.", "bi-controller",
+            new("gaming-amusement", "Gaming / Amusement Licence", "Operate gaming or amusement activities such as billiards or slot machines.", "game-controller",
             [
                 Text("activityType", "Type of gaming or amusement activity"),
                 Text("machineCount", "Number and type of machines, games or tables"),
                 Text("supervision", "Supervision and access-control arrangements"),
                 Text("operatingTimes", "Operating times")
             ], EntertainmentDocuments),
-            new("adult-premises-escort-services", "Adult Premises / Escort Services Licence", "Operate regulated adult entertainment or escort service businesses.", "bi-shield-lock",
+            new("adult-premises-escort-services", "Adult Premises / Escort Services Licence", "Operate regulated adult entertainment or escort service businesses.", "prohibit",
             [
                 Choice("premisesType", "Type of regulated activity", "Adult premises", "Escort service", "Both"),
                 Text("managementControls", "Management and access-control measures"),
                 Text("operatingTimes", "Operating times"),
                 Text("safetyMeasures", "Safety and security measures")
             ], StandardDocuments),
-            new("hawker-street-trading", "Hawker / Street Trading Licence", "Operate a street trading or mobile food vending business.", "bi-shop-window",
+            new("hawker-street-trading", "Hawker / Street Trading Licence", "Operate a street trading or mobile food vending business.", "storefront",
             [
                 Text("goodsSold", "Meals or perishable foodstuffs to be sold"),
                 Text("tradingLocation", "Trading location or route"),

@@ -167,7 +167,7 @@ else
 
                         <a class="btn btn-primary" href="/applications/@application!.Id/official-pdf" target="_blank">
 
-                            <i class="bi bi-file-earmark-pdf-fill me-1"></i>
+                            <PhosphorIcon Name="file-pdf" CssClass="me-1" />
 
                             Open Generated PDF
 
@@ -179,7 +179,7 @@ else
             }
             else if (!string.IsNullOrWhiteSpace(application.ApplicationFormFilePath))
             {
-                <div class="card p-3"><div class="d-flex justify-content-between align-items-center"><strong>Legacy Uploaded Application Form</strong><a class="btn btn-outline-primary" href="@application.ApplicationFormFilePath" target="_blank">Open Legacy Form</a></div></div>
+                <div class="card p-3"><div class="d-flex justify-content-between align-items-center"><strong>Legacy Uploaded Application Form</strong><a class="btn btn-outline-primary" href="@application.ApplicationFormFilePath" target="_blank"><PhosphorIcon Name="eye" />Open Legacy Form</a></div></div>
             }
             else
             {
@@ -204,6 +204,7 @@ else
                         <li class="list-group-item d-flex justify-content-between">
                             @doc.FileName
                             <a class="btn btn-primary btn-sm" href="@doc.FilePath" target="_blank">
+                                <PhosphorIcon Name="eye" />
                                 View
                             </a>
                         </li>
@@ -259,13 +260,13 @@ else
             <div class="mt-4">
 
                 <button class="btn btn-success me-2" @onclick="SaveReview">
-                    <i class="bi bi-check-circle-fill me-1"></i>
+                    <PhosphorIcon Name="floppy-disk" CssClass="me-1" />
                     Save Review
                 </button>
 
                 <button class="btn btn-secondary me-2" @onclick="@(() => Navigation.NavigateTo("/official-dashboard"))">
 
-                    <i class="bi bi-arrow-left me-1"></i>
+                    <PhosphorIcon Name="arrow-left" CssClass="me-1" />
 
                     Back
                 </button>
@@ -273,10 +274,12 @@ else
                 @if (application?.Status == "Final Decision")
                 {
                     <button class="btn btn-primary me-2" @onclick="ApproveApplication">
+                        <PhosphorIcon Name="check-circle" />
                         Approve
                     </button>
 
                     <button class="btn btn-danger" @onclick="RejectApplication">
+                        <PhosphorIcon Name="x-circle" />
                         Reject
                     </button>
                 }

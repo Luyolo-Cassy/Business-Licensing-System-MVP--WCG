@@ -36,7 +36,7 @@
                 var selected = LicenceType == option.Name;
                 <div class="col-12 col-md-6 col-xl-4"><label class="licence-type-card card h-100 @(selected ? "is-selected" : "")">
                     <span class="visually-hidden">@option.Name</span><div class="card-body d-flex flex-column">
-                        <div class="d-flex align-items-start justify-content-between gap-3 mb-3"><span class="licence-type-icon"><i class="bi @option.IconClass"></i></span><input class="form-check-input licence-type-radio" type="radio" name="licenceType" value="@option.Name" checked="@selected" @onchange="@(() => SelectLicence(option))" /></div>
+                        <div class="d-flex align-items-start justify-content-between gap-3 mb-3"><span class="licence-type-icon"><PhosphorIcon Name="@option.IconClass" /></span><input class="form-check-input licence-type-radio" type="radio" name="licenceType" value="@option.Name" checked="@selected" @onchange="@(() => SelectLicence(option))" /></div>
                         <h5 class="licence-type-title">@option.Name</h5><p class="licence-type-description">@option.Description</p>
                         <div class="licence-type-state mt-auto">@(selected ? "Selected" : "Select licence")</div>
                     </div>
@@ -51,7 +51,7 @@
     <section class="business-info-step" aria-labelledby="applicant-heading">
         <div class="business-info-header"><h4 id="applicant-heading" class="fw-bold mb-2">Applicant Details</h4><p class="text-muted mb-0">Provide the applicant or authorised representative details for the official record.</p></div>
         <div class="card business-info-card mb-4"><div class="card-body">
-            <div class="business-info-card-heading"><span class="business-info-card-icon"><i class="bi bi-person"></i></span><h5 class="mb-0">Application Information</h5></div>
+            <div class="business-info-card-heading"><span class="business-info-card-icon"><PhosphorIcon Name="user" /></span><h5 class="mb-0">Application Information</h5></div>
             <div class="row g-3">
                 <div class="col-12 col-md-6">@FieldLabel("applicationType", "Application Type")<select id="applicationType" class="form-select" @bind="ApplicationType"><option value="">Select application type</option><option>New application</option><option>Renewal</option><option>Amendment</option></select></div>
                 <div class="col-12 col-md-6">@FieldLabel("applicantName", "Applicant / Owner / Company Name")<input id="applicantName" class="form-control" @bind="ApplicantName" /></div>
@@ -68,7 +68,7 @@
     <section class="business-info-step" aria-labelledby="business-heading">
         <div class="business-info-header"><h4 id="business-heading" class="fw-bold mb-2">Business Details</h4><p class="text-muted mb-0">Enter the common business and premises information required for the application.</p></div>
         <div class="card business-info-card mb-4"><div class="card-body">
-            <div class="business-info-card-heading"><span class="business-info-card-icon"><i class="bi bi-building"></i></span><h5 class="mb-0">Business Information</h5></div>
+            <div class="business-info-card-heading"><span class="business-info-card-icon"><PhosphorIcon Name="buildings" /></span><h5 class="mb-0">Business Information</h5></div>
             <div class="row g-3">
                 <div class="col-12 col-md-6">@FieldLabel("businessName", "Business Name")<input id="businessName" class="form-control" @bind="BusinessName" /></div>
                 <div class="col-12 col-md-6">@FieldLabel("registrationNumber", "Registration Number")<input id="registrationNumber" class="form-control" @bind="RegistrationNumber" /></div>
@@ -81,7 +81,7 @@
             </div>
         </div></div>
         <div class="card business-info-card mb-4"><div class="card-body">
-            <div class="business-info-card-heading"><span class="business-info-card-icon"><i class="bi bi-geo-alt"></i></span><h5 class="mb-0">Business Address and Routing</h5></div>
+            <div class="business-info-card-heading"><span class="business-info-card-icon"><PhosphorIcon Name="map-pin" /></span><h5 class="mb-0">Business Address and Routing</h5></div>
             <div class="row g-3">
                 <div class="col-12">@FieldLabel("addressLine1", "Address Line 1")<input id="addressLine1" class="form-control" @bind="AddressLine1" /></div>
                 <div class="col-12"><label class="form-label fw-semibold" for="addressLine2">Address Line 2</label><input id="addressLine2" class="form-control" @bind="AddressLine2" /></div>
@@ -100,7 +100,7 @@
     <section class="licence-info-step" aria-labelledby="licence-info-heading">
         <div class="licence-info-header"><h4 id="licence-info-heading" class="fw-bold mb-2">Licence-Specific Details</h4><p class="text-muted mb-0">Only questions relevant to @LicenceType are shown.</p></div>
         <div class="card licence-info-card mb-4"><div class="card-body">
-            <div class="licence-info-card-heading"><span class="licence-info-card-icon"><i class="bi bi-card-checklist"></i></span><h5 class="mb-0">@LicenceType</h5></div>
+            <div class="licence-info-card-heading"><span class="licence-info-card-icon"><PhosphorIcon Name="clipboard-text" /></span><h5 class="mb-0">@LicenceType</h5></div>
             <div class="row g-3">@foreach (var question in SelectedLicence?.Questions ?? []) { <div class="col-12 @(question.Type == QuestionType.Text ? "" : "col-md-6")">@FieldLabel(question.Key, question.Label) @if (question.Type == QuestionType.Text) { <textarea id="@question.Key" class="form-control" rows="2" value="@GetAnswer(question.Key)" @oninput="@(e => SetAnswer(question.Key, e.Value?.ToString()))"></textarea> } else { <select id="@question.Key" class="form-select" value="@GetAnswer(question.Key)" @onchange="@(e => SetAnswer(question.Key, e.Value?.ToString()))"><option value="">Select an option</option>@foreach (var option in question.Options) { <option value="@option">@option</option> }</select> }</div> }</div>
         </div></div>
     </section>
@@ -110,11 +110,11 @@
 {
     <section class="supporting-documents-step" aria-labelledby="documents-heading">
         <div class="supporting-documents-header"><h4 id="documents-heading" class="fw-bold mb-2">Supporting Documents</h4><p class="text-muted mb-0">Upload the documents required for @LicenceType. The generated PDF is not a supporting document.</p></div>
-        <div class="card supporting-documents-card mb-4"><div class="card-body"><div class="supporting-documents-card-heading"><span class="supporting-documents-card-icon"><i class="bi bi-files"></i></span><h5 class="mb-0">Required Documents</h5></div><div class="supporting-document-list">
+        <div class="card supporting-documents-card mb-4"><div class="card-body"><div class="supporting-documents-card-heading"><span class="supporting-documents-card-icon"><PhosphorIcon Name="files" /></span><h5 class="mb-0">Required Documents</h5></div><div class="supporting-document-list">
             @foreach (var requirement in SelectedLicence?.Documents ?? [])
             {
                 var selected = SelectedDocuments.FirstOrDefault(document => document.DocumentType == requirement.DocumentType);
-                <div class="supporting-document-item"><div class="supporting-document-details"><span class="supporting-document-icon"><i class="bi bi-file-earmark-text"></i></span><div><h6 class="fw-bold mb-1">@requirement.DocumentType <span class="text-danger">*</span></h6><p class="text-muted mb-0">@requirement.Description</p></div></div><div class="supporting-document-upload"><label class="form-label fw-semibold">Upload @requirement.DocumentType</label><InputFile class="form-control" accept=".pdf,.png,.jpg,.jpeg" OnChange="@(e => HandleFileSelected(e, requirement.DocumentType))" />@if (selected != null) { <div class="supporting-document-selected-file mt-3"><i class="bi bi-check-circle-fill me-2"></i><strong>Selected:</strong> @selected.FileName</div> }</div></div>
+                <div class="supporting-document-item"><div class="supporting-document-details"><span class="supporting-document-icon"><PhosphorIcon Name="file-text" /></span><div><h6 class="fw-bold mb-1">@requirement.DocumentType <span class="text-danger">*</span></h6><p class="text-muted mb-0">@requirement.Description</p></div></div><div class="supporting-document-upload"><label class="form-label fw-semibold">Upload @requirement.DocumentType</label><InputFile class="form-control" accept=".pdf,.png,.jpg,.jpeg" OnChange="@(e => HandleFileSelected(e, requirement.DocumentType))" />@if (selected != null) { <div class="supporting-document-selected-file mt-3"><PhosphorIcon Name="check-circle" CssClass="me-2" /><strong>Selected:</strong> @selected.FileName</div> }</div></div>
             }
         </div></div></div>
     </section>
@@ -136,11 +136,11 @@
 
 @if (CurrentStep == 7)
 {
-    <section class="review-submit-step" aria-labelledby="submit-heading"><div class="card review-submit-card review-submit-summary-card"><div class="card-body text-center py-5"><i class="bi bi-file-earmark-pdf fs-1 text-primary"></i><h4 id="submit-heading" class="fw-bold mt-3">Ready to Submit</h4><p class="text-muted mx-auto" style="max-width:680px">Submitting will save the application, generate the official completed PDF, and route it to <strong>@Municipality</strong>. Supporting documents remain separate.</p><div class="alert alert-info text-start mt-4 mb-0">After submission, use your dashboard to track progress and download the generated application PDF.</div></div></div></section>
+    <section class="review-submit-step" aria-labelledby="submit-heading"><div class="card review-submit-card review-submit-summary-card"><div class="card-body text-center py-5"><PhosphorIcon Name="file-pdf" CssClass="ph-icon-lg" /><h4 id="submit-heading" class="fw-bold mt-3">Ready to Submit</h4><p class="text-muted mx-auto" style="max-width:680px">Submitting will save the application, generate the official completed PDF, and route it to <strong>@Municipality</strong>. Supporting documents remain separate.</p><div class="alert alert-info text-start mt-4 mb-0">After submission, use your dashboard to track progress and download the generated application PDF.</div></div></div></section>
 }
 
 @if (!string.IsNullOrWhiteSpace(Message)) { <div class="alert @(MessageIsError ? "alert-danger" : "alert-info") mt-3" role="alert">@Message</div> }
-<div class="mt-5 d-flex flex-wrap gap-2">@if (CurrentStep > 1) { <button class="btn btn-outline-secondary" disabled="@IsSubmitting" @onclick="PreviousStep">Back</button> } @if (CurrentStep < TotalSteps) { <button class="btn btn-primary" @onclick="NextStep">Next</button> } else { <button class="btn btn-success" disabled="@IsSubmitting" @onclick="SubmitApplication">@(IsSubmitting ? "Submitting..." : "Submit Application")</button> }</div>
+<div class="mt-5 d-flex flex-wrap gap-2">@if (CurrentStep > 1) { <button class="btn btn-outline-secondary" disabled="@IsSubmitting" @onclick="PreviousStep"><PhosphorIcon Name="arrow-left" /> Back</button> } @if (CurrentStep < TotalSteps) { <button class="btn btn-primary" @onclick="NextStep">Next <PhosphorIcon Name="arrow-right" /></button> } else { <button class="btn btn-success" disabled="@IsSubmitting" @onclick="SubmitApplication"><PhosphorIcon Name="check-circle" /> @(IsSubmitting ? "Submitting..." : "Submit Application")</button> }</div>
 
 @code {
     private const int TotalSteps = 7;

@@ -72,7 +72,7 @@
 <div class="alert alert-warning d-flex justify-content-between align-items-center mb-4">
 
     <div>
-        <i class="bi bi-bell-fill me-2"></i>
+        <PhosphorIcon Name="bell" CssClass="me-2" />
 
         <strong>
             @applications.Count(a => a.Status == "Submitted")
@@ -87,10 +87,14 @@
 
     <div class="col-md-6">
 
-        <input class="form-control"
-               placeholder="Search by Business Name or Application Number..."
-               @bind="SearchText"
-               @bind:event="oninput" />
+        <div class="input-group">
+            <span class="input-group-text" aria-hidden="true"><PhosphorIcon Name="magnifying-glass" /></span>
+            <input class="form-control"
+                   placeholder="Search by Business Name or Application Number..."
+                   aria-label="Search applications"
+                   @bind="SearchText"
+                   @bind:event="oninput" />
+        </div>
 
     </div>
 
@@ -174,7 +178,7 @@
                             <a class="btn btn-primary btn-sm"
                                href="/review-application/@app.Id">
 
-                                <i class="bi bi-eye-fill me-1"></i>
+                                <PhosphorIcon Name="eye" CssClass="me-1" />
 
                                 Review
 
