@@ -4,14 +4,19 @@
 @using BusinessLicensing_Practice.Data
 @using BusinessLicensing_Practice.Models
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
 @inject ApplicationDbContext Db
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
 
 @page "/tracking/{id:int}"
+@attribute [Authorize(Roles = "BusinessOwner")]
 
 <div class="tracking-page">
 
     <div class="d-flex align-items-center mb-4">
-        <a href="/dashboard" class="btn btn-link text-dark me-2">←</a>
+        <a href="/dashboard" class="btn btn-link text-dark me-2" aria-label="Back to dashboard"><PhosphorIcon Name="arrow-left" /></a>
         <h3 class="mb-0 fw-bold">Application Details</h3>
     </div>
 
@@ -19,7 +24,7 @@
 
         <div class="alert alert-info mb-4">
 
-            <i class="bi bi-info-circle-fill me-2"></i>
+            <PhosphorIcon Name="info" CssClass="me-2" />
 
             Review your application progress below. You can monitor each stage until the licence is issued.
 
@@ -169,7 +174,7 @@
         {
             <div class="alert alert-success alert-dismissible fade show mb-4">
 
-                <i class="bi bi-check-circle-fill me-2"></i>
+                <PhosphorIcon Name="check-circle" CssClass="me-2" />
 
                 Application status updated successfully.
 
@@ -277,13 +282,28 @@
 
                     <h5 class="fw-bold">Actions</h5>
 
+                    @if (application?.Details != null && !string.IsNullOrWhiteSpace(application.ApplicationFormFilePath))
+                    {
+                        <a class="btn btn-primary mb-2 d-block" href="/applications/@application.Id/official-pdf" target="_blank">
+                            <PhosphorIcon Name="file-pdf" CssClass="me-2" />
+                            Download Official Application PDF
+                        </a>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(application?.ApplicationFormFilePath))
+                    {
+                        <a class="btn btn-outline-primary mb-2 d-block" href="@application.ApplicationFormFilePath" target="_blank">
+                            <PhosphorIcon Name="file-pdf" CssClass="me-2" />
+                            View Legacy Application Form
+                        </a>
+                    }
+
                     @if (application?.Documents != null && application.Documents.Any())
                     {
                         @foreach (var doc in application.Documents)
                         {
                             <a class="btn btn-outline-primary mb-2 d-block" href="@doc.FilePath" target="_blank">
 
-                                <i class="bi bi-file-earmark-pdf me-2"></i>
+                                <PhosphorIcon Name="download-simple" CssClass="me-2" />
 
                                 View @doc.DocumentType
 
@@ -303,8 +323,8 @@
 
                         @if (application?.Status == "Submitted")
                         {
-                            <button class="btn btn-outline-danger w-100" @onclick="() => showWithdrawModal = true">
-
+                        <button class="btn btn-outline-danger w-100" @onclick="() => showWithdrawModal = true">
+                                <PhosphorIcon Name="x-circle" />
                                 Withdraw Application
 
                             </button>
@@ -315,7 +335,7 @@
                         {
                             <button class="btn btn-outline-primary mt-2 d-block w-100"
                                     @onclick="() => showReapplyModal = true">
-
+                                <PhosphorIcon Name="arrow-counter-clockwise" />
                                 Reapply
 
                             </button>
@@ -347,9 +367,11 @@
                             Cancel
                         </button>
                         <button class="btn btn-outline-primary" @onclick="ReapplyNew">
+                            <PhosphorIcon Name="file-plus" />
                             Use New Data
                         </button>
                         <button class="btn btn-success" @onclick="ReapplyExisting">
+                            <PhosphorIcon Name="arrow-counter-clockwise" />
                             Use Stored Data
                         </button>
                     </div>
@@ -375,6 +397,7 @@
                             Cancel
                         </button>
                         <button class="btn btn-danger" @onclick="WithdrawApplication">
+                            <PhosphorIcon Name="warning" />
                             Yes, Withdraw
                         </button>
                     </div>
@@ -387,7 +410,7 @@
 
         <a class="btn btn-secondary" href="/dashboard">
 
-            <i class="bi bi-arrow-left"></i>
+            <PhosphorIcon Name="arrow-left" />
 
             Back to Dashboard
 
@@ -403,12 +426,8 @@
     public int Id { get; set; }
 
     private Application? application;
-    private bool businessVerified;
-    private bool taxVerified;
-    private bool documentsVerified;
-    private bool addressVerified;
-    private string reviewNotes = "";
     private bool showSuccess;
+    private string currentUserId = "";
 
     private static readonly List<string> StatusOrder = new()
     {
@@ -421,9 +440,14 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(authState.User);
+        currentUserId = user?.Id ?? "";
+
         application = await Db.Applications
             .Include(a => a.Documents)
-            .FirstOrDefaultAsync(a => a.Id == Id);
+            .Include(a => a.Details)
+            .FirstOrDefaultAsync(a => a.Id == Id && a.UserId == currentUserId);
     }
 
     private bool showWithdrawModal = false;
@@ -447,7 +471,8 @@
 
         application = await Db.Applications
             .Include(a => a.Documents)
-            .FirstOrDefaultAsync(a => a.Id == Id);
+            .Include(a => a.Details)
+            .FirstOrDefaultAsync(a => a.Id == Id && a.UserId == currentUserId);
 
         StateHasChanged();
     }
@@ -477,7 +502,8 @@
 
         application = await Db.Applications
             .Include(a => a.Documents)
-            .FirstOrDefaultAsync(a => a.Id == Id);
+            .Include(a => a.Details)
+            .FirstOrDefaultAsync(a => a.Id == Id && a.UserId == currentUserId);
 
         StateHasChanged();
     }
@@ -516,7 +542,8 @@
 
         application = await Db.Applications
             .Include(a => a.Documents)
-            .FirstOrDefaultAsync(a => a.Id == Id);
+            .Include(a => a.Details)
+            .FirstOrDefaultAsync(a => a.Id == Id && a.UserId == currentUserId);
 
         showWithdrawModal = false;
         StateHasChanged();
@@ -554,7 +581,8 @@
 
         application = await Db.Applications
             .Include(a => a.Documents)
-            .FirstOrDefaultAsync(a => a.Id == Id);
+            .Include(a => a.Details)
+            .FirstOrDefaultAsync(a => a.Id == Id && a.UserId == currentUserId);
 
         showReapplyModal = false;
         StateHasChanged();

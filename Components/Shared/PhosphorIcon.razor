@@ -1,0 +1,15 @@
+<img class="ph-icon @CssClass"
+     src="/icons/phosphor/@(Name).svg"
+     alt="@Alt"
+     aria-hidden="@(string.IsNullOrEmpty(Alt) ? "true" : null)" />
+
+@code {
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    [Parameter]
+    public string CssClass { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Alt { get; set; } = string.Empty;
+}

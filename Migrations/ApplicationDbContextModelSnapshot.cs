@@ -74,6 +74,9 @@ namespace BusinessLicensing_Practice.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Municipality")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("PopiaConsentAccepted")
                         .HasColumnType("INTEGER");
 
@@ -118,6 +121,68 @@ namespace BusinessLicensing_Practice.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Applications");
+                });
+
+            modelBuilder.Entity("BusinessLicensing_Practice.Models.ApplicationDetails", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ApplicantAddress")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ApplicantEmail")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ApplicantName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ApplicantTelephone")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ApplicationId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ApplicationType")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BusinessEmail")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BusinessTelephone")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContactPerson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool?>("DeclarationAccepted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("DeclarationAcceptedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ErfNumber")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LicenceSpecificDetailsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PostalAddress")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TradingHours")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Zoning")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationId")
+                        .IsUnique();
+
+                    b.ToTable("ApplicationDetails");
                 });
 
             modelBuilder.Entity("BusinessLicensing_Practice.Models.ApplicationDocument", b =>
@@ -358,6 +423,17 @@ namespace BusinessLicensing_Practice.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("BusinessLicensing_Practice.Models.ApplicationDetails", b =>
+                {
+                    b.HasOne("BusinessLicensing_Practice.Models.Application", "Application")
+                        .WithOne("Details")
+                        .HasForeignKey("BusinessLicensing_Practice.Models.ApplicationDetails", "ApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Application");
+                });
+
             modelBuilder.Entity("BusinessLicensing_Practice.Models.ApplicationDocument", b =>
                 {
                     b.HasOne("BusinessLicensing_Practice.Models.Application", "Application")
@@ -422,6 +498,8 @@ namespace BusinessLicensing_Practice.Migrations
 
             modelBuilder.Entity("BusinessLicensing_Practice.Models.Application", b =>
                 {
+                    b.Navigation("Details");
+
                     b.Navigation("Documents");
                 });
 

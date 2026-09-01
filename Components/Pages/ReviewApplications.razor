@@ -6,9 +6,14 @@
 @using Microsoft.AspNetCore.Authorization
 @using BusinessLicensing_Practice.Data
 @using BusinessLicensing_Practice.Models
+@using BusinessLicensing_Practice.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
 
 @inject ApplicationDbContext Db
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
 
 <PageTitle>Review Application</PageTitle>
 
@@ -55,7 +60,7 @@ else
             <div class="row mb-3">
                 <div class="col-md-6">
                     <strong>Application Number</strong><br />
-                    @application.ApplicationNumber
+                    @application!.ApplicationNumber
                 </div>
 
                 <div class="col-md-6">
@@ -106,6 +111,24 @@ else
                 @application.PostalCode
             </p>
 
+            @if (application.Details != null)
+            {
+                <hr />
+                <h5>Applicant Information</h5>
+                <div class="row mb-3">
+                    <div class="col-md-6"><strong>Applicant</strong><br />@application.Details.ApplicantName</div>
+                    <div class="col-md-6"><strong>Application Type</strong><br />@application.Details.ApplicationType</div>
+                    <div class="col-md-6 mt-3"><strong>Telephone</strong><br />@application.Details.ApplicantTelephone</div>
+                    <div class="col-md-6 mt-3"><strong>Email</strong><br />@application.Details.ApplicantEmail</div>
+                </div>
+
+                <h5>Licence-Specific Information</h5>
+                @foreach (var question in LicenceApplicationCatalog.Find(application.LicenceType)?.Questions ?? [])
+                {
+                    <p><strong>@question.Label:</strong> @LicenceAnswers.GetValueOrDefault(question.Key, "Not provided")</p>
+                }
+            }
+
             @if (!string.IsNullOrWhiteSpace(application.FoodHandlingType))
             {
                 <p>
@@ -124,9 +147,9 @@ else
 
             <hr />
 
-                        <h5>Application Form</h5>
+            <h5>Official Application PDF</h5>
 
-            @if (!string.IsNullOrWhiteSpace(application.ApplicationFormFilePath))
+            @if (application.Details != null && !string.IsNullOrWhiteSpace(application.ApplicationFormFilePath))
             {
                 <div class="card p-3">
 
@@ -134,7 +157,7 @@ else
 
                         <div>
 
-                            <strong>Official Application Form</strong><br />
+                            <strong>System-Generated Official Application</strong><br />
 
                             <small class="text-muted">
                                 Submitted by <strong>@application?.User?.FullName</strong>
@@ -142,11 +165,11 @@ else
 
                         </div>
 
-                        <a class="btn btn-primary" href="@application.ApplicationFormFilePath" target="_blank">
+                        <a class="btn btn-primary" href="/applications/@application!.Id/official-pdf" target="_blank">
 
-                            <i class="bi bi-file-earmark-pdf-fill me-1"></i>
+                            <PhosphorIcon Name="file-pdf" CssClass="me-1" />
 
-                            Open Form
+                            Open Generated PDF
 
                         </a>
 
@@ -154,11 +177,15 @@ else
 
                 </div>
             }
+            else if (!string.IsNullOrWhiteSpace(application.ApplicationFormFilePath))
+            {
+                <div class="card p-3"><div class="d-flex justify-content-between align-items-center"><strong>Legacy Uploaded Application Form</strong><a class="btn btn-outline-primary" href="@application.ApplicationFormFilePath" target="_blank"><PhosphorIcon Name="eye" />Open Legacy Form</a></div></div>
+            }
             else
             {
                 <div class="alert alert-warning">
 
-                    No application form was uploaded.
+                    No application PDF is available for this legacy record.
 
                 </div>
             }
@@ -177,6 +204,7 @@ else
                         <li class="list-group-item d-flex justify-content-between">
                             @doc.FileName
                             <a class="btn btn-primary btn-sm" href="@doc.FilePath" target="_blank">
+                                <PhosphorIcon Name="eye" />
                                 View
                             </a>
                         </li>
@@ -232,13 +260,13 @@ else
             <div class="mt-4">
 
                 <button class="btn btn-success me-2" @onclick="SaveReview">
-                    <i class="bi bi-check-circle-fill me-1"></i>
+                    <PhosphorIcon Name="floppy-disk" CssClass="me-1" />
                     Save Review
                 </button>
 
                 <button class="btn btn-secondary me-2" @onclick="@(() => Navigation.NavigateTo("/official-dashboard"))">
 
-                    <i class="bi bi-arrow-left me-1"></i>
+                    <PhosphorIcon Name="arrow-left" CssClass="me-1" />
 
                     Back
                 </button>
@@ -246,10 +274,12 @@ else
                 @if (application?.Status == "Final Decision")
                 {
                     <button class="btn btn-primary me-2" @onclick="ApproveApplication">
+                        <PhosphorIcon Name="check-circle" />
                         Approve
                     </button>
 
                     <button class="btn btn-danger" @onclick="RejectApplication">
+                        <PhosphorIcon Name="x-circle" />
                         Reject
                     </button>
                 }
@@ -268,13 +298,21 @@ else
     private Application? application;
     private string ReviewComments = "";
     private bool ShowSuccess = false;
+    private Dictionary<string, string> LicenceAnswers = new();
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var official = await UserManager.GetUserAsync(authState.User);
+        if (official == null || string.IsNullOrWhiteSpace(official.Municipality)) return;
+
         application = await Db.Applications
-    .Include(a => a.Documents)
-    .Include(a => a.User)
-    .FirstOrDefaultAsync(a => a.Id == Id);
+            .Include(a => a.Documents)
+            .Include(a => a.User)
+            .Include(a => a.Details)
+            .FirstOrDefaultAsync(a => a.Id == Id && (a.Municipality == official.Municipality || a.Municipality == null));
+
+        LicenceAnswers = ApplicationPdfService.DeserializeAnswers(application?.Details?.LicenceSpecificDetailsJson);
     }
 
     private async Task SaveReview()
