@@ -645,3 +645,42 @@
         gap: 0.25rem;
     }
 }
+
+
+.ai-validation-card {
+    border-radius: 0.75rem;
+    border: 1px solid transparent;
+    padding: 1rem;
+}
+
+.ai-validation-pass {
+    background: #eaf7ef;
+    border-color: #b8e0c4;
+}
+
+.ai-validation-review {
+    background: #fff8e1;
+    border-color: #f0d98a;
+}
+
+.ai-validation-fail {
+    background: #fdecec;
+    border-color: #efb4b4;
+}
+
+.ai-validation-icon {
+    font-size: 1.4rem;
+    line-height: 1;
+}
+
+.ai-validation-pass .ai-validation-icon {
+    color: #198754;
+}
+
+.ai-validation-review .ai-validation-icon {
+    color: #b58105;
+}
+
+.ai-validation-fail .ai-validation-icon {
+    color: #dc3545;
+}

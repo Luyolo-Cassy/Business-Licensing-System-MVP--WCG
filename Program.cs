@@ -45,6 +45,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 builder.Services.AddSingleton<ApplicationFileService>();
 builder.Services.AddSingleton<ApplicationPdfService>();
+builder.Services.AddHttpClient<GeminiDocumentValidationService>();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

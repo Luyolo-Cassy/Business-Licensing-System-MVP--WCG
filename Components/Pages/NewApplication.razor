@@ -19,6 +19,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ApplicationPdfService PdfService
 @inject ApplicationFileService FileService
+@inject GeminiDocumentValidationService GeminiValidator
 
 <h3 class="fw-bold mb-4">New Business Licence Application</h3>
 <div class="progress mb-3" aria-label="Application progress">
@@ -114,7 +115,53 @@
             @foreach (var requirement in SelectedLicence?.Documents ?? [])
             {
                 var selected = SelectedDocuments.FirstOrDefault(document => document.DocumentType == requirement.DocumentType);
-                <div class="supporting-document-item"><div class="supporting-document-details"><span class="supporting-document-icon"><PhosphorIcon Name="file-text" /></span><div><h6 class="fw-bold mb-1">@requirement.DocumentType <span class="text-danger">*</span></h6><p class="text-muted mb-0">@requirement.Description</p></div></div><div class="supporting-document-upload"><label class="form-label fw-semibold">Upload @requirement.DocumentType</label><InputFile class="form-control" accept=".pdf,.png,.jpg,.jpeg" OnChange="@(e => HandleFileSelected(e, requirement.DocumentType))" />@if (selected != null) { <div class="supporting-document-selected-file mt-3"><PhosphorIcon Name="check-circle" CssClass="me-2" /><strong>Selected:</strong> @selected.FileName</div> }</div></div>
+                <div class="supporting-document-item"><div class="supporting-document-details"><span class="supporting-document-icon"><PhosphorIcon Name="file-text" /></span><div><h6 class="fw-bold mb-1">@requirement.DocumentType <span class="text-danger">*</span></h6><p class="text-muted mb-0">@requirement.Description</p></div></div><div class="supporting-document-upload"><label class="form-label fw-semibold">Upload @requirement.DocumentType</label><InputFile class="form-control" accept=".pdf,.png,.jpg,.jpeg" OnChange="@(e => HandleFileSelected(e, requirement.DocumentType))" />@if (selected != null)
+{
+    <div class="supporting-document-selected-file mt-3">
+        <PhosphorIcon Name="check-circle" CssClass="me-2" />
+        <strong>Selected:</strong> @selected.FileName
+    </div>
+
+    @if (DocumentValidationResults.TryGetValue(requirement.DocumentType, out var validation))
+    {
+        <div class="ai-validation-card mt-3 @(GetValidationCss(validation.Status))" role="status">
+            <div class="d-flex align-items-start gap-3">
+                <div class="ai-validation-icon">
+                    <PhosphorIcon Name="@GetValidationIcon(validation.Status)" />
+                </div>
+                <div class="flex-grow-1">
+                    <div class="fw-bold">@GetValidationTitle(validation.Status)</div>
+                    <div class="mt-1">@validation.Summary</div>
+
+                    @if (!string.IsNullOrWhiteSpace(validation.ExpiryDate))
+                    {
+                        <div class="small mt-2"><strong>Expiry date:</strong> @validation.ExpiryDate</div>
+                    }
+
+                    @if (validation.Issues.Count > 0)
+                    {
+                        <ul class="small mb-0 mt-2">
+                            @foreach (var issue in validation.Issues)
+                            {
+                                <li><strong>@issue.Type:</strong> @issue.Message</li>
+                            }
+                        </ul>
+                    }
+                </div>
+                <span class="badge @GetValidationBadge(validation.Status)">
+                    @validation.Status
+                </span>
+            </div>
+        </div>
+    }
+    else if (ValidatingDocumentTypes.Contains(requirement.DocumentType))
+    {
+        <div class="alert alert-info mt-3 mb-0">
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            AI is checking this document...
+        </div>
+    }
+}</div></div>
             }
         </div></div></div>
     </section>
@@ -152,6 +199,8 @@
     private string AddressLine1 = "", AddressLine2 = "", Suburb = "", City = "", PostalCode = "", Municipality = "", PostalAddress = "";
     private readonly Dictionary<string, string> LicenceAnswers = new();
     private readonly List<SelectedDocument> SelectedDocuments = new();
+    private readonly Dictionary<string, DocumentValidationResult> DocumentValidationResults = new();
+    private readonly HashSet<string> ValidatingDocumentTypes = new();
 
     private LicenceDefinition? SelectedLicence => LicenceApplicationCatalog.Find(LicenceType);
     private string FormattedBusinessAddress => string.Join(", ", new[] { AddressLine1, AddressLine2, Suburb, City, PostalCode }.Where(value => !string.IsNullOrWhiteSpace(value)));
@@ -167,7 +216,7 @@
     private void SelectLicence(LicenceDefinition definition)
     {
         if (LicenceType == definition.Name) return;
-        LicenceType = definition.Name; LicenceAnswers.Clear(); SelectedDocuments.Clear();
+        LicenceType = definition.Name; LicenceAnswers.Clear(); SelectedDocuments.Clear(); DocumentValidationResults.Clear(); ValidatingDocumentTypes.Clear();
         foreach (var question in definition.Questions) LicenceAnswers[question.Key] = "";
     }
 
@@ -180,38 +229,16 @@
     {
         var error = step switch
         {
-<<<<<<< HEAD
-            "Sale of Meals Licence" =>
-                "/forms/sale-of-meals-licence-application-form.pdf",
-
-            "Sale of Perishable Foodstuffs Licence" =>
-                "/forms/sale-of-perishable-foodstuffs-licence-application-form.pdf",
-
-            "Health Facility Licence" =>
-                "/forms/health-facility-licence-application-form.pdf",
-
-            "Entertainment Venue Licence" =>
-                "/forms/entertainment-venue-licence-application-form.pdf",
-
-            "Gaming / Amusement Licence" =>
-                "/forms/gaming-amusement-licence-application-form.pdf",
-
-            "Adult Premises / Escort Services Licence" =>
-                "/forms/adult-premises-escort-services-licence-application-form.pdf",
-
-            "Hawker / Street Trading Licence" =>
-                "/forms/hawker-street-trading-licence-application-form.pdf",
-
-            _ => "#"
-=======
             1 when SelectedLicence == null => "Please select a licence type before continuing.",
             2 when AnyBlank(ApplicationType, ApplicantName, ApplicantAddress, ApplicantTelephone, ApplicantEmail) => "Please complete all required applicant details.",
             3 when AnyBlank(BusinessName, RegistrationNumber, TaxNumber, BusinessCategory, ContactPerson, BusinessTelephone, BusinessEmail, TradingHours, AddressLine1, Suburb, City, PostalCode, Municipality, PostalAddress) => "Please complete all required business and routing details.",
             4 when SelectedLicence?.Questions.Any(question => question.Required && string.IsNullOrWhiteSpace(GetAnswer(question.Key))) == true => "Please answer every required licence-specific question.",
             5 when SelectedLicence?.Documents.Any(requirement => requirement.Required && !SelectedDocuments.Any(document => document.DocumentType == requirement.DocumentType)) == true => "Please upload every required supporting document.",
+            5 when SelectedLicence?.Documents.Any(requirement => requirement.Required &&
+                (!DocumentValidationResults.TryGetValue(requirement.DocumentType, out var result) ||
+                 result.Status != "PASS")) == true => "Please fix or replace every supporting document that did not pass the AI document check before continuing.",
             6 when !DeclarationAccepted || !PopiaConsentAccepted => "Please accept both the declaration and POPIA consent before continuing.",
             _ => null
->>>>>>> Alec
         };
         if (error == null) return true;
         SetError(error); return false;
@@ -222,11 +249,122 @@
 
     private async Task HandleFileSelected(InputFileChangeEventArgs args, string documentType)
     {
-        Message = ""; var file = args.File; var extension = Path.GetExtension(file.Name).ToLowerInvariant();
-        if (extension is not (".pdf" or ".png" or ".jpg" or ".jpeg")) { SetError("Supporting documents must be PDF, PNG or JPEG files."); return; }
-        try { using var stream = new MemoryStream(); await file.OpenReadStream(MaxFileSize).CopyToAsync(stream); SelectedDocuments.RemoveAll(item => item.DocumentType == documentType); SelectedDocuments.Add(new(documentType, Path.GetFileName(file.Name), stream.ToArray())); }
-        catch (IOException) { SetError("The selected document exceeds the 10 MB file limit."); }
+        Message = "";
+        var file = args.File;
+        var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+
+        if (extension is not (".pdf" or ".png" or ".jpg" or ".jpeg"))
+        {
+            SetError("Supporting documents must be PDF, PNG or JPEG files.");
+            return;
+        }
+
+        try
+        {
+            using var stream = new MemoryStream();
+            await file.OpenReadStream(MaxFileSize).CopyToAsync(stream);
+
+            SelectedDocuments.RemoveAll(item => item.DocumentType == documentType);
+            DocumentValidationResults.Remove(documentType);
+
+            var selected = new SelectedDocument(
+                documentType,
+                Path.GetFileName(file.Name),
+                stream.ToArray(),
+                GetMimeType(extension));
+
+            SelectedDocuments.Add(selected);
+
+            await ValidateDocumentWithAiAsync(selected);
+        }
+        catch (IOException)
+        {
+            SetError("The selected document exceeds the 10 MB file limit.");
+        }
+        catch (Exception ex)
+        {
+            SetError($"The document was uploaded, but the AI check could not be completed: {ex.Message}");
+        }
     }
+
+    private async Task ValidateDocumentWithAiAsync(SelectedDocument selected)
+    {
+        var requirement = SelectedLicence?.Documents
+            .FirstOrDefault(item => item.DocumentType == selected.DocumentType);
+
+        if (requirement == null)
+        {
+            SetError("The selected document type is not part of this licence application.");
+            return;
+        }
+
+        ValidatingDocumentTypes.Add(selected.DocumentType);
+        try
+        {
+            var result = await GeminiValidator.ValidateDocumentAsync(
+                selected.FileBytes,
+                selected.MimeType,
+                selected.DocumentType,
+                requirement.Description,
+                LicenceType,
+                BusinessName,
+                RegistrationNumber);
+
+            DocumentValidationResults[selected.DocumentType] = result;
+
+            if (result.Status == "PASS")
+            {
+                MessageIsError = false;
+                Message = $"{selected.DocumentType} passed the AI document check.";
+            }
+            else
+            {
+                MessageIsError = true;
+                Message = $"{selected.DocumentType} needs attention. Please review the feedback below.";
+            }
+        }
+        finally
+        {
+            ValidatingDocumentTypes.Remove(selected.DocumentType);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private static string GetMimeType(string extension) => extension switch
+    {
+        ".pdf" => "application/pdf",
+        ".png" => "image/png",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        _ => "application/octet-stream"
+    };
+
+    private static string GetValidationCss(string status) => status switch
+    {
+        "PASS" => "ai-validation-pass",
+        "FAIL" => "ai-validation-fail",
+        _ => "ai-validation-review"
+    };
+
+    private static string GetValidationBadge(string status) => status switch
+    {
+        "PASS" => "bg-success",
+        "FAIL" => "bg-danger",
+        _ => "bg-warning text-dark"
+    };
+
+    private static string GetValidationIcon(string status) => status switch
+    {
+        "PASS" => "check-circle",
+        "FAIL" => "x-circle",
+        _ => "warning"
+    };
+
+    private static string GetValidationTitle(string status) => status switch
+    {
+        "PASS" => "Document appears valid",
+        "FAIL" => "Document does not meet the requirement",
+        _ => "Document needs review"
+    };
 
     private async Task SubmitApplication()
     {
@@ -268,5 +406,5 @@
         builder.OpenElement(2, "span"); builder.AddAttribute(3, "class", "review-label"); builder.AddContent(4, label + ":"); builder.CloseElement();
         builder.OpenElement(5, "span"); builder.AddAttribute(6, "class", "review-value"); builder.AddContent(7, string.IsNullOrWhiteSpace(value) ? "Not provided" : value); builder.CloseElement(); builder.CloseElement();
     };
-    private sealed record SelectedDocument(string DocumentType, string FileName, byte[] FileBytes);
+    private sealed record SelectedDocument(string DocumentType, string FileName, byte[] FileBytes, string MimeType);
 }
