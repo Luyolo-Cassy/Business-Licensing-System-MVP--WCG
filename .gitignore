@@ -5,3 +5,4 @@ obj/
 *.db-shm
 *.db-wal
 wwwroot/uploads/
+App_Data/generated-applications/
