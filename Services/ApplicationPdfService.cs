@@ -55,7 +55,7 @@ namespace BusinessLicensing_Practice.Services
             var definition = LicenceApplicationCatalog.Find(application.LicenceType);
             if (definition != null)
             {
-                renderer.AddRows(definition.Questions.Select(question =>
+                renderer.AddLicenceSpecificRows(definition.Questions.Select(question =>
                     (question.Label, answers.GetValueOrDefault(question.Key))));
             }
 
@@ -143,6 +143,14 @@ namespace BusinessLicensing_Practice.Services
                 }
             }
 
+            public void AddLicenceSpecificRows(IEnumerable<(string Label, string? Value)> rows)
+            {
+                foreach (var (label, value) in rows)
+                {
+                    AddRow(label, value, 0.34);
+                }
+            }
+
             public void AddParagraph(string text)
             {
                 var lines = Wrap(text, page.Width.Point - (Margin * 2), regular);
@@ -155,20 +163,28 @@ namespace BusinessLicensing_Practice.Services
                 y += 4;
             }
 
-            private void AddRow(string label, string? value)
+            private void AddRow(string label, string? value, double? labelColumnRatio = null)
             {
                 var displayValue = string.IsNullOrWhiteSpace(value) ? "Not provided" : value.Trim();
-                var labelWidth = 170d;
-                var valueWidth = page.Width.Point - (Margin * 2) - labelWidth - 12;
-                var lines = Wrap(displayValue, valueWidth, regular);
-                var height = Math.Max(22, lines.Count * 13 + 8);
+                var contentWidth = page.Width.Point - (Margin * 2);
+                var labelColumnWidth = labelColumnRatio.HasValue
+                    ? contentWidth * labelColumnRatio.Value
+                    : 170d;
+                const double columnPadding = 12;
+                var labelLines = Wrap(label, labelColumnWidth - columnPadding, bold);
+                var valueLines = Wrap(displayValue, contentWidth - labelColumnWidth - columnPadding, regular);
+                var lineCount = Math.Max(labelLines.Count, valueLines.Count);
+                var height = Math.Max(22, lineCount * 13 + 8);
                 EnsureSpace(height);
 
                 graphics.DrawLine(new XPen(XColor.FromArgb(220, 220, 220)), Margin, y + height, page.Width.Point - Margin, y + height);
-                graphics.DrawString(label, bold, new XSolidBrush(TextGrey), new XPoint(Margin, y + 14));
-                for (var index = 0; index < lines.Count; index++)
+                for (var index = 0; index < labelLines.Count; index++)
                 {
-                    graphics.DrawString(lines[index], regular, XBrushes.Black, new XPoint(Margin + labelWidth, y + 14 + (index * 13)));
+                    graphics.DrawString(labelLines[index], bold, new XSolidBrush(TextGrey), new XPoint(Margin, y + 14 + (index * 13)));
+                }
+                for (var index = 0; index < valueLines.Count; index++)
+                {
+                    graphics.DrawString(valueLines[index], regular, XBrushes.Black, new XPoint(Margin + labelColumnWidth, y + 14 + (index * 13)));
                 }
                 y += height;
             }
@@ -180,14 +196,31 @@ namespace BusinessLicensing_Practice.Services
                 foreach (var word in text.Replace("\r", "").Replace("\n", " ").Split(' ', StringSplitOptions.RemoveEmptyEntries))
                 {
                     var candidate = string.IsNullOrEmpty(current) ? word : $"{current} {word}";
-                    if (graphics.MeasureString(candidate, font).Width <= width || string.IsNullOrEmpty(current))
+                    if (graphics.MeasureString(candidate, font).Width <= width)
                     {
                         current = candidate;
                     }
                     else
                     {
-                        lines.Add(current);
-                        current = word;
+                        if (!string.IsNullOrEmpty(current))
+                        {
+                            lines.Add(current);
+                            current = "";
+                        }
+
+                        foreach (var character in word)
+                        {
+                            var fragment = $"{current}{character}";
+                            if (graphics.MeasureString(fragment, font).Width <= width || string.IsNullOrEmpty(current))
+                            {
+                                current = fragment;
+                            }
+                            else
+                            {
+                                lines.Add(current);
+                                current = character.ToString();
+                            }
+                        }
                     }
                 }
                 if (!string.IsNullOrEmpty(current)) lines.Add(current);
