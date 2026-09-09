@@ -45,6 +45,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 builder.Services.AddSingleton<ApplicationFileService>();
 builder.Services.AddSingleton<ApplicationPdfService>();
+builder.Services.AddScoped<MunicipalMessageService>();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

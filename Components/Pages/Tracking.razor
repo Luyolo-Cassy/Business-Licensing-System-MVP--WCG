@@ -6,6 +6,8 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
+@using BusinessLicensing_Practice.Services
+@inject MunicipalMessageService Messages
 @inject ApplicationDbContext Db
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserManager<ApplicationUser> UserManager
@@ -13,6 +15,12 @@
 @page "/tracking/{id:int}"
 @attribute [Authorize(Roles = "BusinessOwner")]
 
+@if (application == null)
+{
+    <div class="alert alert-info">Application unavailable or loading.</div>
+}
+else
+{
 <div class="tracking-page">
 
     <div class="d-flex align-items-center mb-4">
@@ -89,6 +97,22 @@
 
         <hr />
 
+        <section class="card mb-4" aria-labelledby="municipal-messages">
+            <div class="card-header"><h5 id="municipal-messages" class="mb-0">Municipal Messages</h5></div>
+            <div class="card-body">
+                @if (municipalMessages.Count == 0)
+                {
+                    <p class="text-muted mb-0">No municipal messages yet.</p>
+                }
+                @foreach (var message in municipalMessages)
+                {
+                    <article class="border-bottom pb-3 mb-3">
+                        <small class="text-muted">@message.SenderName ? @message.CreatedAtUtc.ToString("dd MMM yyyy HH:mm") UTC</small>
+                        <div style="white-space: pre-wrap; overflow-wrap: anywhere;">@message.Content</div>
+                    </article>
+                }
+            </div>
+        </section>
         <h5 class="fw-bold mb-3">
             Application Progress
         </h5>
@@ -420,12 +444,16 @@
 
 </div>
 
+}
+
 @code {
 
     [Parameter]
     public int Id { get; set; }
 
     private Application? application;
+    private List<MunicipalMessage> municipalMessages = [];
+    private bool markMessagesRead;
     private bool showSuccess;
     private string currentUserId = "";
 
@@ -438,7 +466,7 @@
         "Licence Issued"
     };
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = await UserManager.GetUserAsync(authState.User);
@@ -448,6 +476,18 @@
             .Include(a => a.Documents)
             .Include(a => a.Details)
             .FirstOrDefaultAsync(a => a.Id == Id && a.UserId == currentUserId);
+        municipalMessages = application == null ? [] : await Messages.GetMessagesAsync(authState.User, Id);
+        markMessagesRead = municipalMessages.Any(m => m.ReadAtUtc == null);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!markMessagesRead) return;
+        markMessagesRead = false;
+        var displayedApplicationId = Id;
+        var displayedIds = municipalMessages.Select(m => m.Id).ToArray();
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        await Messages.MarkReadAsync(authState.User, displayedApplicationId, displayedIds);
     }
 
     private bool showWithdrawModal = false;

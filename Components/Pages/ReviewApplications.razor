@@ -10,6 +10,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
 
+@inject MunicipalMessageService Messages
 @inject ApplicationDbContext Db
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -101,14 +102,14 @@ else
 
             <hr />
 
-            <h5>Business Address</h5>
+            <h5>Place of Business / Trading Address</h5>
 
             <p>
-                @application.AddressLine1 <br />
-                @application.AddressLine2 <br />
-                @application.Suburb <br />
-                @application.City <br />
-                @application.PostalCode
+                @application.PlaceOfBusinessAddressLine1 <br />
+                @application.PlaceOfBusinessAddressLine2 <br />
+                @application.PlaceOfBusinessSuburb <br />
+                @application.PlaceOfBusinessCity <br />
+                @application.PlaceOfBusinessPostalCode
             </p>
 
             @if (application.Details != null)
@@ -225,13 +226,14 @@ else
 
             <div class="mb-3">
                 <label class="form-label">
-                    Comments
+                    Message to applicant
                 </label>
 
                 <InputTextArea class="form-control" @bind-Value="ReviewComments" rows="4">
                 </InputTextArea>
             </div>
 
+            <p class="form-text">This note is visible to the applicant and creates an unread notification when you save the review.</p>
             <h5>Review Decision</h5>
 
             <div class="mb-3">
@@ -257,9 +259,14 @@ else
                 </div>
             }
 
+            @if (saveError != null)
+            {
+                <div class="alert alert-danger" role="alert">@saveError</div>
+            }
+
             <div class="mt-4">
 
-                <button class="btn btn-success me-2" @onclick="SaveReview">
+                <button class="btn btn-success me-2" disabled="@saving" @onclick="SaveReview">
                     <PhosphorIcon Name="floppy-disk" CssClass="me-1" />
                     Save Review
                 </button>
@@ -298,6 +305,8 @@ else
     private Application? application;
     private string ReviewComments = "";
     private bool ShowSuccess = false;
+    private bool saving;
+    private string? saveError;
     private Dictionary<string, string> LicenceAnswers = new();
 
     protected override async Task OnInitializedAsync()
@@ -317,14 +326,34 @@ else
 
     private async Task SaveReview()
     {
-        if (application != null)
+        if (application != null && !saving)
         {
-            Db.Update(application);
-            await Db.SaveChangesAsync();
+            saving = true;
+            saveError = null;
+            try
+            {
+                var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+                await Messages.SaveReviewAsync(authState.User, application.Id, application.Status, ReviewComments);
+                ReviewComments = "";
+            }
+            catch (UnauthorizedAccessException)
+            {
+                saveError = "You no longer have access to review this application.";
+                return;
+            }
+            catch (DbUpdateException)
+            {
+                saveError = "The review could not be saved. Your message is still here; please try again.";
+                return;
+            }
+            finally
+            {
+                saving = false;
+            }
 
             ShowSuccess = true;
 
-            await Task.Delay(1500);
+
 
             Navigation.NavigateTo("/official-dashboard");
         }

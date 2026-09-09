@@ -5,7 +5,7 @@ namespace BusinessLicensing_Practice.Services
         private static readonly IReadOnlyList<DocumentRequirement> StandardDocuments =
         [
             Document("Certificate of Incorporation", "Proof that the business is legally registered."),
-            Document("Proof of Address", "A recent document confirming the business address."),
+            Document("Proof of Address", "A recent document confirming the Place of Business / Trading Address (the physical address where the business operates or trades)."),
             Document("Tax Clearance Certificate", "Current proof of the business's tax compliance status."),
             Document("Owner ID Document", "A clear copy of the owner's identification document.")
         ];

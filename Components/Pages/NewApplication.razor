@@ -81,13 +81,14 @@
             </div>
         </div></div>
         <div class="card business-info-card mb-4"><div class="card-body">
-            <div class="business-info-card-heading"><span class="business-info-card-icon"><PhosphorIcon Name="map-pin" /></span><h5 class="mb-0">Business Address and Routing</h5></div>
+            <div class="business-info-card-heading"><span class="business-info-card-icon"><PhosphorIcon Name="map-pin" /></span><h5 class="mb-0">Place of Business / Trading Address</h5></div>
+            <p class="text-muted">Enter the physical address where the business operates or trades.</p>
             <div class="row g-3">
-                <div class="col-12">@FieldLabel("addressLine1", "Address Line 1")<input id="addressLine1" class="form-control" @bind="AddressLine1" /></div>
-                <div class="col-12"><label class="form-label fw-semibold" for="addressLine2">Address Line 2</label><input id="addressLine2" class="form-control" @bind="AddressLine2" /></div>
-                <div class="col-12 col-md-6">@FieldLabel("suburb", "Suburb")<input id="suburb" class="form-control" @bind="Suburb" /></div>
-                <div class="col-12 col-md-6">@FieldLabel("city", "Town / City")<input id="city" class="form-control" @bind="City" /></div>
-                <div class="col-12 col-md-4">@FieldLabel("postalCode", "Postal Code")<input id="postalCode" class="form-control" @bind="PostalCode" /></div>
+                <div class="col-12">@FieldLabel("addressLine1", "Address Line 1")<input id="addressLine1" class="form-control" @bind="PlaceOfBusinessAddressLine1" /></div>
+                <div class="col-12"><label class="form-label fw-semibold" for="addressLine2">Address Line 2</label><input id="addressLine2" class="form-control" @bind="PlaceOfBusinessAddressLine2" /></div>
+                <div class="col-12 col-md-6">@FieldLabel("suburb", "Suburb")<input id="suburb" class="form-control" @bind="PlaceOfBusinessSuburb" /></div>
+                <div class="col-12 col-md-6">@FieldLabel("city", "Town / City")<input id="city" class="form-control" @bind="PlaceOfBusinessCity" /></div>
+                <div class="col-12 col-md-4">@FieldLabel("postalCode", "Postal Code")<input id="postalCode" class="form-control" @bind="PlaceOfBusinessPostalCode" /></div>
                 <div class="col-12 col-md-8">@FieldLabel("municipality", "Responsible Municipality")<select id="municipality" class="form-select" @bind="Municipality"><option value="">Select municipality</option>@foreach (var municipality in LicenceApplicationCatalog.Municipalities) { <option value="@municipality">@municipality.Replace(" Municipality", "")</option> }</select></div>
                 <div class="col-12">@FieldLabel("postalAddress", "Postal Address")<textarea id="postalAddress" class="form-control" rows="2" @bind="PostalAddress"></textarea></div>
             </div>
@@ -126,7 +127,7 @@
         <div class="review-submit-header"><h4 id="review-heading" class="fw-bold mb-2">Review & Declaration</h4><p class="text-muted mb-0">Verify all information before making the declaration.</p></div>
         <div class="row g-4">
             <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Applicant</h5>@ReviewItem("Application Type", ApplicationType)@ReviewItem("Licence Type", LicenceType)@ReviewItem("Applicant Name", ApplicantName)@ReviewItem("Address", ApplicantAddress)@ReviewItem("Telephone", ApplicantTelephone)@ReviewItem("Email", ApplicantEmail)</div></div></div>
-            <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Business</h5>@ReviewItem("Business Name", BusinessName)@ReviewItem("Nature", BusinessCategory)@ReviewItem("Address", FormattedBusinessAddress)@ReviewItem("Responsible Municipality", Municipality.Replace(" Municipality", ""))@ReviewItem("Trading Hours", TradingHours)</div></div></div>
+            <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Business</h5>@ReviewItem("Business Name", BusinessName)@ReviewItem("Nature", BusinessCategory)@ReviewItem("Place of Business / Trading Address", FormattedPlaceOfBusinessAddress)@ReviewItem("Responsible Municipality", Municipality.Replace(" Municipality", ""))@ReviewItem("Trading Hours", TradingHours)</div></div></div>
             <div class="col-12"><div class="card review-submit-card"><div class="card-body"><h5 class="mb-3">@LicenceType Details</h5>@foreach (var question in SelectedLicence?.Questions ?? []) { @ReviewItem(question.Label, GetAnswer(question.Key)) }</div></div></div>
             <div class="col-12"><div class="card review-submit-card"><div class="card-body"><h5 class="mb-3">Supporting Documents</h5>@foreach (var document in SelectedDocuments) { @ReviewItem(document.DocumentType, document.FileName) }</div></div></div>
         </div>
@@ -149,12 +150,12 @@
     private bool IsSubmitting, MessageIsError, DeclarationAccepted, PopiaConsentAccepted;
     private string Message = "", LicenceType = "", ApplicationType = "", ApplicantName = "", ApplicantAddress = "", ApplicantTelephone = "", ApplicantEmail = "";
     private string BusinessName = "", RegistrationNumber = "", TaxNumber = "", BusinessCategory = "", ContactPerson = "", BusinessTelephone = "", BusinessEmail = "", TradingHours = "";
-    private string AddressLine1 = "", AddressLine2 = "", Suburb = "", City = "", PostalCode = "", Municipality = "", PostalAddress = "";
+    private string PlaceOfBusinessAddressLine1 = "", PlaceOfBusinessAddressLine2 = "", PlaceOfBusinessSuburb = "", PlaceOfBusinessCity = "", PlaceOfBusinessPostalCode = "", Municipality = "", PostalAddress = "";
     private readonly Dictionary<string, string> LicenceAnswers = new();
     private readonly List<SelectedDocument> SelectedDocuments = new();
 
     private LicenceDefinition? SelectedLicence => LicenceApplicationCatalog.Find(LicenceType);
-    private string FormattedBusinessAddress => string.Join(", ", new[] { AddressLine1, AddressLine2, Suburb, City, PostalCode }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private string FormattedPlaceOfBusinessAddress => string.Join(", ", new[] { PlaceOfBusinessAddressLine1, PlaceOfBusinessAddressLine2, PlaceOfBusinessSuburb, PlaceOfBusinessCity, PlaceOfBusinessPostalCode }.Where(value => !string.IsNullOrWhiteSpace(value)));
     private string StepTitle => CurrentStep switch { 1 => "Licence Type", 2 => "Applicant Details", 3 => "Business Details", 4 => "Licence-Specific Details", 5 => "Supporting Documents", 6 => "Review & Declaration", 7 => "Submit", _ => "" };
 
     protected override async Task OnInitializedAsync()
@@ -182,7 +183,7 @@
         {
             1 when SelectedLicence == null => "Please select a licence type before continuing.",
             2 when AnyBlank(ApplicationType, ApplicantName, ApplicantAddress, ApplicantTelephone, ApplicantEmail) => "Please complete all required applicant details.",
-            3 when AnyBlank(BusinessName, RegistrationNumber, TaxNumber, BusinessCategory, ContactPerson, BusinessTelephone, BusinessEmail, TradingHours, AddressLine1, Suburb, City, PostalCode, Municipality, PostalAddress) => "Please complete all required business and routing details.",
+            3 when AnyBlank(BusinessName, RegistrationNumber, TaxNumber, BusinessCategory, ContactPerson, BusinessTelephone, BusinessEmail, TradingHours, PlaceOfBusinessAddressLine1, PlaceOfBusinessSuburb, PlaceOfBusinessCity, PlaceOfBusinessPostalCode, Municipality, PostalAddress) => "Please complete all required business and routing details.",
             4 when SelectedLicence?.Questions.Any(question => question.Required && string.IsNullOrWhiteSpace(GetAnswer(question.Key))) == true => "Please answer every required licence-specific question.",
             5 when SelectedLicence?.Documents.Any(requirement => requirement.Required && !SelectedDocuments.Any(document => document.DocumentType == requirement.DocumentType)) == true => "Please upload every required supporting document.",
             6 when !DeclarationAccepted || !PopiaConsentAccepted => "Please accept both the declaration and POPIA consent before continuing.",
@@ -216,7 +217,7 @@
             var application = new Application
             {
                 ApplicationNumber = $"APP-{now.Year}-{count + 1:D3}", BusinessName = BusinessName.Trim(), RegistrationNumber = RegistrationNumber.Trim(), TaxNumber = TaxNumber.Trim(), BusinessCategory = BusinessCategory.Trim(),
-                BusinessAddress = FormattedBusinessAddress, AddressLine1 = AddressLine1.Trim(), AddressLine2 = AddressLine2.Trim(), Suburb = Suburb.Trim(), City = City.Trim(), PostalCode = PostalCode.Trim(), LicenceType = LicenceType, Municipality = Municipality,
+                PlaceOfBusinessAddress = FormattedPlaceOfBusinessAddress, PlaceOfBusinessAddressLine1 = PlaceOfBusinessAddressLine1.Trim(), PlaceOfBusinessAddressLine2 = PlaceOfBusinessAddressLine2.Trim(), PlaceOfBusinessSuburb = PlaceOfBusinessSuburb.Trim(), PlaceOfBusinessCity = PlaceOfBusinessCity.Trim(), PlaceOfBusinessPostalCode = PlaceOfBusinessPostalCode.Trim(), LicenceType = LicenceType, Municipality = Municipality,
                 PopiaConsentAccepted = true, Status = "Submitted", DateSubmitted = now, UserId = user.Id,
                 Details = new ApplicationDetails { ApplicationType = ApplicationType, ApplicantName = ApplicantName.Trim(), ApplicantAddress = ApplicantAddress.Trim(), ApplicantTelephone = ApplicantTelephone.Trim(), ApplicantEmail = ApplicantEmail.Trim(), PostalAddress = PostalAddress.Trim(), ContactPerson = ContactPerson.Trim(), BusinessTelephone = BusinessTelephone.Trim(), BusinessEmail = BusinessEmail.Trim(), TradingHours = TradingHours.Trim(), LicenceSpecificDetailsJson = JsonSerializer.Serialize(LicenceAnswers), DeclarationAccepted = true, DeclarationAcceptedAt = now }
             };

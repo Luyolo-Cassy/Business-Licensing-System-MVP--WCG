@@ -22,17 +22,19 @@ namespace BusinessLicensing_Practice.Models
 
         public string TaxNumber { get; set; } = "";
 
-        public string BusinessAddress { get; set; } = "";
+        // Step 3 physical operating/trading address. These PlaceOfBusiness fields
+        // are the address source for future municipal routing.
+        public string PlaceOfBusinessAddress { get; set; } = "";
 
-        public string AddressLine1 { get; set; } = "";
+        public string PlaceOfBusinessAddressLine1 { get; set; } = "";
 
-        public string AddressLine2 { get; set; } = "";
+        public string PlaceOfBusinessAddressLine2 { get; set; } = "";
 
-        public string Suburb { get; set; } = "";
+        public string PlaceOfBusinessSuburb { get; set; } = "";
 
-        public string City { get; set; } = "";
+        public string PlaceOfBusinessCity { get; set; } = "";
 
-        public string PostalCode { get; set; } = "";
+        public string PlaceOfBusinessPostalCode { get; set; } = "";
 
         public string TradingName { get; set; } = "";
 

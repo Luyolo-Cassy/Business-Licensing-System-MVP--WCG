@@ -7,6 +7,8 @@
 @using BusinessLicensing_Practice.Models
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+@using BusinessLicensing_Practice.Services
+@inject MunicipalMessageService Messages
 @inject ApplicationDbContext Db
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -21,12 +23,14 @@
     private List<BusinessLicensing_Practice.Models.Application> applications = new();
 
     private ApplicationUser? currentUser;
+    private Dictionary<int, int> unreadCounts = [];
 
     protected override async Task OnParametersSetAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
         currentUser = await UserManager.GetUserAsync(authState.User);
+        unreadCounts = await Messages.GetUnreadCountsAsync(authState.User);
 
         if (currentUser != null)
         {
@@ -71,6 +75,10 @@
         </p>
     </Authorized>
 </AuthorizeView>
+<div class="alert alert-info" role="status">
+    Municipal Messages: <span class="badge bg-primary">@unreadCounts.Values.Sum() unread</span>
+    <button class="btn btn-sm btn-outline-primary ms-2" @onclick="OnParametersSetAsync">Refresh notifications</button>
+</div>
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="card p-3 shadow-sm">
@@ -124,7 +132,13 @@
                     @foreach (var application in applications)
                     {
                         <tr>
-                            <td>@application.ApplicationNumber</td>
+                            <td>
+                                @application.ApplicationNumber
+                                @if (unreadCounts.GetValueOrDefault(application.Id) > 0)
+                                {
+                                    <a href="/tracking/@application.Id" class="badge bg-primary ms-2">@unreadCounts[application.Id] unread municipal message(s)</a>
+                                }
+                            </td>
                             <td>@application.BusinessName</td>
                             <td>@application.LicenceType</td>
                             <td>
