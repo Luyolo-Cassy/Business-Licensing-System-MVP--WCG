@@ -46,6 +46,11 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 builder.Services.AddSingleton<ApplicationFileService>();
 builder.Services.AddSingleton<ApplicationPdfService>();
 builder.Services.AddScoped<MunicipalMessageService>();
+builder.Services.AddHttpClient<ArcGisGeocodingService>(client => client.Timeout = TimeSpan.FromSeconds(30))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddHttpClient<WcgMunicipalBoundaryService>(client => client.Timeout = TimeSpan.FromSeconds(30))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddScoped<MunicipalRoutingService>();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

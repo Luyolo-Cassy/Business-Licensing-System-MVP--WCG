@@ -16,7 +16,7 @@ public class MunicipalMessageService(ApplicationDbContext db, UserManager<Applic
             throw new UnauthorizedAccessException();
 
         var application = await db.Applications.FirstOrDefaultAsync(a => a.Id == applicationId
-            && (a.Municipality == official.Municipality || a.Municipality == null))
+            && a.Municipality == official.Municipality)
             ?? throw new UnauthorizedAccessException();
 
         application.Status = status;

@@ -219,7 +219,7 @@
         }
 
         applications = await Db.Applications
-            .Where(application => application.Municipality == official.Municipality || application.Municipality == null)
+            .Where(application => application.Municipality == official.Municipality)
             .OrderByDescending(a => a.DateSubmitted)
             .ToListAsync();
     }

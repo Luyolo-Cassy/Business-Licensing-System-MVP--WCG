@@ -64,6 +64,7 @@ await using (var provider = CreateProvider())
     applicationId = application.Id;
     otherApplicationId = other.Id;
     await db.Database.MigrateAsync();
+    Check(!db.Database.HasPendingModelChanges(), "Current model matches migrations; no migration required");
     Check(await db.Applications.CountAsync() == 2, "Migration preserves existing applications");
     var service = scope.ServiceProvider.GetRequiredService<MunicipalMessageService>();
     await service.SaveReviewAsync(Principal(officialId), applicationId, "Under Review", longMessage);
@@ -74,6 +75,11 @@ await using (var provider = CreateProvider())
     await Denied(() => service.SaveReviewAsync(Principal(wrongOfficialId), applicationId, "Rejected", "Forbidden"));
     await Denied(() => service.SaveReviewAsync(Principal(ownerId), applicationId, "Rejected", "Forbidden"));
     Check(await db.MunicipalMessages.CountAsync() == 1, "Municipality and role restrictions enforced");
+    var unrouted = new Application { UserId = ownerId, Municipality = null, Status = "Submitted" };
+    db.Applications.Add(unrouted);
+    await db.SaveChangesAsync();
+    await Denied(() => service.SaveReviewAsync(Principal(officialId), unrouted.Id, "Rejected", "Forbidden"));
+    Check(unrouted.Status == "Submitted", "Official cannot review an unrouted legacy application");
 }
 // Dispose the entire provider and reopen the file database to simulate process restart.
 await using (var provider = CreateProvider())

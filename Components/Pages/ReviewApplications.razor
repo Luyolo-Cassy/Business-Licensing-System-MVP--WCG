@@ -319,7 +319,7 @@ else
             .Include(a => a.Documents)
             .Include(a => a.User)
             .Include(a => a.Details)
-            .FirstOrDefaultAsync(a => a.Id == Id && (a.Municipality == official.Municipality || a.Municipality == null));
+            .FirstOrDefaultAsync(a => a.Id == Id && a.Municipality == official.Municipality);
 
         LicenceAnswers = ApplicationPdfService.DeserializeAnswers(application?.Details?.LicenceSpecificDetailsJson);
     }

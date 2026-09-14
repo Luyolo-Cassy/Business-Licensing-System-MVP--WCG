@@ -19,6 +19,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ApplicationPdfService PdfService
 @inject ApplicationFileService FileService
+@inject MunicipalRoutingService RoutingService
 
 <h3 class="fw-bold mb-4">New Business Licence Application</h3>
 <div class="progress mb-3" aria-label="Application progress">
@@ -89,7 +90,7 @@
                 <div class="col-12 col-md-6">@FieldLabel("suburb", "Suburb")<input id="suburb" class="form-control" @bind="PlaceOfBusinessSuburb" /></div>
                 <div class="col-12 col-md-6">@FieldLabel("city", "Town / City")<input id="city" class="form-control" @bind="PlaceOfBusinessCity" /></div>
                 <div class="col-12 col-md-4">@FieldLabel("postalCode", "Postal Code")<input id="postalCode" class="form-control" @bind="PlaceOfBusinessPostalCode" /></div>
-                <div class="col-12 col-md-8">@FieldLabel("municipality", "Responsible Municipality")<select id="municipality" class="form-select" @bind="Municipality"><option value="">Select municipality</option>@foreach (var municipality in LicenceApplicationCatalog.Municipalities) { <option value="@municipality">@municipality.Replace(" Municipality", "")</option> }</select></div>
+                <div class="col-12 col-md-8"><p class="text-muted">Your responsible municipality will be determined from your trading address when you submit.</p></div>
                 <div class="col-12">@FieldLabel("postalAddress", "Postal Address")<textarea id="postalAddress" class="form-control" rows="2" @bind="PostalAddress"></textarea></div>
             </div>
         </div></div>
@@ -127,7 +128,7 @@
         <div class="review-submit-header"><h4 id="review-heading" class="fw-bold mb-2">Review & Declaration</h4><p class="text-muted mb-0">Verify all information before making the declaration.</p></div>
         <div class="row g-4">
             <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Applicant</h5>@ReviewItem("Application Type", ApplicationType)@ReviewItem("Licence Type", LicenceType)@ReviewItem("Applicant Name", ApplicantName)@ReviewItem("Address", ApplicantAddress)@ReviewItem("Telephone", ApplicantTelephone)@ReviewItem("Email", ApplicantEmail)</div></div></div>
-            <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Business</h5>@ReviewItem("Business Name", BusinessName)@ReviewItem("Nature", BusinessCategory)@ReviewItem("Place of Business / Trading Address", FormattedPlaceOfBusinessAddress)@ReviewItem("Responsible Municipality", Municipality.Replace(" Municipality", ""))@ReviewItem("Trading Hours", TradingHours)</div></div></div>
+            <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Business</h5>@ReviewItem("Business Name", BusinessName)@ReviewItem("Nature", BusinessCategory)@ReviewItem("Place of Business / Trading Address", FormattedPlaceOfBusinessAddress)@ReviewItem("Responsible Municipality", "Determined automatically on submission")@ReviewItem("Trading Hours", TradingHours)</div></div></div>
             <div class="col-12"><div class="card review-submit-card"><div class="card-body"><h5 class="mb-3">@LicenceType Details</h5>@foreach (var question in SelectedLicence?.Questions ?? []) { @ReviewItem(question.Label, GetAnswer(question.Key)) }</div></div></div>
             <div class="col-12"><div class="card review-submit-card"><div class="card-body"><h5 class="mb-3">Supporting Documents</h5>@foreach (var document in SelectedDocuments) { @ReviewItem(document.DocumentType, document.FileName) }</div></div></div>
         </div>
@@ -137,11 +138,11 @@
 
 @if (CurrentStep == 7)
 {
-    <section class="review-submit-step" aria-labelledby="submit-heading"><div class="card review-submit-card review-submit-summary-card"><div class="card-body text-center py-5"><PhosphorIcon Name="file-pdf" CssClass="ph-icon-lg" /><h4 id="submit-heading" class="fw-bold mt-3">Ready to Submit</h4><p class="text-muted mx-auto" style="max-width:680px">Submitting will save the application, generate the official completed PDF, and route it to <strong>@Municipality</strong>. Supporting documents remain separate.</p><div class="alert alert-info text-start mt-4 mb-0">After submission, use your dashboard to track progress and download the generated application PDF.</div></div></div></section>
+    <section class="review-submit-step" aria-labelledby="submit-heading"><div class="card review-submit-card review-submit-summary-card"><div class="card-body text-center py-5"><PhosphorIcon Name="file-pdf" CssClass="ph-icon-lg" /><h4 id="submit-heading" class="fw-bold mt-3">Ready to Submit</h4><p class="text-muted mx-auto" style="max-width:680px">Submitting will save the application, generate the official completed PDF, and route it to the municipality determined from your trading address. Supporting documents remain separate.</p><div class="alert alert-info text-start mt-4 mb-0">After submission, use your dashboard to track progress and download the generated application PDF.</div></div></div></section>
 }
 
 @if (!string.IsNullOrWhiteSpace(Message)) { <div class="alert @(MessageIsError ? "alert-danger" : "alert-info") mt-3" role="alert">@Message</div> }
-<div class="mt-5 d-flex flex-wrap gap-2">@if (CurrentStep > 1) { <button class="btn btn-outline-secondary" disabled="@IsSubmitting" @onclick="PreviousStep"><PhosphorIcon Name="arrow-left" /> Back</button> } @if (CurrentStep < TotalSteps) { <button class="btn btn-primary" @onclick="NextStep">Next <PhosphorIcon Name="arrow-right" /></button> } else { <button class="btn btn-success" disabled="@IsSubmitting" @onclick="SubmitApplication"><PhosphorIcon Name="check-circle" /> @(IsSubmitting ? "Submitting..." : "Submit Application")</button> }</div>
+<div class="mt-5 d-flex flex-wrap gap-2">@if (CurrentStep > 1) { <button class="btn btn-outline-secondary" disabled="@IsSubmitting" @onclick="PreviousStep"><PhosphorIcon Name="arrow-left" /> Back</button> } @if (CurrentStep < TotalSteps) { <button class="btn btn-primary" disabled="@IsSubmitting" @onclick="NextStep">Next <PhosphorIcon Name="arrow-right" /></button> } else { <button class="btn btn-success" disabled="@IsSubmitting" @onclick="SubmitApplication"><PhosphorIcon Name="check-circle" /> @(IsSubmitting ? "Submitting..." : "Submit Application")</button> }</div>
 
 @code {
     private const int TotalSteps = 7;
@@ -150,7 +151,7 @@
     private bool IsSubmitting, MessageIsError, DeclarationAccepted, PopiaConsentAccepted;
     private string Message = "", LicenceType = "", ApplicationType = "", ApplicantName = "", ApplicantAddress = "", ApplicantTelephone = "", ApplicantEmail = "";
     private string BusinessName = "", RegistrationNumber = "", TaxNumber = "", BusinessCategory = "", ContactPerson = "", BusinessTelephone = "", BusinessEmail = "", TradingHours = "";
-    private string PlaceOfBusinessAddressLine1 = "", PlaceOfBusinessAddressLine2 = "", PlaceOfBusinessSuburb = "", PlaceOfBusinessCity = "", PlaceOfBusinessPostalCode = "", Municipality = "", PostalAddress = "";
+    private string PlaceOfBusinessAddressLine1 = "", PlaceOfBusinessAddressLine2 = "", PlaceOfBusinessSuburb = "", PlaceOfBusinessCity = "", PlaceOfBusinessPostalCode = "", PostalAddress = "";
     private readonly Dictionary<string, string> LicenceAnswers = new();
     private readonly List<SelectedDocument> SelectedDocuments = new();
 
@@ -174,8 +175,8 @@
 
     private string GetAnswer(string key) => LicenceAnswers.GetValueOrDefault(key, "");
     private void SetAnswer(string key, string? value) => LicenceAnswers[key] = value?.Trim() ?? "";
-    private void NextStep() { Message = ""; if (ValidateStep(CurrentStep)) CurrentStep++; }
-    private void PreviousStep() { Message = ""; CurrentStep--; }
+    private void NextStep() { if (IsSubmitting) return; Message = ""; if (ValidateStep(CurrentStep)) CurrentStep++; }
+    private void PreviousStep() { if (IsSubmitting) return; Message = ""; CurrentStep--; }
 
     private bool ValidateStep(int step)
     {
@@ -183,7 +184,7 @@
         {
             1 when SelectedLicence == null => "Please select a licence type before continuing.",
             2 when AnyBlank(ApplicationType, ApplicantName, ApplicantAddress, ApplicantTelephone, ApplicantEmail) => "Please complete all required applicant details.",
-            3 when AnyBlank(BusinessName, RegistrationNumber, TaxNumber, BusinessCategory, ContactPerson, BusinessTelephone, BusinessEmail, TradingHours, PlaceOfBusinessAddressLine1, PlaceOfBusinessSuburb, PlaceOfBusinessCity, PlaceOfBusinessPostalCode, Municipality, PostalAddress) => "Please complete all required business and routing details.",
+            3 when AnyBlank(BusinessName, RegistrationNumber, TaxNumber, BusinessCategory, ContactPerson, BusinessTelephone, BusinessEmail, TradingHours, PlaceOfBusinessAddressLine1, PlaceOfBusinessSuburb, PlaceOfBusinessCity, PlaceOfBusinessPostalCode, PostalAddress) => "Please complete all required business and trading address details.",
             4 when SelectedLicence?.Questions.Any(question => question.Required && string.IsNullOrWhiteSpace(GetAnswer(question.Key))) == true => "Please answer every required licence-specific question.",
             5 when SelectedLicence?.Documents.Any(requirement => requirement.Required && !SelectedDocuments.Any(document => document.DocumentType == requirement.DocumentType)) == true => "Please upload every required supporting document.",
             6 when !DeclarationAccepted || !PopiaConsentAccepted => "Please accept both the declaration and POPIA consent before continuing.",
@@ -206,18 +207,29 @@
 
     private async Task SubmitApplication()
     {
+        if (IsSubmitting) return;
         Message = ""; for (var step = 1; step <= 6; step++) if (!ValidateStep(step)) { CurrentStep = step; return; }
-        if (IsSubmitting) return; IsSubmitting = true;
-        await using var transaction = await Db.Database.BeginTransactionAsync();
+        IsSubmitting = true;
+
         try
         {
             var state = await AuthenticationStateProvider.GetAuthenticationStateAsync(); var user = await UserManager.GetUserAsync(state.User);
             if (user == null) { SetError("You must be logged in to submit an application."); return; }
+            var address = new TradingAddress(PlaceOfBusinessAddressLine1.Trim(), PlaceOfBusinessAddressLine2.Trim(), PlaceOfBusinessSuburb.Trim(), PlaceOfBusinessCity.Trim(), PlaceOfBusinessPostalCode.Trim());
+            MessageIsError = false; Message = "Checking your trading address...";
+            var routing = await RoutingService.ResolveAsync(address);
+            if (!routing.Success)
+            {
+                if (routing.Failure != RoutingFailure.Unavailable) CurrentStep = 3;
+                SetError(routing.Message);
+                return;
+            }
+            await using var transaction = await Db.Database.BeginTransactionAsync();
             var now = DateTime.Now; var count = await Db.Applications.CountAsync(item => item.DateSubmitted.Year == now.Year);
             var application = new Application
             {
                 ApplicationNumber = $"APP-{now.Year}-{count + 1:D3}", BusinessName = BusinessName.Trim(), RegistrationNumber = RegistrationNumber.Trim(), TaxNumber = TaxNumber.Trim(), BusinessCategory = BusinessCategory.Trim(),
-                PlaceOfBusinessAddress = FormattedPlaceOfBusinessAddress, PlaceOfBusinessAddressLine1 = PlaceOfBusinessAddressLine1.Trim(), PlaceOfBusinessAddressLine2 = PlaceOfBusinessAddressLine2.Trim(), PlaceOfBusinessSuburb = PlaceOfBusinessSuburb.Trim(), PlaceOfBusinessCity = PlaceOfBusinessCity.Trim(), PlaceOfBusinessPostalCode = PlaceOfBusinessPostalCode.Trim(), LicenceType = LicenceType, Municipality = Municipality,
+                PlaceOfBusinessAddress = address.Formatted, PlaceOfBusinessAddressLine1 = address.Line1, PlaceOfBusinessAddressLine2 = address.Line2, PlaceOfBusinessSuburb = address.Suburb, PlaceOfBusinessCity = address.City, PlaceOfBusinessPostalCode = address.PostalCode, LicenceType = LicenceType, Municipality = routing.Municipality,
                 PopiaConsentAccepted = true, Status = "Submitted", DateSubmitted = now, UserId = user.Id,
                 Details = new ApplicationDetails { ApplicationType = ApplicationType, ApplicantName = ApplicantName.Trim(), ApplicantAddress = ApplicantAddress.Trim(), ApplicantTelephone = ApplicantTelephone.Trim(), ApplicantEmail = ApplicantEmail.Trim(), PostalAddress = PostalAddress.Trim(), ContactPerson = ContactPerson.Trim(), BusinessTelephone = BusinessTelephone.Trim(), BusinessEmail = BusinessEmail.Trim(), TradingHours = TradingHours.Trim(), LicenceSpecificDetailsJson = JsonSerializer.Serialize(LicenceAnswers), DeclarationAccepted = true, DeclarationAcceptedAt = now }
             };
@@ -229,7 +241,7 @@
             await Db.SaveChangesAsync(); await transaction.CommitAsync();
             MessageIsError = false; Message = "Application submitted successfully. Your official PDF has been generated."; Nav.NavigateTo($"/tracking/{application.Id}");
         }
-        catch (Exception) { await transaction.RollbackAsync(); SetError("The application could not be submitted. No database changes were saved. Please try again."); }
+        catch (Exception) { SetError("The application could not be submitted. No database changes were saved. Please try again."); }
         finally { IsSubmitting = false; }
     }
 

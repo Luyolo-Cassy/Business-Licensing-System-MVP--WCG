@@ -9,6 +9,8 @@
 @using Microsoft.JSInterop
 
 @inject ApplicationDbContext Db
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
+@inject Microsoft.AspNetCore.Identity.UserManager<ApplicationUser> UserManager
 @inject IJSRuntime JS
 
 <h1 class="fw-bold mb-4">
@@ -124,7 +126,11 @@ private int Withdrawn;
 
 protected override async Task OnInitializedAsync()
 {
-    applications = await Db.Applications.ToListAsync();
+    var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    var official = await UserManager.GetUserAsync(state.User);
+    applications = official == null || string.IsNullOrWhiteSpace(official.Municipality)
+        ? new()
+        : await Db.Applications.Where(a => a.Municipality == official.Municipality).ToListAsync();
 
     Total = applications.Count;
 

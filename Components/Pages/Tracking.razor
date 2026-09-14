@@ -95,6 +95,11 @@ else
 
         </div>
 
+        <div class="mb-4">
+            <p class="text-muted mb-1">Responsible Municipality</p>
+            <strong>@(string.IsNullOrWhiteSpace(application.Municipality) ? "Not assigned" : application.Municipality)</strong>
+        </div>
+
         <hr />
 
         <section class="card mb-4" aria-labelledby="municipal-messages">

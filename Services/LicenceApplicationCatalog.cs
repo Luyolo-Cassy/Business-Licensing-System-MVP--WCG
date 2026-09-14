@@ -2,6 +2,19 @@ namespace BusinessLicensing_Practice.Services
 {
     public static class LicenceApplicationCatalog
     {
+        public static string? MapMunicipality(string name)
+        {
+            var aliases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var canonical in Municipalities)
+            {
+                var shortName = canonical[..^" Municipality".Length];
+                aliases[canonical] = canonical;
+                aliases[shortName] = canonical;
+                aliases[shortName + " Local Municipality"] = canonical;
+            }
+            return aliases.GetValueOrDefault(name.Trim());
+        }
+
         private static readonly IReadOnlyList<DocumentRequirement> StandardDocuments =
         [
             Document("Certificate of Incorporation", "Proof that the business is legally registered."),
