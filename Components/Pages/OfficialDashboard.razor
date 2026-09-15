@@ -210,7 +210,7 @@
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var official = await UserManager.GetUserAsync(authState.User);
+        var official = await BusinessLicensing_Practice.Services.OfficialAccess.GetAsync(Db, authState.User);
 
         if (official == null || string.IsNullOrWhiteSpace(official.Municipality))
         {

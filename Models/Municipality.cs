@@ -11,4 +11,8 @@ public class Municipality
     public string Name { get; set; } = "";
 
     public bool IsActive { get; set; } = true;
+
+    // Stable geographic routing identity; null for administratively added municipalities.
+    [StringLength(200)]
+    public string? RoutingName { get; set; }
 }

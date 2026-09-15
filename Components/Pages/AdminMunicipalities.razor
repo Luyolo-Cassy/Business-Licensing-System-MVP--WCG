@@ -1,0 +1,113 @@
+@page "/admin/municipalities"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "DEDATAdmin")]
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using BusinessLicensing_Practice.Models
+@using BusinessLicensing_Practice.Services
+@inject MunicipalityManagementService Management
+@inject AuthenticationStateProvider Authentication
+@inject ILogger<AdminMunicipalities> Logger
+
+<PageTitle>Municipality Management</PageTitle>
+<h1 class="fw-bold">Municipality Management</h1>
+<p class="text-muted">Manage participating municipalities. Inactive municipalities retain their historical applications and Official access.</p>
+<div class="alert alert-info">
+    Adding a municipality does not enable geographic routing for it. Only municipalities marked “Supported” can receive new applications, and they must also be active.
+    Renaming preserves existing assignments and routing support.
+</div>
+@if (message != null)
+{
+    <div class="alert @(isError ? "alert-danger" : "alert-success")" role="alert">@message</div>
+}
+<div class="card shadow-sm mb-4"><div class="card-body">
+    <h2 class="h5">@(editingId == null ? "Add Municipality" : "Edit Municipality")</h2>
+    <EditForm Model="input" OnValidSubmit="Save" FormName="municipality">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <fieldset disabled="@busy">
+            <label for="municipality-name" class="form-label">Municipality name</label>
+            <InputText id="municipality-name" class="form-control mb-3" @bind-Value="input.Name" maxlength="200" />
+            <button class="btn btn-primary" type="submit">@(editingId == null ? "Add Municipality" : "Save Name")</button>
+            @if (editingId != null)
+            {
+                <button class="btn btn-outline-secondary ms-2" type="button" @onclick="Cancel">Cancel</button>
+            }
+        </fieldset>
+    </EditForm>
+</div></div>
+<div class="card shadow-sm"><div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+        <thead><tr><th scope="col">Name</th><th scope="col">Status</th><th scope="col">Geographic Routing</th><th scope="col">Actions</th></tr></thead>
+        <tbody>
+            @foreach (var municipality in municipalities)
+            {
+                <tr @key="municipality.Id">
+                    <td>@municipality.Name</td>
+                    <td><span class="badge @(municipality.IsActive ? "bg-success" : "bg-secondary")">@(municipality.IsActive ? "Active" : "Inactive")</span></td>
+                    <td>@(municipality.RoutingName == null ? "Not supported" : "Supported")</td>
+                    <td>
+                        <button class="btn btn-outline-primary btn-sm me-2" disabled="@busy" @onclick="() => Edit(municipality)" aria-label="Edit @municipality.Name">Edit</button>
+                        <button class="btn btn-outline-secondary btn-sm" disabled="@busy" @onclick="() => SetActive(municipality)" aria-label="@((municipality.IsActive ? "Deactivate " : "Activate ") + municipality.Name)">@(municipality.IsActive ? "Deactivate" : "Activate")</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div></div>
+
+@code {
+    private List<Municipality> municipalities = [];
+    private NameInput input = new();
+    private int? editingId;
+    private string? originalName;
+    private string? message;
+    private bool busy;
+    private bool isError;
+
+    protected override async Task OnInitializedAsync() => await Run(async () => { });
+    private void Edit(Municipality municipality)
+    {
+        editingId = municipality.Id;
+        originalName = municipality.Name;
+        input = new() { Name = municipality.Name };
+        message = null;
+    }
+    private void Cancel() { editingId = null; originalName = null; input = new(); }
+    private async Task Save() => await Run(async () =>
+    {
+        await Management.SaveAsync((await Authentication.GetAuthenticationStateAsync()).User, editingId, input.Name, originalName);
+        Cancel();
+        message = "Municipality saved.";
+    });
+    private async Task SetActive(Municipality municipality) => await Run(async () =>
+    {
+        await Management.SetActiveAsync((await Authentication.GetAuthenticationStateAsync()).User, municipality.Id, !municipality.IsActive);
+        message = municipality.IsActive ? "Municipality deactivated. Historical applications remain accessible." : "Municipality activated.";
+    });
+    private async Task Run(Func<Task> action)
+    {
+        if (busy) return;
+        busy = true; message = null; isError = false;
+        try
+        {
+            await action();
+            municipalities = await Management.ListAsync((await Authentication.GetAuthenticationStateAsync()).User);
+        }
+        catch (ValidationException error) { isError = true; message = error.Message; }
+        catch (UnauthorizedAccessException) { isError = true; message = "You do not have permission to manage municipalities."; municipalities = []; }
+        catch (Exception error)
+        {
+            Logger.LogError(error, "Municipality management operation failed.");
+            isError = true; message = "The operation could not be completed. Refresh the page and try again.";
+        }
+        finally { busy = false; }
+    }
+    private sealed class NameInput
+    {
+        [Required, StringLength(200)]
+        public string Name { get; set; } = "";
+    }
+}
+

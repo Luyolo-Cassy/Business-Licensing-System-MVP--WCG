@@ -1,0 +1,139 @@
+@page "/admin/officials"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "DEDATAdmin")]
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.WebUtilities
+@using BusinessLicensing_Practice.Models
+@using BusinessLicensing_Practice.Services
+@inject OfficialManagementService Officials
+@inject AuthenticationStateProvider Authentication
+@inject NavigationManager Navigation
+
+<PageTitle>Municipal Official Management</PageTitle>
+<h1 class="fw-bold">Municipal Official Management</h1>
+<p class="text-muted">Create and manage Official accounts and their municipality assignments.</p>
+@if (message != null)
+{
+    <div class="alert @(isError ? "alert-danger" : "alert-success")" role="alert">@message</div>
+}
+@if (invitation != null)
+{
+    <div class="alert alert-info">
+        <strong>Account setup: @invitation.FullName (@invitation.Email)</strong>
+        <p>Automatic email delivery is not configured. Copy this private setup link and provide it securely to the Official. They will choose their own password. The link expires after one day and works only for initial setup.</p>
+        <label for="setup-link" class="form-label">Setup link (select and copy)</label>
+        <input id="setup-link" class="form-control" readonly value="@setupLink" onclick="this.select()" />
+        <button class="btn btn-outline-secondary btn-sm mt-2" @onclick="ClearInvitation">Dismiss link</button>
+    </div>
+}
+<div class="card shadow-sm mb-4"><div class="card-body">
+    <h2 class="h5">@(editingId == null ? "Create Official" : "Edit Official")</h2>
+    <EditForm Model="input" FormName="official" OnValidSubmit="Save">
+        <DataAnnotationsValidator /><ValidationSummary class="text-danger" />
+        <fieldset disabled="@busy">
+            <div class="row g-3">
+                <div class="col-md-4"><label for="official-name" class="form-label">Full Name</label><InputText id="official-name" class="form-control" @bind-Value="input.FullName" maxlength="200" /></div>
+                <div class="col-md-4"><label for="official-email" class="form-label">Email Address</label><InputText id="official-email" type="email" class="form-control" @bind-Value="input.Email" maxlength="256" /></div>
+                <div class="col-md-4">
+                    <label for="official-municipality" class="form-label">Municipality</label>
+                    <InputSelect id="official-municipality" class="form-select" @bind-Value="input.MunicipalityId">
+                        <option value="">@(editingId == null ? "Select an active municipality" : $"Keep current assignment: {currentMunicipality}")</option>
+                        @foreach (var municipality in municipalities) { <option value="@municipality.Id">@municipality.Name</option> }
+                    </InputSelect>
+                </div>
+            </div>
+            <p class="text-muted mt-2">New assignments must use an active municipality. Existing inactive or legacy assignments can be retained.</p>
+            <button type="submit" class="btn btn-primary">@(editingId == null ? "Create Official" : "Save Changes")</button>
+            @if (editingId != null) { <button type="button" class="btn btn-outline-secondary ms-2" @onclick="Cancel">Cancel</button> }
+        </fieldset>
+    </EditForm>
+</div></div>
+<div class="card shadow-sm"><div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Full Name</th><th>Email</th><th>Municipality</th><th>Account Status</th><th>Actions</th></tr></thead>
+        <tbody>
+            @foreach (var official in officials)
+            {
+                <tr @key="official.Id">
+                    <td>@official.FullName</td><td>@official.Email</td><td>@official.Municipality</td>
+                    <td><span class="badge @(official.IsActive ? "bg-success" : "bg-secondary")">@(official.IsActive ? "Active" : "Inactive")</span>
+                        @if (official.NeedsSetup) { <span class="d-block text-muted">Awaiting password setup</span> }
+                    </td>
+                    <td>
+                        <button class="btn btn-outline-primary btn-sm me-1" disabled="@busy" @onclick="() => Edit(official)">Edit</button>
+                        <button class="btn btn-outline-secondary btn-sm me-1" disabled="@busy" @onclick="() => SetActive(official)">@(official.IsActive ? "Deactivate" : "Activate")</button>
+                        @if (official.NeedsSetup && official.IsActive)
+                        {
+                            <button class="btn btn-outline-primary btn-sm" disabled="@busy" @onclick="() => Invite(official)">New Setup Link</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div></div>
+
+@code {
+    private List<OfficialSummary> officials = [];
+    private List<Municipality> municipalities = [];
+    private OfficialInput input = new();
+    private string? editingId, currentMunicipality, message, setupLink;
+    private OfficialInvitation? invitation;
+    private bool busy, isError;
+    protected override async Task OnInitializedAsync() => await Run(() => Task.CompletedTask);
+    private void ClearInvitation() { invitation = null; setupLink = null; }
+    private void Cancel() { editingId = null; currentMunicipality = null; input = new(); }
+    private void Edit(OfficialSummary official)
+    {
+        ClearInvitation(); message = null;
+        editingId = official.Id; currentMunicipality = official.Municipality;
+        input = new() { FullName = official.FullName, Email = official.Email };
+    }
+    private void ShowInvitation(OfficialInvitation? value)
+    {
+        invitation = value;
+        setupLink = value == null ? null : QueryHelpers.AddQueryString(Navigation.ToAbsoluteUri("Account/Setup-Official").ToString(),
+            new Dictionary<string, string?> { ["userId"] = value.UserId, ["code"] = value.Code });
+    }
+    private async Task Save() => await Run(async () =>
+    {
+        var created = editingId == null;
+        ShowInvitation(await Officials.SaveAsync((await Authentication.GetAuthenticationStateAsync()).User,
+            editingId, input.FullName, input.Email, input.MunicipalityId));
+        Cancel(); message = created ? "Official created. Provide the setup link to the Official." : "Official updated. They must log in again to use the updated account.";
+    });
+    private async Task SetActive(OfficialSummary official) => await Run(async () =>
+    {
+        await Officials.SetActiveAsync((await Authentication.GetAuthenticationStateAsync()).User, official.Id, !official.IsActive);
+        message = official.IsActive ? "Official deactivated. Historical data is preserved." : "Official reactivated. They can log in with their existing password, or request a new setup link if setup is pending.";
+    });
+    private async Task Invite(OfficialSummary official) => await Run(async () =>
+    {
+        ShowInvitation(await Officials.GenerateInvitationAsync((await Authentication.GetAuthenticationStateAsync()).User, official.Id));
+        message = "New setup link generated. Previous setup links no longer work.";
+    });
+    private async Task Run(Func<Task> action)
+    {
+        if (busy) return;
+        busy = true; isError = false; message = null; ClearInvitation();
+        try
+        {
+            await action();
+            var principal = (await Authentication.GetAuthenticationStateAsync()).User;
+            officials = await Officials.ListAsync(principal);
+            municipalities = await Officials.ActiveMunicipalitiesAsync(principal);
+        }
+        catch (ValidationException error) { isError = true; message = error.Message; }
+        catch (UnauthorizedAccessException) { isError = true; message = "You do not have permission to manage Officials."; officials = []; }
+        catch (Exception) { isError = true; message = "The operation could not be completed. Refresh the page and try again."; }
+        finally { busy = false; }
+    }
+    private sealed class OfficialInput
+    {
+        [Required, StringLength(200)] public string FullName { get; set; } = "";
+        [Required, EmailAddress, StringLength(256)] public string Email { get; set; } = "";
+        public int? MunicipalityId { get; set; }
+    }
+}

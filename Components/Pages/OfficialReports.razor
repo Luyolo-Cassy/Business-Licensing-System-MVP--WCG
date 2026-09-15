@@ -127,7 +127,7 @@ private int Withdrawn;
 protected override async Task OnInitializedAsync()
 {
     var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-    var official = await UserManager.GetUserAsync(state.User);
+    var official = await BusinessLicensing_Practice.Services.OfficialAccess.GetAsync(Db, state.User);
     applications = official == null || string.IsNullOrWhiteSpace(official.Municipality)
         ? new()
         : await Db.Applications.Where(a => a.Municipality == official.Municipality).ToListAsync();

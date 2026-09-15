@@ -225,11 +225,21 @@
                 return;
             }
             await using var transaction = await Db.Database.BeginTransactionAsync();
+            BusinessLicensing_Practice.Models.Municipality participatingMunicipality;
+            try
+            {
+                participatingMunicipality = await MunicipalityManagementService.RequireActiveRoutingAsync(Db, routing.Municipality!);
+            }
+            catch (System.ComponentModel.DataAnnotations.ValidationException error)
+            {
+                SetError(error.Message);
+                return;
+            }
             var now = DateTime.Now; var count = await Db.Applications.CountAsync(item => item.DateSubmitted.Year == now.Year);
             var application = new Application
             {
                 ApplicationNumber = $"APP-{now.Year}-{count + 1:D3}", BusinessName = BusinessName.Trim(), RegistrationNumber = RegistrationNumber.Trim(), TaxNumber = TaxNumber.Trim(), BusinessCategory = BusinessCategory.Trim(),
-                PlaceOfBusinessAddress = address.Formatted, PlaceOfBusinessAddressLine1 = address.Line1, PlaceOfBusinessAddressLine2 = address.Line2, PlaceOfBusinessSuburb = address.Suburb, PlaceOfBusinessCity = address.City, PlaceOfBusinessPostalCode = address.PostalCode, LicenceType = LicenceType, Municipality = routing.Municipality,
+                PlaceOfBusinessAddress = address.Formatted, PlaceOfBusinessAddressLine1 = address.Line1, PlaceOfBusinessAddressLine2 = address.Line2, PlaceOfBusinessSuburb = address.Suburb, PlaceOfBusinessCity = address.City, PlaceOfBusinessPostalCode = address.PostalCode, LicenceType = LicenceType, Municipality = participatingMunicipality.Name,
                 PopiaConsentAccepted = true, Status = "Submitted", DateSubmitted = now, UserId = user.Id,
                 Details = new ApplicationDetails { ApplicationType = ApplicationType, ApplicantName = ApplicantName.Trim(), ApplicantAddress = ApplicantAddress.Trim(), ApplicantTelephone = ApplicantTelephone.Trim(), ApplicantEmail = ApplicantEmail.Trim(), PostalAddress = PostalAddress.Trim(), ContactPerson = ContactPerson.Trim(), BusinessTelephone = BusinessTelephone.Trim(), BusinessEmail = BusinessEmail.Trim(), TradingHours = TradingHours.Trim(), LicenceSpecificDetailsJson = JsonSerializer.Serialize(LicenceAnswers), DeclarationAccepted = true, DeclarationAcceptedAt = now }
             };

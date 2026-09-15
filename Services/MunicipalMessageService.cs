@@ -6,23 +6,25 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BusinessLicensing_Practice.Services;
 
-public class MunicipalMessageService(ApplicationDbContext db, UserManager<ApplicationUser> users)
+public class MunicipalMessageService(ApplicationDbContext db, UserManager<ApplicationUser> users, IServiceScopeFactory scopes)
 {
     public async Task SaveReviewAsync(ClaimsPrincipal principal, int applicationId, string status, string content)
     {
-        var official = await users.GetUserAsync(principal);
-        if (official == null || !await users.IsInRoleAsync(official, "MunicipalOfficial")
-            || string.IsNullOrWhiteSpace(official.Municipality))
+        await using var scope = scopes.CreateAsyncScope();
+        var reviewDb = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using var transaction = await reviewDb.Database.BeginTransactionAsync();
+        var official = await OfficialAccess.GetAsync(reviewDb, principal);
+        if (official == null)
             throw new UnauthorizedAccessException();
 
-        var application = await db.Applications.FirstOrDefaultAsync(a => a.Id == applicationId
+        var application = await reviewDb.Applications.FirstOrDefaultAsync(a => a.Id == applicationId
             && a.Municipality == official.Municipality)
             ?? throw new UnauthorizedAccessException();
 
         application.Status = status;
         if (!string.IsNullOrWhiteSpace(content))
         {
-            db.MunicipalMessages.Add(new MunicipalMessage
+            reviewDb.MunicipalMessages.Add(new MunicipalMessage
             {
                 ApplicationId = application.Id,
                 Content = content,
@@ -34,11 +36,12 @@ public class MunicipalMessageService(ApplicationDbContext db, UserManager<Applic
         // Status and the message/notification commit atomically.
         try
         {
-            await db.SaveChangesAsync();
+            await reviewDb.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
         catch
         {
-            foreach (var entry in db.ChangeTracker.Entries<MunicipalMessage>()
+            foreach (var entry in reviewDb.ChangeTracker.Entries<MunicipalMessage>()
                          .Where(e => e.State == EntityState.Added).ToList())
                 entry.State = EntityState.Detached;
             throw;

@@ -1,0 +1,66 @@
+@page "/Account/Setup-Official"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@using System.ComponentModel.DataAnnotations
+@using BusinessLicensing_Practice.Services
+@inject OfficialManagementService Officials
+
+<PageTitle>Set Up Your Official Account</PageTitle>
+<HeadContent><meta name="referrer" content="no-referrer" /></HeadContent>
+<h1>Set Up Your Official Account</h1>
+@if (success)
+{
+    <div class="alert alert-success" role="status">Your password has been set. You can now log in with your email and password.</div>
+    <a class="btn btn-primary" href="Account/Login">Go to Login</a>
+}
+else if (!valid)
+{
+    <div class="alert alert-danger" role="alert">This setup link is invalid, expired, or already used. Contact your administrator for assistance.</div>
+}
+else
+{
+    <p>Create your own password for your Municipal Official account.</p>
+    @if (error != null) { <div class="alert alert-danger" role="alert">@error</div> }
+    <EditForm Model="Input" method="post" FormName="official-setup" OnValidSubmit="Complete">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger" />
+        <div class="mb-3">
+            <label for="password" class="form-label">New Password</label>
+            <InputText id="password" type="password" class="form-control" autocomplete="new-password" @bind-Value="Input.Password" />
+        </div>
+        <div class="mb-3">
+            <label for="confirm-password" class="form-label">Confirm Password</label>
+            <InputText id="confirm-password" type="password" class="form-control" autocomplete="new-password" @bind-Value="Input.ConfirmPassword" />
+        </div>
+        <button type="submit" class="btn btn-primary">Set Password</button>
+    </EditForm>
+}
+
+@code {
+    [SupplyParameterFromQuery] private string? UserId { get; set; }
+    [SupplyParameterFromQuery] private string? Code { get; set; }
+    [SupplyParameterFromForm] private PasswordInput Input { get; set; } = default!;
+    private bool valid;
+    private bool success;
+    private string? error;
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+        valid = await Officials.ValidateSetupAsync(UserId, Code);
+    }
+    private async Task Complete()
+    {
+        try
+        {
+            await Officials.CompleteSetupAsync(UserId, Code, Input.Password);
+            Input = new(); success = true;
+        }
+        catch (ValidationException exception) { error = exception.Message; }
+    }
+    private sealed class PasswordInput
+    {
+        [Required, DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+        [Required, Compare(nameof(Password), ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; } = "";
+    }
+}

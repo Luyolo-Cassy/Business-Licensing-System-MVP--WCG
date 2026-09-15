@@ -312,7 +312,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var official = await UserManager.GetUserAsync(authState.User);
+        var official = await OfficialAccess.GetAsync(Db, authState.User);
         if (official == null || string.IsNullOrWhiteSpace(official.Municipality)) return;
 
         application = await Db.Applications
@@ -362,13 +362,13 @@ else
     private async Task ApproveApplication()
     {
         application!.Status = "Licence Issued";
-        await Db.SaveChangesAsync();
+        await SaveReview();
     }
 
     private async Task RejectApplication()
     {
         application!.Status = "Rejected";
-        await Db.SaveChangesAsync();
+        await SaveReview();
     }
 
     private string GetBadge(string? status)

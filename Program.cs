@@ -41,11 +41,16 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 .AddSignInManager()
 .AddDefaultTokenProviders();
 
+// Revoke changed/deactivated accounts on the next HTTP request as well as circuit actions.
+builder.Services.Configure<SecurityStampValidatorOptions>(options => options.ValidationInterval = TimeSpan.Zero);
+
 // Add services to the container.
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 builder.Services.AddSingleton<ApplicationFileService>();
 builder.Services.AddSingleton<ApplicationPdfService>();
 builder.Services.AddScoped<MunicipalMessageService>();
+builder.Services.AddScoped<MunicipalityManagementService>();
+builder.Services.AddScoped<OfficialManagementService>();
 builder.Services.AddHttpClient<ArcGisGeocodingService>(client => client.Timeout = TimeSpan.FromSeconds(30))
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddHttpClient<WcgMunicipalBoundaryService>(client => client.Timeout = TimeSpan.FromSeconds(30))
@@ -104,9 +109,8 @@ app.MapGet("/applications/{id:int}/official-pdf", async (
 
     var isOwner = application.UserId == user.Id;
     var isAdmin = await userManager.IsInRoleAsync(user, "DEDATAdmin");
-    var isAssignedOfficial = await userManager.IsInRoleAsync(user, "MunicipalOfficial")
-        && !string.IsNullOrWhiteSpace(user.Municipality)
-        && user.Municipality == application.Municipality;
+    var currentOfficial = await OfficialAccess.GetAsync(db, principal);
+    var isAssignedOfficial = currentOfficial != null && currentOfficial.Municipality == application.Municipality;
 
     if (!isOwner && !isAdmin && !isAssignedOfficial)
     {
@@ -151,7 +155,19 @@ using (var scope = app.Services.CreateScope())
     // Create a default Municipal Official
     var officialEmail = "official@westerncape.gov.za";
 
-    var official = await userManager.FindByEmailAsync(officialEmail);
+    // Persist the legacy seed identity so an Admin email edit cannot create a duplicate on restart.
+    async Task<ApplicationUser?> FindSeededOfficial(string email)
+    {
+        var id = await db.UserTokens.Where(t => t.LoginProvider == "LegacyOfficialSeed" && t.Name == email)
+            .Select(t => t.UserId).SingleOrDefaultAsync();
+        return id == null ? await userManager.FindByEmailAsync(email) : await userManager.FindByIdAsync(id);
+    }
+    async Task RememberSeed(ApplicationUser user, string email)
+    {
+        var result = await userManager.SetAuthenticationTokenAsync(user, "LegacyOfficialSeed", email, user.Id);
+        if (!result.Succeeded) throw new InvalidOperationException("Could not preserve legacy Official seed identity.");
+    }
+    var official = await FindSeededOfficial(officialEmail);
 
     if (official == null)
     {
@@ -177,6 +193,8 @@ using (var scope = app.Services.CreateScope())
         await userManager.UpdateAsync(official);
     }
 
+    await RememberSeed(official, officialEmail);
+
     // Ensure the user has the MunicipalOfficial role
     if (!await userManager.IsInRoleAsync(official, "MunicipalOfficial"))
     {
@@ -194,7 +212,11 @@ using (var scope = app.Services.CreateScope())
 
     foreach (var municipalityOfficial in municipalityOfficials)
     {
-        var municipalityUser = await userManager.FindByEmailAsync(municipalityOfficial.Email);
+        // Keep the original geographic identity while respecting an Admin's display-name edits.
+        var assignedMunicipality = await db.Municipalities
+            .Where(m => m.RoutingName == municipalityOfficial.Municipality)
+            .Select(m => m.Name).SingleOrDefaultAsync() ?? municipalityOfficial.Municipality;
+        var municipalityUser = await FindSeededOfficial(municipalityOfficial.Email);
 
         if (municipalityUser == null)
         {
@@ -203,7 +225,7 @@ using (var scope = app.Services.CreateScope())
                 UserName = municipalityOfficial.Email,
                 Email = municipalityOfficial.Email,
                 FullName = municipalityOfficial.Name,
-                Municipality = municipalityOfficial.Municipality
+                Municipality = assignedMunicipality
             };
 
             var result = await userManager.CreateAsync(municipalityUser, "Password123!");
@@ -213,13 +235,8 @@ using (var scope = app.Services.CreateScope())
                 throw new Exception($"Failed to create {municipalityOfficial.Municipality} official: {errors}");
             }
         }
-        else if (municipalityUser.Municipality != municipalityOfficial.Municipality ||
-                 municipalityUser.FullName != municipalityOfficial.Name)
-        {
-            municipalityUser.Municipality = municipalityOfficial.Municipality;
-            municipalityUser.FullName = municipalityOfficial.Name;
-            await userManager.UpdateAsync(municipalityUser);
-        }
+        // Existing account details/assignment are now owned by Admin management.
+        await RememberSeed(municipalityUser, municipalityOfficial.Email);
 
         if (!await userManager.IsInRoleAsync(municipalityUser, "MunicipalOfficial"))
         {

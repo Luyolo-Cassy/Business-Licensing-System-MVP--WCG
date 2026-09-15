@@ -24,13 +24,14 @@ namespace BusinessLicensing_Practice.Data
             builder.Entity<Municipality>(municipality =>
             {
                 municipality.HasIndex(m => m.Name).IsUnique();
+                municipality.HasIndex(m => m.RoutingName).IsUnique();
                 // Migration-managed seeds run once, preserving later administrative edits.
                 municipality.HasData(
-                    new Municipality { Id = 1, Name = "Bergrivier Municipality", IsActive = true },
-                    new Municipality { Id = 2, Name = "Cederberg Municipality", IsActive = true },
-                    new Municipality { Id = 3, Name = "Hessequa Municipality", IsActive = true },
-                    new Municipality { Id = 4, Name = "Swartland Municipality", IsActive = true },
-                    new Municipality { Id = 5, Name = "Witzenberg Municipality", IsActive = true });
+                    new Municipality { Id = 1, Name = "Bergrivier Municipality", RoutingName = "Bergrivier Municipality", IsActive = true },
+                    new Municipality { Id = 2, Name = "Cederberg Municipality", RoutingName = "Cederberg Municipality", IsActive = true },
+                    new Municipality { Id = 3, Name = "Hessequa Municipality", RoutingName = "Hessequa Municipality", IsActive = true },
+                    new Municipality { Id = 4, Name = "Swartland Municipality", RoutingName = "Swartland Municipality", IsActive = true },
+                    new Municipality { Id = 5, Name = "Witzenberg Municipality", RoutingName = "Witzenberg Municipality", IsActive = true });
             });
 
             builder.Entity<MunicipalMessage>(message =>
