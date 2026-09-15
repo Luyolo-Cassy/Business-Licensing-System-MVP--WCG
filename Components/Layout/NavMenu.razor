@@ -65,6 +65,17 @@
             </Authorized>
         </AuthorizeView>
 
+        <AuthorizeView Roles="DEDATAdmin">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="admin-dashboard">
+                        <PhosphorIcon Name="gauge" CssClass="nav-menu-icon" />
+                        Admin Dashboard
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
         <!-- Logout (all logged-in users) -->
         <AuthorizeView>
             <Authorized Context="authContext">

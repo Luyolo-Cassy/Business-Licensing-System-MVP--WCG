@@ -1,0 +1,59 @@
+@page "/admin-dashboard"
+@attribute [Authorize(Roles = "DEDATAdmin")]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using BusinessLicensing_Practice.Data
+@inject ApplicationDbContext Db
+
+<PageTitle>DEDAT Admin Dashboard</PageTitle>
+
+<div class="mb-4">
+    <h1 class="fw-bold">DEDAT Admin Dashboard</h1>
+    <p class="text-muted">Overview of provincial business licensing applications and municipalities.</p>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card shadow-sm p-3 h-100">
+            <h2 class="h6">Total Applications</h2>
+            <p class="h2 text-primary fw-bold mb-0">@totalApplications</p>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card shadow-sm p-3 h-100">
+            <h2 class="h6">Total Municipalities</h2>
+            <p class="h2 text-primary fw-bold mb-0">@totalMunicipalities</p>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card shadow-sm p-3 h-100">
+            <h2 class="h6">Active Municipalities</h2>
+            <p class="h2 text-success fw-bold mb-0">@activeMunicipalities</p>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card shadow-sm p-3 h-100">
+            <h2 class="h6">Total Municipal Officials</h2>
+            <p class="h2 text-primary fw-bold mb-0">@totalMunicipalOfficials</p>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int totalApplications;
+    private int totalMunicipalities;
+    private int activeMunicipalities;
+    private int totalMunicipalOfficials;
+
+    protected override async Task OnInitializedAsync()
+    {
+        totalApplications = await Db.Applications.CountAsync();
+        totalMunicipalities = await Db.Municipalities.CountAsync();
+        activeMunicipalities = await Db.Municipalities.CountAsync(m => m.IsActive);
+        totalMunicipalOfficials = await (
+            from membership in Db.UserRoles
+            join role in Db.Roles on membership.RoleId equals role.Id
+            where role.NormalizedName == "MUNICIPALOFFICIAL"
+            select membership.UserId).Distinct().CountAsync();
+    }
+}

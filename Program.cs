@@ -146,6 +146,8 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
+    await DevelopmentAdminSeeder.SeedAsync(app.Environment, userManager);
+
     // Create a default Municipal Official
     var officialEmail = "official@westerncape.gov.za";
 
