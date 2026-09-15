@@ -15,10 +15,23 @@ namespace BusinessLicensing_Practice.Data
         public DbSet<ApplicationDocument> ApplicationDocuments { get; set; }
         public DbSet<ApplicationDetails> ApplicationDetails { get; set; }
         public DbSet<MunicipalMessage> MunicipalMessages { get; set; }
+        public DbSet<Municipality> Municipalities { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            builder.Entity<Municipality>(municipality =>
+            {
+                municipality.HasIndex(m => m.Name).IsUnique();
+                // Migration-managed seeds run once, preserving later administrative edits.
+                municipality.HasData(
+                    new Municipality { Id = 1, Name = "Bergrivier Municipality", IsActive = true },
+                    new Municipality { Id = 2, Name = "Cederberg Municipality", IsActive = true },
+                    new Municipality { Id = 3, Name = "Hessequa Municipality", IsActive = true },
+                    new Municipality { Id = 4, Name = "Swartland Municipality", IsActive = true },
+                    new Municipality { Id = 5, Name = "Witzenberg Municipality", IsActive = true });
+            });
 
             builder.Entity<MunicipalMessage>(message =>
             {
