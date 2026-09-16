@@ -50,7 +50,7 @@ foreach (var municipality in LicenceApplicationCatalog.Municipalities)
 }
 foreach (var type in new[] { "Subaddress", "StreetAddress" })
     Check((await Run(type, ["Swartland Municipality"])).Success, "Precise type accepted without score threshold: " + type);
-foreach (var type in new[] { "Postal", "Locality", "StreetName", "POI", "Unknown" })
+foreach (var type in new[] { "Postal", "Locality", "StreetName", "StreetAddressExt", "POI", "Unknown" })
     Check((await Run(type, [])).Failure == RoutingFailure.AddressNotPrecise, "Coarse type rejected: " + type);
 Check((await Run("PointAddress", [], "{\"candidates\":[]}")).Failure == RoutingFailure.AddressNotPrecise, "No geocode rejected");
 Check((await Run("PointAddress", [])).Failure == RoutingFailure.NoMunicipality, "No boundary rejected");
@@ -62,6 +62,7 @@ Check((await Run("PointAddress", [], "not json")).Failure == RoutingFailure.Unav
 Check((await Run("PointAddress", [], "{\"candidates\":[{\"address\":\"Test\",\"attributes\":{\"Addr_type\":\"PointAddress\"},\"location\":{\"x\":18,\"y\":91}}]}")).Failure == RoutingFailure.AddressNotPrecise, "Out-of-range coordinates rejected");
 Check((await Run("PointAddress", [], "{\"error\":{\"code\":498}}")).Failure == RoutingFailure.Unavailable, "API error in HTTP success response blocks routing");
 Console.WriteLine("All routing checks passed; no real APIs or database used.");
+await PoiTests.RunAsync();
 
 sealed class Handler(Func<HttpRequestMessage, Task<string>> respond) : HttpMessageHandler
 {
