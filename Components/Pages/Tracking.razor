@@ -8,12 +8,18 @@
 @using Microsoft.AspNetCore.Identity
 @using BusinessLicensing_Practice.Services
 @inject MunicipalMessageService Messages
+@inject ApplicantApplicationService ApplicantActions
 @inject ApplicationDbContext Db
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserManager<ApplicationUser> UserManager
 
 @page "/tracking/{id:int}"
 @attribute [Authorize(Roles = "BusinessOwner")]
+
+@if (actionError != null)
+{
+    <div class="alert alert-danger" role="alert">@actionError</div>
+}
 
 @if (application == null)
 {
@@ -461,6 +467,7 @@ else
     private bool markMessagesRead;
     private bool showSuccess;
     private string currentUserId = "";
+    private string? actionError;
 
     private static readonly List<string> StatusOrder = new()
     {
@@ -478,6 +485,7 @@ else
         currentUserId = user?.Id ?? "";
 
         application = await Db.Applications
+            .AsNoTracking()
             .Include(a => a.Documents)
             .Include(a => a.Details)
             .FirstOrDefaultAsync(a => a.Id == Id && a.UserId == currentUserId);
@@ -497,31 +505,6 @@ else
 
     private bool showWithdrawModal = false;
 
-    private string? GetNextStatus()
-    {
-        if (application?.Status == null) return null;
-        var currentIndex = StatusOrder.IndexOf(application.Status);
-        if (currentIndex == -1 || currentIndex >= StatusOrder.Count - 1) return null;
-        return StatusOrder[currentIndex + 1];
-    }
-
-    private async Task AdvanceStatus()
-    {
-        var next = GetNextStatus();
-        if (application == null || next == null) return;
-
-        application.Status = next;
-        await Db.SaveChangesAsync();
-        showSuccess = true;
-
-        application = await Db.Applications
-            .Include(a => a.Documents)
-            .Include(a => a.Details)
-            .FirstOrDefaultAsync(a => a.Id == Id && a.UserId == currentUserId);
-
-        StateHasChanged();
-    }
-
     
 
     private string GetStatusBadge(string? status)
@@ -536,21 +519,6 @@ else
             "Rejected" => "bg-danger",
             _ => "bg-secondary"
         };
-    }
-
-    private async Task RejectApplication()
-    {
-        if (application == null) return;
-
-        application.Status = "Rejected";
-        await Db.SaveChangesAsync();
-
-        application = await Db.Applications
-            .Include(a => a.Documents)
-            .Include(a => a.Details)
-            .FirstOrDefaultAsync(a => a.Id == Id && a.UserId == currentUserId);
-
-        StateHasChanged();
     }
 
     private bool IsCompleted(string step)
@@ -580,18 +548,8 @@ else
 
     private async Task WithdrawApplication()
     {
-        if (application == null) return;
-
-        application.Status = "Withdrawn";
-        await Db.SaveChangesAsync();
-
-        application = await Db.Applications
-            .Include(a => a.Documents)
-            .Include(a => a.Details)
-            .FirstOrDefaultAsync(a => a.Id == Id && a.UserId == currentUserId);
-
+        await ChangeSubmission(false);
         showWithdrawModal = false;
-        StateHasChanged();
     }
 
     private string GetStepIcon(string step)
@@ -618,19 +576,21 @@ else
 
     private async Task ReapplyExisting()
     {
-        if (application == null) return;
-
-        application.Status = "Submitted";
-        application.DateSubmitted = DateTime.Now;
-        await Db.SaveChangesAsync();
-
-        application = await Db.Applications
-            .Include(a => a.Documents)
-            .Include(a => a.Details)
-            .FirstOrDefaultAsync(a => a.Id == Id && a.UserId == currentUserId);
-
+        await ChangeSubmission(true);
         showReapplyModal = false;
-        StateHasChanged();
+    }
+
+    private async Task ChangeSubmission(bool reapply)
+    {
+        actionError = null;
+        try
+        {
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            await ApplicantActions.ChangeSubmissionAsync(principal, Id, reapply);
+            await OnParametersSetAsync();
+        }
+        catch (UnauthorizedAccessException) { actionError = "You no longer have access to change this application."; }
+        catch (System.ComponentModel.DataAnnotations.ValidationException error) { actionError = error.Message; }
     }
 
     private void ReapplyNew()

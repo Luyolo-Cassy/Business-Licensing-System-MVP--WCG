@@ -20,7 +20,7 @@ ApplicationDbContext
   v
 SQLite database (businesslicensing.db)
 
-Uploaded files -> wwwroot/uploads -> static-file URL
+Uploaded files -> App_Data/protected-uploads -> authorized /uploads/... download
 ```
 
 ## Startup and request pipeline
@@ -34,7 +34,7 @@ Uploaded files -> wwwroot/uploads -> static-file URL
 5. Maps the Razor component and Identity endpoints.
 6. Applies outstanding migrations.
 7. Creates `BusinessOwner`, `MunicipalOfficial`, and `DEDATAdmin` roles.
-8. Seeds the development municipal-official account.
+8. Seeds the Development DEDAT Admin in Development only. Municipal Official accounts are provisioned through Admin management, not startup.
 
 ## Core entities
 
@@ -79,7 +79,7 @@ Route matching is case-insensitive in normal ASP.NET Core hosting, although rout
 
 The connection string is currently embedded in `Program.cs` as `Data Source=businesslicensing.db`. Database migrations live in `Migrations/` and are automatically applied every time the app starts.
 
-Application forms and supporting documents are buffered in memory, written to `wwwroot/uploads` using GUID-prefixed file names, and referenced by a public `/uploads/...` URL. Metadata is stored only after the application record has received its database ID.
+Supporting documents are buffered in memory and written to `App_Data/protected-uploads` using server-generated names. Existing `/uploads/...` database references are retained as authorized download URLs. `ProtectedUploadService` moves legacy files out of `wwwroot/uploads` at startup without overwriting destinations; these files are excluded from static-asset manifests and publishing. Downloads require ownership plus BusinessOwner membership, current MunicipalOfficial municipality access, or DEDATAdmin membership. Unreferenced files are not downloadable. Generated application PDFs remain in `App_Data/generated-applications` and use the same application read authorization. Back up and deploy private storage separately from published web assets. See [the Stage 7 audit](SECURITY_AUDIT.md).
 
 ## Authentication and authorization
 
@@ -89,8 +89,8 @@ Important production considerations:
 
 - Move seeded credentials to secure, environment-specific provisioning.
 - Configure a real email sender and confirmation policy.
-- Enforce ownership checks whenever an application is loaded by route ID.
-- Validate file type as well as size, scan uploads, and serve them through authorization-aware endpoints.
+- Preserve the server-side ownership and municipality checks whenever adding routes or actions.
+- Add content-signature validation and malware scanning if required; current upload extension/size checks and authorized downloads do not scan document contents.
 - Move connection settings out of source code.
 - Use database-generated sequences or unique constraints for application numbers.
 

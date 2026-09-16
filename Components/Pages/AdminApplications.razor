@@ -1,0 +1,55 @@
+@page "/admin/applications"
+@attribute [Authorize(Roles = "DEDATAdmin")]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using BusinessLicensing_Practice.Services
+@inject AdminApplicationService Oversight
+@inject AuthenticationStateProvider Authentication
+
+<PageTitle>Admin Applications</PageTitle>
+<h1 class="fw-bold">Applications</h1>
+<p class="text-muted">Read-only oversight across all municipalities, including historical applications.</p>
+<form method="get" action="admin/applications" class="card card-body shadow-sm mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-4"><label for="search" class="form-label">Reference or applicant</label><input id="search" name="search" class="form-control" value="@Search" /></div>
+        <div class="col-md-3"><label for="municipality" class="form-label">Municipality</label><select id="municipality" name="municipality" class="form-select">
+            <option value="">All municipalities</option>
+            @foreach (var name in result?.Municipalities ?? []) { <option value="@name" selected="@(name == Municipality)">@name</option> }
+        </select></div>
+        <div class="col-md-3"><label for="status" class="form-label">Status</label><select id="status" name="status" class="form-select">
+            <option value="">All statuses</option>
+            @foreach (var status in result?.Statuses ?? []) { <option value="@status" selected="@(status == Status)">@status</option> }
+        </select></div>
+        <div class="col-md-2"><button type="submit" class="btn btn-primary">Filter</button> <a href="admin/applications" class="btn btn-link">Clear</a></div>
+    </div>
+</form>
+@if (result != null)
+{
+    <p role="status">@result.Applications.Count application(s) found.</p>
+    @if (result.Applications.Count == 0) { <div class="alert alert-info">No applications match these filters.</div> }
+    else
+    {
+        <div class="card shadow-sm table-responsive"><table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Reference</th><th>Applicant</th><th>Licence / Application Type</th><th>Municipality</th><th>Submitted</th><th>Status</th><th>View</th></tr></thead>
+            <tbody>@foreach (var application in result.Applications)
+            {
+                <tr>
+                    <td>@application.ApplicationNumber</td><td>@application.Applicant</td>
+                    <td>@application.LicenceType <small class="d-block text-muted">@application.ApplicationType</small></td>
+                    <td>@(string.IsNullOrWhiteSpace(application.Municipality) ? "Not assigned" : application.Municipality)</td>
+                    <td>@application.DateSubmitted.ToString("yyyy/MM/dd HH:mm")</td><td>@application.Status</td>
+                    <td><a class="btn btn-outline-primary btn-sm" href="admin/applications/@application.Id" aria-label="View @application.ApplicationNumber">View</a></td>
+                </tr>
+            }</tbody>
+        </table></div>
+    }
+}
+
+@code {
+    [SupplyParameterFromQuery] public string? Search { get; set; }
+    [SupplyParameterFromQuery] public string? Municipality { get; set; }
+    [SupplyParameterFromQuery] public string? Status { get; set; }
+    private AdminApplicationList? result;
+    protected override async Task OnParametersSetAsync() =>
+        result = await Oversight.ListAsync((await Authentication.GetAuthenticationStateAsync()).User, Search, Municipality, Status);
+}

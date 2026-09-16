@@ -19,6 +19,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ApplicationPdfService PdfService
 @inject ApplicationFileService FileService
+@inject ProtectedUploadService Uploads
 @inject MunicipalRoutingService RoutingService
 
 <h3 class="fw-bold mb-4">New Business Licence Application</h3>
@@ -243,8 +244,7 @@
                 PopiaConsentAccepted = true, Status = "Submitted", DateSubmitted = now, UserId = user.Id,
                 Details = new ApplicationDetails { ApplicationType = ApplicationType, ApplicantName = ApplicantName.Trim(), ApplicantAddress = ApplicantAddress.Trim(), ApplicantTelephone = ApplicantTelephone.Trim(), ApplicantEmail = ApplicantEmail.Trim(), PostalAddress = PostalAddress.Trim(), ContactPerson = ContactPerson.Trim(), BusinessTelephone = BusinessTelephone.Trim(), BusinessEmail = BusinessEmail.Trim(), TradingHours = TradingHours.Trim(), LicenceSpecificDetailsJson = JsonSerializer.Serialize(LicenceAnswers), DeclarationAccepted = true, DeclarationAcceptedAt = now }
             };
-            var uploads = Path.Combine(Environment.WebRootPath ?? "wwwroot", "uploads"); Directory.CreateDirectory(uploads);
-            foreach (var selected in SelectedDocuments) { var storedName = $"{Guid.NewGuid():N}{Path.GetExtension(selected.FileName).ToLowerInvariant()}"; await File.WriteAllBytesAsync(Path.Combine(uploads, storedName), selected.FileBytes); application.Documents.Add(new ApplicationDocument { DocumentType = selected.DocumentType, FileName = selected.FileName, FilePath = $"/uploads/{storedName}" }); }
+            foreach (var selected in SelectedDocuments) { var reference = await Uploads.SaveAsync(selected.FileName, selected.FileBytes); application.Documents.Add(new ApplicationDocument { DocumentType = selected.DocumentType, FileName = selected.FileName, FilePath = reference }); }
             Db.Applications.Add(application); await Db.SaveChangesAsync();
             application.ApplicationFormFileName = $"{application.ApplicationNumber}-Official-Application.pdf";
             application.ApplicationFormFilePath = await FileService.SaveGeneratedPdfAsync(application.Id, application.ApplicationFormFileName, PdfService.Generate(application));

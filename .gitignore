@@ -6,3 +6,4 @@ obj/
 *.db-wal
 wwwroot/uploads/
 App_Data/generated-applications/
+App_Data/protected-uploads/

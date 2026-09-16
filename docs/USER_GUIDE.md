@@ -45,7 +45,7 @@ An application may also be marked `Withdrawn`. A rejected or withdrawn applicati
 
 ### Sign in
 
-For local demonstrations, use the seeded official account documented in the project README. Successful sign-in redirects municipal officials to `/official-dashboard`.
+Ask the DEDAT Admin to create your Municipal Official account and provide its setup link. Use the link to set your own password, then sign in through the normal Login page. Successful sign-in redirects municipal officials to `/official-dashboard`. Existing accounts continue to use their current credentials; startup no longer creates Official accounts.
 
 ### Find and review applications
 
@@ -84,11 +84,11 @@ The charts use the current records in the SQLite database and are rendered with 
 
 ### A page redirects to login or access denied
 
-Confirm that you are signed in with the appropriate role. Self-registered users are business owners; official access is seeded by the application.
+Confirm that you are signed in with the appropriate role. Self-registered users are business owners; Municipal Official accounts are created and managed by the DEDAT Admin.
 
 ### An upload fails
 
-Keep each file below 10 MB and ensure the process can write to `wwwroot/uploads`. The directory is created on the first successful submission.
+Keep each file below 10 MB and ensure the process can write to `App_Data/protected-uploads`. Supporting files are private; existing download links require an authorized login. Startup moves legacy `wwwroot/uploads` files to private storage without changing database references or overwriting existing files. Back up private storage with the database.
 
 ### Charts or icons do not appear
 

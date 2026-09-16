@@ -55,15 +55,11 @@ The application automatically applies Entity Framework migrations and creates th
 
 Register through `/Account/Register` to create a `BusinessOwner` account.
 
-A municipal official is seeded on first startup:
+The Development DEDAT Admin remains the bootstrap account, provisioned by `Data/DevelopmentAdminSeeder.cs` in Development only.
 
-| Field | Value |
-|---|---|
-| Email | `official@westerncape.gov.za` |
-| Password | `Password123!` |
-| Role | `MunicipalOfficial` |
+Municipal Officials are created through DEDAT Admin → Municipal Officials (`/admin/officials`). The Admin assigns one active municipality and provides the generated setup link; the Official chooses their own password and uses the normal Login page.
 
-> These credentials are for local demonstration only. Remove the seeded password and use secure provisioning before any deployment.
+Startup does not provision Municipal Official users. Existing legacy accounts and historical data remain in the database and can still be managed by the Admin.
 
 ## Application workflow
 
@@ -98,7 +94,8 @@ Data/            Entity Framework database context
 Migrations/      Database schema migrations
 Models/          Application, document, and user entities
 Properties/      Local launch profiles
-wwwroot/         Styles, scripts, forms, and runtime uploads
+wwwroot/         Public styles, scripts, icons, and blank forms
+App_Data/        Private generated PDFs and protected supporting uploads
 Program.cs       Service registration, middleware, migrations, and role seeding
 ```
 
@@ -106,6 +103,7 @@ Program.cs       Service registration, middleware, migrations, and role seeding
 
 - [User guide](docs/USER_GUIDE.md)
 - [Architecture and data model](docs/ARCHITECTURE.md)
+- [Stage 7 security audit and verification](docs/SECURITY_AUDIT.md)
 - [Developer guide](docs/DEVELOPMENT.md)
 
 ## Current MVP limitations

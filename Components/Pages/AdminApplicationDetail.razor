@@ -1,0 +1,148 @@
+@page "/admin/applications/{Id:int}"
+@attribute [Authorize(Roles = "DEDATAdmin")]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using BusinessLicensing_Practice.Services
+@inject AdminApplicationService Oversight
+@inject AuthenticationStateProvider Authentication
+@inject ApplicationFileService Files
+
+<PageTitle>Application Oversight</PageTitle>
+<a class="btn btn-link px-0 mb-3" href="admin/applications">Back to Applications</a>
+<h1 class="fw-bold">Application Oversight</h1>
+<p class="text-muted">Read-only application information. Municipal Officials remain responsible for processing applications.</p>
+@if (detail == null)
+{
+    <div class="alert alert-info">Application not found.</div>
+}
+else
+{
+    var application = detail.Application;
+    <section class="card shadow-sm mb-4">
+        <div class="card-header"><h2 class="h5 mb-0">Application Summary</h2></div>
+        <div class="card-body"><dl class="row mb-0">
+            @Field("Application Reference", application.ApplicationNumber)
+            @Field("Status", application.Status)
+            @Field("Responsible Municipality", application.Municipality, "Not assigned")
+            @Field("Submitted", application.DateSubmitted.ToString("yyyy/MM/dd HH:mm"))
+            @Field("Licence Type", application.LicenceType)
+            @Field("Application Type", application.Details?.ApplicationType)
+        </dl></div>
+    </section>
+    <section class="card shadow-sm mb-4">
+        <div class="card-header"><h2 class="h5 mb-0">Applicant Information</h2></div>
+        <div class="card-body"><dl class="row mb-0">
+            @Field("Applicant", detail.ApplicantName)
+            @Field("Email", detail.ApplicantEmail)
+            @Field("Telephone", detail.ApplicantTelephone)
+            @Field("Applicant Address", application.Details?.ApplicantAddress)
+            @Field("Postal Address", application.Details?.PostalAddress)
+            @Field("Contact Person", application.Details?.ContactPerson)
+        </dl></div>
+    </section>
+    <section class="card shadow-sm mb-4">
+        <div class="card-header"><h2 class="h5 mb-0">Business Information</h2></div>
+        <div class="card-body"><dl class="row mb-0">
+            @Field("Business Name", application.BusinessName)
+            @Field("Trading Name", application.TradingName)
+            @Field("Business Category", application.BusinessCategory)
+            @Field("Registration Number", application.RegistrationNumber)
+            @Field("Tax Number", application.TaxNumber)
+            @Field("Place of Business / Trading Address", TradingAddress)
+            @Field("Business Telephone", application.Details?.BusinessTelephone)
+            @Field("Business Email", application.Details?.BusinessEmail)
+            @Field("Trading Hours", application.Details?.TradingHours)
+            @Field("Erf Number", application.Details?.ErfNumber)
+            @Field("Zoning", application.Details?.Zoning)
+        </dl></div>
+    </section>
+    <section class="card shadow-sm mb-4">
+        <div class="card-header"><h2 class="h5 mb-0">Licence-specific Information</h2></div>
+        <div class="card-body"><dl class="row mb-0">
+            @Field("Food Handling Type", application.FoodHandlingType)
+            @Field("Entertainment Activity", application.EntertainmentActivityType)
+            @foreach (var answer in answers)
+            {
+                @Field(LicenceApplicationCatalog.Find(application.LicenceType)?.Questions.FirstOrDefault(q => q.Key == answer.Key)?.Label ?? answer.Key, answer.Value)
+            }
+        </dl></div>
+    </section>
+    <section class="card shadow-sm mb-4">
+        <div class="card-header"><h2 class="h5 mb-0">Submission Information</h2></div>
+        <div class="card-body"><dl class="row mb-0">
+            @Field("POPIA Consent Recorded", application.PopiaConsentAccepted ? "Yes" : "No")
+            @Field("Declaration Accepted", application.Details?.DeclarationAccepted is bool accepted ? accepted ? "Yes" : "No" : null)
+            @Field("Declaration Date", application.Details?.DeclarationAcceptedAt?.ToString("yyyy/MM/dd HH:mm"))
+        </dl></div>
+    </section>
+    <section class="card shadow-sm mb-4">
+        <div class="card-header"><h2 class="h5 mb-0">Application PDF and Supporting Documents</h2></div>
+        <div class="card-body">
+            @if (hasGeneratedPdf)
+            {
+                <a class="btn btn-primary mb-3" href="applications/@application.Id/official-pdf" target="_blank" rel="noopener">Open Generated Application PDF</a>
+            }
+            else { <p>No generated application PDF is available.</p> }
+            @if (IsUpload(application.ApplicationFormFilePath))
+            {
+                <p><a href="@application.ApplicationFormFilePath" target="_blank" rel="noopener">Open Legacy Application Form</a></p>
+            }
+            @if (!string.IsNullOrWhiteSpace(application.UploadedDocumentName))
+            {
+                <p>Legacy document: @application.UploadedDocumentName
+                    @if (IsUpload(application.UploadedDocumentPath)) { <a href="@application.UploadedDocumentPath" target="_blank" rel="noopener">Open</a> }
+                </p>
+            }
+            @if (application.Documents.Count == 0) { <p>No supporting documents recorded.</p> }
+            else
+            {
+                <ul class="list-group">@foreach (var document in application.Documents)
+                {
+                    <li class="list-group-item"><strong>@document.DocumentType</strong>: @document.FileName
+                        @if (IsUpload(document.FilePath)) { <a class="ms-2" href="@document.FilePath" target="_blank" rel="noopener">Open Document</a> }
+                    </li>
+                }</ul>
+            }
+        </div>
+    </section>
+    <section class="card shadow-sm mb-4">
+        <div class="card-header"><h2 class="h5 mb-0">Municipal Communication History</h2></div>
+        <div class="card-body">
+            @if (detail.Communications.Count == 0) { <p class="mb-0">No municipal messages recorded.</p> }
+            @foreach (var communication in detail.Communications)
+            {
+                <article class="border-bottom mb-3 pb-3">
+                    <h3 class="h6">@communication.SenderName</h3>
+                    <p class="text-muted small">Sent @communication.CreatedAtUtc.ToString("yyyy/MM/dd HH:mm") UTC</p>
+                    <p style="white-space: pre-wrap; overflow-wrap: anywhere;">@communication.Content</p>
+                    <p class="text-muted small mb-0">@(communication.ReadAtUtc is DateTime read ? $"Read by applicant: {read:yyyy/MM/dd HH:mm} UTC" : "Not yet read by applicant")</p>
+                </article>
+            }
+        </div>
+    </section>
+}
+@code {
+    [Parameter] public int Id { get; set; }
+    private BusinessLicensing_Practice.Services.AdminApplicationDetail? detail;
+    private Dictionary<string, string> answers = [];
+    private bool hasGeneratedPdf;
+    protected override async Task OnParametersSetAsync()
+    {
+        detail = await Oversight.DetailAsync((await Authentication.GetAuthenticationStateAsync()).User, Id);
+        answers = ApplicationPdfService.DeserializeAnswers(detail?.Application.Details?.LicenceSpecificDetailsJson);
+        hasGeneratedPdf = false;
+        if (detail != null)
+        {
+            try { hasGeneratedPdf = Files.GetGeneratedPdfPath(detail.Application.ApplicationFormFilePath) != null; }
+            catch (InvalidOperationException) { /* An invalid legacy file reference is not a generated PDF. */ }
+        }
+    }
+    private string TradingAddress => !string.IsNullOrWhiteSpace(detail!.Application.PlaceOfBusinessAddress)
+        ? detail.Application.PlaceOfBusinessAddress
+        : string.Join(", ", new[] { detail.Application.PlaceOfBusinessAddressLine1, detail.Application.PlaceOfBusinessAddressLine2,
+            detail.Application.PlaceOfBusinessSuburb, detail.Application.PlaceOfBusinessCity, detail.Application.PlaceOfBusinessPostalCode }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    private static bool IsUpload(string? path) => path?.StartsWith("/uploads/", StringComparison.Ordinal) == true;
+    private RenderFragment Field(string label, string? value, string missing = "Not recorded") => @<div class="col-md-6 mb-3">
+        <dt>@label</dt><dd class="mb-0">@(string.IsNullOrWhiteSpace(value) ? missing : value)</dd>
+    </div>;
+}

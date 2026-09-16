@@ -47,10 +47,13 @@ builder.Services.Configure<SecurityStampValidatorOptions>(options => options.Val
 // Add services to the container.
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 builder.Services.AddSingleton<ApplicationFileService>();
+builder.Services.AddSingleton<ProtectedUploadService>();
 builder.Services.AddSingleton<ApplicationPdfService>();
 builder.Services.AddScoped<MunicipalMessageService>();
 builder.Services.AddScoped<MunicipalityManagementService>();
 builder.Services.AddScoped<OfficialManagementService>();
+builder.Services.AddScoped<AdminApplicationService>();
+builder.Services.AddScoped<ApplicantApplicationService>();
 builder.Services.AddHttpClient<ArcGisGeocodingService>(client => client.Timeout = TimeSpan.FromSeconds(30))
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddHttpClient<WcgMunicipalBoundaryService>(client => client.Timeout = TimeSpan.FromSeconds(30))
@@ -61,6 +64,9 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 var app = builder.Build();
+
+// Preserve historical files and DB references; only the physical storage location changes.
+app.Services.GetRequiredService<ProtectedUploadService>().MoveLegacyUploads();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -74,6 +80,19 @@ app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages:
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
+// Intercept legacy URLs before ANY static-asset/fallback middleware (including fingerprinted URLs).
+app.Use(async (context, next) =>
+{
+    var segments = (context.Request.Path.Value ?? "").Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+    if (segments.Length > 0 && string.Equals(segments[0], "uploads", StringComparison.OrdinalIgnoreCase))
+    {
+        var result = await context.RequestServices.GetRequiredService<ProtectedUploadService>().DownloadAsync(context,
+            context.RequestServices.GetRequiredService<ApplicationDbContext>(), context.RequestServices.GetRequiredService<UserManager<ApplicationUser>>());
+        await result.ExecuteAsync(context);
+        return;
+    }
+    await next(context);
+});
 app.UseAuthorization();
 
 app.UseAntiforgery();
@@ -87,11 +106,14 @@ app.MapAdditionalIdentityEndpoints();
 
 app.MapGet("/applications/{id:int}/official-pdf", async (
     int id,
+    HttpContext context,
     ClaimsPrincipal principal,
     ApplicationDbContext db,
     UserManager<ApplicationUser> userManager,
     ApplicationFileService fileService) =>
 {
+    context.Response.Headers.CacheControl = "private, no-store";
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
     var user = await userManager.GetUserAsync(principal);
     if (user == null)
     {
@@ -107,12 +129,7 @@ app.MapGet("/applications/{id:int}/official-pdf", async (
         return Results.NotFound();
     }
 
-    var isOwner = application.UserId == user.Id;
-    var isAdmin = await userManager.IsInRoleAsync(user, "DEDATAdmin");
-    var currentOfficial = await OfficialAccess.GetAsync(db, principal);
-    var isAssignedOfficial = currentOfficial != null && currentOfficial.Municipality == application.Municipality;
-
-    if (!isOwner && !isAdmin && !isAssignedOfficial)
+    if (!await ApplicationReadAccess.CanReadAsync(db, userManager, principal, application))
     {
         return Results.Forbid();
     }
@@ -152,97 +169,6 @@ using (var scope = app.Services.CreateScope())
 
     await DevelopmentAdminSeeder.SeedAsync(app.Environment, userManager);
 
-    // Create a default Municipal Official
-    var officialEmail = "official@westerncape.gov.za";
-
-    // Persist the legacy seed identity so an Admin email edit cannot create a duplicate on restart.
-    async Task<ApplicationUser?> FindSeededOfficial(string email)
-    {
-        var id = await db.UserTokens.Where(t => t.LoginProvider == "LegacyOfficialSeed" && t.Name == email)
-            .Select(t => t.UserId).SingleOrDefaultAsync();
-        return id == null ? await userManager.FindByEmailAsync(email) : await userManager.FindByIdAsync(id);
-    }
-    async Task RememberSeed(ApplicationUser user, string email)
-    {
-        var result = await userManager.SetAuthenticationTokenAsync(user, "LegacyOfficialSeed", email, user.Id);
-        if (!result.Succeeded) throw new InvalidOperationException("Could not preserve legacy Official seed identity.");
-    }
-    var official = await FindSeededOfficial(officialEmail);
-
-    if (official == null)
-    {
-        official = new ApplicationUser
-        {
-            UserName = officialEmail,
-            Email = officialEmail,
-            FullName = "Municipal Official",
-            Municipality = "City of Cape Town"
-        };
-
-        var result = await userManager.CreateAsync(official, "Password123!");
-
-        if (!result.Succeeded)
-        {
-            throw new Exception("Failed to create Municipal Official user.");
-        }
-    }
-
-    if (string.IsNullOrWhiteSpace(official.Municipality))
-    {
-        official.Municipality = "City of Cape Town";
-        await userManager.UpdateAsync(official);
-    }
-
-    await RememberSeed(official, officialEmail);
-
-    // Ensure the user has the MunicipalOfficial role
-    if (!await userManager.IsInRoleAsync(official, "MunicipalOfficial"))
-    {
-        await userManager.AddToRoleAsync(official, "MunicipalOfficial");
-    }
-
-    var municipalityOfficials = new[]
-    {
-        new { Email = "bergrivier.official@westerncape.gov.za", Name = "Bergrivier Municipal Official", Municipality = "Bergrivier Municipality" },
-        new { Email = "cederberg.official@westerncape.gov.za", Name = "Cederberg Municipal Official", Municipality = "Cederberg Municipality" },
-        new { Email = "hessequa.official@westerncape.gov.za", Name = "Hessequa Municipal Official", Municipality = "Hessequa Municipality" },
-        new { Email = "swartland.official@westerncape.gov.za", Name = "Swartland Municipal Official", Municipality = "Swartland Municipality" },
-        new { Email = "witzenberg.official@westerncape.gov.za", Name = "Witzenberg Municipal Official", Municipality = "Witzenberg Municipality" }
-    };
-
-    foreach (var municipalityOfficial in municipalityOfficials)
-    {
-        // Keep the original geographic identity while respecting an Admin's display-name edits.
-        var assignedMunicipality = await db.Municipalities
-            .Where(m => m.RoutingName == municipalityOfficial.Municipality)
-            .Select(m => m.Name).SingleOrDefaultAsync() ?? municipalityOfficial.Municipality;
-        var municipalityUser = await FindSeededOfficial(municipalityOfficial.Email);
-
-        if (municipalityUser == null)
-        {
-            municipalityUser = new ApplicationUser
-            {
-                UserName = municipalityOfficial.Email,
-                Email = municipalityOfficial.Email,
-                FullName = municipalityOfficial.Name,
-                Municipality = assignedMunicipality
-            };
-
-            var result = await userManager.CreateAsync(municipalityUser, "Password123!");
-            if (!result.Succeeded)
-            {
-                var errors = string.Join(", ", result.Errors.Select(error => error.Description));
-                throw new Exception($"Failed to create {municipalityOfficial.Municipality} official: {errors}");
-            }
-        }
-        // Existing account details/assignment are now owned by Admin management.
-        await RememberSeed(municipalityUser, municipalityOfficial.Email);
-
-        if (!await userManager.IsInRoleAsync(municipalityUser, "MunicipalOfficial"))
-        {
-            await userManager.AddToRoleAsync(municipalityUser, "MunicipalOfficial");
-        }
-    }
 }
 
 app.Run();
