@@ -1,196 +1,94 @@
 @page "/"
 @using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.AspNetCore.Identity
-@inject UserManager<ApplicationUser> UserManager
-@inject AuthenticationStateProvider AuthenticationStateProvider
-@using BusinessLicensing_Practice.Models
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Provincial Business Licensing System</PageTitle>
 
-<section class="py-5 text-center">
-    <div class="container">
-        <div class="mx-auto" style="max-width: 860px;">
-            <div class="wcg-logo-wrap">
-                <img class="wcg-logo" src="/images/WCG_logo.jpg" alt="Western Cape Government" />
-            </div>
-            <h1 class="display-4 fw-bold text-primary mb-3">Provincial Business Licensing System</h1>
-            <p class="lead text-muted mb-4">
-                Apply for, manage and track business licence applications online across the Western Cape.
-            </p>
-            <AuthorizeView Context="auth">
+<AuthorizeView Context="auth">
+    <Authorized>
+        <div class="authenticated-home">
+            <h1>Provincial Business Licensing System</h1>
+            <p>Welcome back. Continue using your dashboard.</p>
+            @if (auth.User.IsInRole("BusinessOwner"))
+            {
+                <a class="btn btn-primary" href="/dashboard">Go to dashboard</a>
+            }
+            else if (auth.User.IsInRole("MunicipalOfficial"))
+            {
+                <a class="btn btn-primary" href="/official-dashboard">Go to dashboard</a>
+            }
+            else if (auth.User.IsInRole("DEDATAdmin"))
+            {
+                <a class="btn btn-primary" href="/admin-dashboard">Go to dashboard</a>
+            }
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="public-home">
+            <header class="public-header">
+                <div class="public-container public-header-inner">
+                    <a class="public-logo-link" href="/" aria-label="Western Cape Government home">
+                        <img src="/images/WCG_logo.jpg" alt="Western Cape Government" />
+                    </a>
+                    <a class="public-sign-in" href="/Account/Login">Sign in</a>
+                </div>
+            </header>
 
-                <Authorized>
-
-                    <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
-
-                        @if (auth.User.IsInRole("BusinessOwner"))
-                        {
-                            <a class="btn btn-primary btn-lg px-4" href="/new-application">
+            <main>
+                <section class="public-hero" aria-labelledby="hero-heading">
+                    <div class="public-hero-art" aria-hidden="true">
+                        <span class="public-hero-outline public-hero-outline-one"></span>
+                        <span class="public-hero-outline public-hero-outline-two"></span>
+                    </div>
+                    <div class="public-container public-hero-inner">
+                        <div class="public-hero-copy">
+                            <h1 id="hero-heading">Provincial Business<br class="desktop-break" /> Licensing System</h1>
+                            <p>Apply for and manage your Western Cape<br class="desktop-break" /> business licence online.</p>
+                            <a class="public-apply" href="/Account/Login?returnUrl=%2Fnew-application">
                                 <PhosphorIcon Name="file-plus" />
-                                Apply for a Licence
+                                <span>Apply for a business licence</span>
+                                <PhosphorIcon Name="arrow-right" CssClass="public-apply-arrow" />
                             </a>
-
-                            <a class="btn btn-outline-primary btn-lg px-4" href="/dashboard">
-                                <PhosphorIcon Name="clipboard-text" />
-                                Review My Applications
-                            </a>
-                        }
-                        else if (auth.User.IsInRole("MunicipalOfficial"))
-                        {
-                            <a class="btn btn-primary btn-lg px-4" href="/official-dashboard">
-                                <PhosphorIcon Name="eye" />
-                                Review Applications
-                            </a>
-                        }
-                        else if (auth.User.IsInRole("DEDATAdmin"))
-                        {
-                            <a class="btn btn-primary btn-lg px-4" href="/admin-dashboard">
-                                <PhosphorIcon Name="eye" />
-                                Review Applications
-                            </a>
-                        }
-
+                            <p class="public-register">New here? <a href="/Account/Register?returnUrl=%2Fnew-application">Create an account</a></p>
+                        </div>
                     </div>
+                </section>
 
-                    <p class="text-success mt-3">
-                        Welcome back, @currentUser?.FullName
-                    </p>
-
-                </Authorized>
-
-                <NotAuthorized>
-
-                    <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
-
-                        <a class="btn btn-primary btn-lg px-4" href="/Account/Login">
-                            <PhosphorIcon Name="file-plus" />
-                            Apply for a Licence
-                        </a>
-
-                        <a class="btn btn-outline-primary btn-lg px-4" href="/Account/Login">
-                            <PhosphorIcon Name="eye" />
-                            Review Applications
-                        </a>
-
-                        <a class="btn btn-outline-secondary btn-lg px-4" href="/Account/Register">
-                            <PhosphorIcon Name="user" />
-                            Create Account
-                        </a>
-
+                <section class="public-steps" aria-labelledby="steps-heading">
+                    <div class="public-container">
+                        <div class="public-steps-heading">
+                            <h2 id="steps-heading">How it works</h2>
+                            <p>Get your business licence in three simple steps.</p>
+                        </div>
+                        <ol class="public-step-list">
+                            <li class="public-step">
+                                <span class="public-step-number">STEP 1</span>
+                                <span class="public-step-icon"><PhosphorIcon Name="file-text" /></span>
+                                <h3>Apply online</h3>
+                                <p>Complete your application through our secure system.</p>
+                            </li>
+                            <li class="public-step">
+                                <span class="public-step-number">STEP 2</span>
+                                <span class="public-step-icon"><PhosphorIcon Name="upload-simple" /></span>
+                                <h3>Submit documents</h3>
+                                <p>Upload the required forms and supporting documents.</p>
+                            </li>
+                            <li class="public-step">
+                                <span class="public-step-number">STEP 3</span>
+                                <span class="public-step-icon"><PhosphorIcon Name="magnifying-glass" /></span>
+                                <h3>Track progress</h3>
+                                <p>Monitor the status of your application online.</p>
+                            </li>
+                        </ol>
                     </div>
+                </section>
+            </main>
 
-                </NotAuthorized>
-
-            </AuthorizeView>
+            <footer class="public-footer">
+                <div class="public-container public-footer-inner">
+                    <span class="public-footer-logo"><img src="/images/WCG_logo.jpg" alt="Western Cape Government" /></span>
+                    <span>Provincial Business Licensing System</span>
+                </div>
+            </footer>
         </div>
-    </div>
-</section>
-
-<section class="pb-5">
-    <div class="container">
-        <div class="row g-4">
-            <div class="col-md-6 col-xl-3">
-                <div class="card h-100 border-light shadow-sm">
-                    <div class="card-body">
-                        <PhosphorIcon Name="briefcase" CssClass="ph-icon-lg mb-3" />
-                        <h5 class="card-title">Apply Online</h5>
-                        <p class="card-text text-muted">Submit new business licence applications digitally.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 col-xl-3">
-                <div class="card h-100 border-light shadow-sm">
-                    <div class="card-body">
-                        <PhosphorIcon Name="upload-simple" CssClass="ph-icon-lg mb-3" />
-                        <h5 class="card-title">Upload Documents</h5>
-                        <p class="card-text text-muted">Securely upload supporting documentation.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 col-xl-3">
-                <div class="card h-100 border-light shadow-sm">
-                    <div class="card-body">
-                        <PhosphorIcon Name="clock-clockwise" CssClass="ph-icon-lg mb-3" />
-                        <h5 class="card-title">Track Progress</h5>
-                        <p class="card-text text-muted">Monitor your application from submission to approval.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 col-xl-3">
-                <div class="card h-100 border-light shadow-sm">
-                    <div class="card-body">
-                        <PhosphorIcon Name="file-pdf" CssClass="ph-icon-lg mb-3" />
-                        <h5 class="card-title">Automatic Official PDF</h5>
-                        <p class="card-text text-muted">Your completed official application PDF is generated when you submit.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<section class="py-5 bg-light border-top border-bottom">
-    <div class="container">
-        <h2 class="h4 fw-bold text-center mb-4">Application Process</h2>
-        <div class="row g-3 align-items-stretch text-center">
-            <div class="col-md">
-                <div class="card h-100 border-light shadow-sm">
-                    <div class="card-body">
-                        <span class="badge rounded-pill text-bg-primary mb-2">Step 1</span>
-                        <h6 class="mb-0">Choose Licence Type</h6>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-auto d-none d-md-flex align-items-center text-primary fw-bold">&darr;</div>
-            <div class="col-md">
-                <div class="card h-100 border-light shadow-sm">
-                    <div class="card-body">
-                        <span class="badge rounded-pill text-bg-primary mb-2">Step 2</span>
-                        <h6 class="mb-0">Complete Application</h6>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-auto d-none d-md-flex align-items-center text-primary fw-bold">&darr;</div>
-            <div class="col-md">
-                <div class="card h-100 border-light shadow-sm">
-                    <div class="card-body">
-                        <span class="badge rounded-pill text-bg-primary mb-2">Step 3</span>
-                        <h6 class="mb-0">Upload Supporting Documents</h6>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-auto d-none d-md-flex align-items-center text-primary fw-bold">&darr;</div>
-            <div class="col-md">
-                <div class="card h-100 border-light shadow-sm">
-                    <div class="card-body">
-                        <span class="badge rounded-pill text-bg-primary mb-2">Step 4</span>
-                        <h6 class="mb-0">Review, Submit &amp; Track</h6>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<footer class="py-4 text-center text-muted">
-    <div class="container">
-        <div class="fw-semibold">Provincial Business Licensing Digital System</div>
-        <div>Western Cape Government Prototype</div>
-    </div>
-</footer>
-
-
-@code {
-
-    private ApplicationUser? currentUser;
-
-
-    protected override async Task OnInitializedAsync()
-    {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-
-        currentUser = await UserManager.GetUserAsync(authState.User);
-    }
-
-}
-
+    </NotAuthorized>
+</AuthorizeView>
