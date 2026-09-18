@@ -24,6 +24,15 @@
 
     private ApplicationUser? currentUser;
     private Dictionary<int, int> unreadCounts = [];
+    private bool refreshingNotifications;
+
+    private async Task RefreshNotifications()
+    {
+        if (refreshingNotifications) return;
+        refreshingNotifications = true;
+        try { await OnParametersSetAsync(); }
+        finally { refreshingNotifications = false; }
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -77,7 +86,8 @@
 </AuthorizeView>
 <div class="alert alert-info" role="status">
     Municipal Messages: <span class="badge bg-primary">@unreadCounts.Values.Sum() unread</span>
-    <button class="btn btn-sm btn-outline-primary ms-2" @onclick="OnParametersSetAsync">Refresh notifications</button>
+    <button class="btn btn-sm btn-outline-primary ms-2" disabled="@refreshingNotifications" aria-busy="@refreshingNotifications" @onclick="RefreshNotifications">@if (refreshingNotifications) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> }@(refreshingNotifications ? "Refreshing notifications..." : "Refresh notifications")</button>
+    @if (refreshingNotifications) { <span class="visually-hidden" role="status">Refreshing notifications...</span> }
 </div>
 <div class="row mb-4">
     <div class="col-md-3">

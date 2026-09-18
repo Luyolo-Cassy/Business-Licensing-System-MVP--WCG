@@ -645,3 +645,22 @@
         gap: 0.25rem;
     }
 }
+.application-fields {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.wizard-step-enter { animation: wizard-step-in 160ms ease-out; }
+@keyframes wizard-step-in { from { opacity: .65; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .wizard-step-enter { animation: none; } }
+
+.trading-hours-list { border-top: 1px solid #d7dce5; }
+.trading-hours-row { display: grid; grid-template-columns: minmax(6rem, 1fr) minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(8rem, 1fr); gap: .75rem; align-items: center; padding: .7rem 0; border-bottom: 1px solid #d7dce5; }
+.trading-hours-row label { min-width: 0; font-size: .875rem; }
+.trading-hours-row input[type="text"] { width: 100%; min-width: 0; }
+.review-value { white-space: pre-line; }
+@media (max-width: 767.98px) {
+    .trading-hours-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem .75rem; }
+}

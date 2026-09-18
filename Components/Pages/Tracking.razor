@@ -23,7 +23,14 @@
 
 @if (application == null)
 {
-    <div class="alert alert-info">Application unavailable or loading.</div>
+    @if (loadingApplication)
+    {
+        <div class="alert alert-info" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Loading application...</div>
+    }
+    else
+    {
+        <div class="alert alert-info">Application unavailable.</div>
+    }
 }
 else
 {
@@ -105,6 +112,16 @@ else
             <p class="text-muted mb-1">Responsible Municipality</p>
             <strong>@(string.IsNullOrWhiteSpace(application.Municipality) ? "Not assigned" : application.Municipality)</strong>
         </div>
+
+        @if (application.Details != null)
+        {
+            <div class="row mb-4 g-3">
+                <div class="col-md-6"><span class="text-muted d-block">Applicant</span><strong>@ApplicationEntry.FullName(application.Details)</strong></div>
+                <div class="col-md-6"><span class="text-muted d-block">Applicant Address</span>@ApplicationEntry.ApplicantAddress(application.Details)</div>
+                <div class="col-md-6"><span class="text-muted d-block">Postal Address</span>@ApplicationEntry.PostalAddress(application)</div>
+                <div class="col-md-6"><span class="text-muted d-block">Trading Hours</span><span style="white-space: pre-line">@ApplicationEntry.FormatTradingHours(application.Details.TradingHours)</span></div>
+            </div>
+        }
 
         <hr />
 
@@ -392,22 +409,22 @@ else
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title fw-bold">Reapply for Licence</h5>
-                        <button class="btn-close" @onclick="() => showReapplyModal = false"></button>
+                        <button class="btn-close" disabled="@actionBusy" aria-label="Close" @onclick="() => showReapplyModal = false"></button>
                     </div>
                     <div class="modal-body">
                         <p>Would you like to use your previously stored application data or start fresh?</p>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-outline-secondary" @onclick="() => showReapplyModal = false">
+                        <button class="btn btn-outline-secondary" disabled="@actionBusy" @onclick="() => showReapplyModal = false">
                             Cancel
                         </button>
-                        <button class="btn btn-outline-primary" @onclick="ReapplyNew">
+                        <button class="btn btn-outline-primary" disabled="@actionBusy" @onclick="ReapplyNew">
                             <PhosphorIcon Name="file-plus" />
                             Use New Data
                         </button>
-                        <button class="btn btn-success" @onclick="ReapplyExisting">
-                            <PhosphorIcon Name="arrow-counter-clockwise" />
-                            Use Stored Data
+                        <button class="btn btn-success" disabled="@actionBusy" aria-busy="@actionBusy" @onclick="ReapplyExisting">
+                            @if (actionBusy) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> } else { <PhosphorIcon Name="arrow-counter-clockwise" /> }
+                            @(actionBusy ? "Reapplying..." : "Use Stored Data")
                         </button>
                     </div>
                 </div>
@@ -422,18 +439,18 @@ else
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title fw-bold">Withdraw Application</h5>
-                        <button class="btn-close" @onclick="() => showWithdrawModal = false"></button>
+                        <button class="btn-close" disabled="@actionBusy" aria-label="Close" @onclick="() => showWithdrawModal = false"></button>
                     </div>
                     <div class="modal-body">
                         <p>Are you sure you want to withdraw this application? This action cannot be undone.</p>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-outline-secondary" @onclick="() => showWithdrawModal = false">
+                        <button class="btn btn-outline-secondary" disabled="@actionBusy" @onclick="() => showWithdrawModal = false">
                             Cancel
                         </button>
-                        <button class="btn btn-danger" @onclick="WithdrawApplication">
-                            <PhosphorIcon Name="warning" />
-                            Yes, Withdraw
+                        <button class="btn btn-danger" disabled="@actionBusy" aria-busy="@actionBusy" @onclick="WithdrawApplication">
+                            @if (actionBusy) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> } else { <PhosphorIcon Name="warning" /> }
+                            @(actionBusy ? "Withdrawing application..." : "Yes, Withdraw")
                         </button>
                     </div>
                 </div>
@@ -468,6 +485,9 @@ else
     private bool showSuccess;
     private string currentUserId = "";
     private string? actionError;
+    private bool actionBusy;
+    private bool loadingApplication = true;
+    private int? loadedApplicationId;
 
     private static readonly List<string> StatusOrder = new()
     {
@@ -480,6 +500,14 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
+        loadingApplication = true;
+        if (loadedApplicationId != Id)
+        {
+            application = null;
+            municipalMessages = [];
+        }
+        try
+        {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = await UserManager.GetUserAsync(authState.User);
         currentUserId = user?.Id ?? "";
@@ -491,6 +519,9 @@ else
             .FirstOrDefaultAsync(a => a.Id == Id && a.UserId == currentUserId);
         municipalMessages = application == null ? [] : await Messages.GetMessagesAsync(authState.User, Id);
         markMessagesRead = municipalMessages.Any(m => m.ReadAtUtc == null);
+        loadedApplicationId = Id;
+        }
+        finally { loadingApplication = false; }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -582,6 +613,8 @@ else
 
     private async Task ChangeSubmission(bool reapply)
     {
+        if (actionBusy) return;
+        actionBusy = true;
         actionError = null;
         try
         {
@@ -591,6 +624,7 @@ else
         }
         catch (UnauthorizedAccessException) { actionError = "You no longer have access to change this application."; }
         catch (System.ComponentModel.DataAnnotations.ValidationException error) { actionError = error.Message; }
+        finally { actionBusy = false; }
     }
 
     private void ReapplyNew()

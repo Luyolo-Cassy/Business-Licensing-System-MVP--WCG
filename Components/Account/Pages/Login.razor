@@ -22,7 +22,7 @@
         <h1 id="auth-heading">Sign in</h1>
         <p class="auth-intro">Sign in to access the Provincial Business Licensing System.</p>
             <StatusMessage Message="@errorMessage" />
-            <EditForm EditContext="editContext" method="post" OnSubmit="LoginUser" FormName="login">
+            <EditForm EditContext="editContext" method="post" OnSubmit="LoginUser" FormName="login" data-busy-form="login">
                 <DataAnnotationsValidator />
                 <ValidationSummary class="text-danger" role="alert" />
                 <div class="auth-field form-floating">
@@ -43,7 +43,7 @@
                         Remember me
                     </label>
                 </div>
-                <button type="submit" class="auth-submit btn btn-primary">Sign in</button>
+                <button type="submit" class="auth-submit btn btn-primary" data-busy-submit data-busy-text="Signing in...">Sign in</button>
                 <div class="auth-links">
                     <a href="/Account/ForgotPassword">Forgot your password?</a>
                     <p>Don't have an account? <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Create an account</a></p>

@@ -27,8 +27,8 @@ namespace BusinessLicensing_Practice.Services
                 ("Licence type", application.LicenceType),
                 ("Application type", application.Details?.ApplicationType),
                 ("Responsible municipality", application.Municipality),
-                ("Applicant / owner", application.Details?.ApplicantName),
-                ("Applicant address", application.Details?.ApplicantAddress),
+                ("Applicant / owner", ApplicationEntry.FullName(application.Details)),
+                ("Applicant address", ApplicationEntry.ApplicantAddress(application.Details)),
                 ("Telephone", application.Details?.ApplicantTelephone),
                 ("Email", application.Details?.ApplicantEmail)
             ]);
@@ -40,15 +40,26 @@ namespace BusinessLicensing_Practice.Services
                 ("Registration number", application.RegistrationNumber),
                 ("Tax number", application.TaxNumber),
                 ("Nature of business", application.BusinessCategory),
-                ("Place of Business / Trading Address", application.PlaceOfBusinessAddress),
-                ("Postal address", application.Details?.PostalAddress),
+                ("Place of Business / Trading Address", ApplicationEntry.PlaceOfBusinessAddress(application)),
+                ("Postal address", ApplicationEntry.PostalAddress(application)),
                 ("Town / city", application.PlaceOfBusinessCity),
                 ("Postal code", application.PlaceOfBusinessPostalCode),
                 ("Contact person", application.Details?.ContactPerson),
                 ("Business telephone", application.Details?.BusinessTelephone),
-                ("Business email", application.Details?.BusinessEmail),
-                ("Trading hours", application.Details?.TradingHours)
+                ("Business email", application.Details?.BusinessEmail)
             ]);
+            var tradingHours = ApplicationEntry.FormatTradingHours(application.Details?.TradingHours);
+            if (tradingHours.Contains('\n'))
+            {
+                renderer.AddRows([("Trading hours", "Daily schedule")]);
+                renderer.AddRows(tradingHours.Split('\n').Select(line =>
+                {
+                    var separator = line.IndexOf(':');
+                    return (separator < 0 ? "Trading hours" : line[..separator],
+                        (string?)(separator < 0 ? line : line[(separator + 1)..].Trim()));
+                }));
+            }
+            else renderer.AddRows([("Trading hours", tradingHours)]);
 
             renderer.AddSection("Section C - Licence-Specific Information");
             var answers = DeserializeAnswers(application.Details?.LicenceSpecificDetailsJson);

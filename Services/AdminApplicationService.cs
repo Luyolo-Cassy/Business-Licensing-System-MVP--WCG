@@ -37,14 +37,17 @@ public class AdminApplicationService(IServiceScopeFactory scopes)
         {
             var term = search.Trim().ToLowerInvariant();
             rows = rows.Where(a => a.ApplicationNumber.ToLower().Contains(term) ||
-                (a.Details != null && a.Details.ApplicantName != null && a.Details.ApplicantName != ""
-                    ? a.Details.ApplicantName : a.User != null ? a.User.FullName : "").ToLower().Contains(term));
+                (a.Details != null && a.Details.ApplicantFirstName != null && a.Details.ApplicantFirstName != ""
+                    ? a.Details.ApplicantFirstName + " " + a.Details.ApplicantLastName
+                    : a.Details != null && a.Details.ApplicantName != null && a.Details.ApplicantName != ""
+                        ? a.Details.ApplicantName : a.User != null ? a.User.FullName : "").ToLower().Contains(term));
         }
         if (!string.IsNullOrEmpty(municipality)) rows = rows.Where(a => a.Municipality == municipality);
         if (!string.IsNullOrEmpty(status)) rows = rows.Where(a => a.Status == status);
         var applications = await rows.OrderByDescending(a => a.DateSubmitted).ThenByDescending(a => a.Id)
             .Select(a => new AdminApplicationRow(a.Id, a.ApplicationNumber,
-                a.Details != null && a.Details.ApplicantName != null && a.Details.ApplicantName != "" ? a.Details.ApplicantName : a.User != null ? a.User.FullName : "",
+                a.Details != null && a.Details.ApplicantFirstName != null && a.Details.ApplicantFirstName != "" ? a.Details.ApplicantFirstName + " " + a.Details.ApplicantLastName :
+                    a.Details != null && a.Details.ApplicantName != null && a.Details.ApplicantName != "" ? a.Details.ApplicantName : a.User != null ? a.User.FullName : "",
                 a.LicenceType, a.Details != null ? a.Details.ApplicationType : null, a.Municipality, a.DateSubmitted, a.Status)).ToListAsync();
         var municipalities = await db.Municipalities.Select(m => m.Name)
             .Union(db.Applications.Where(a => a.Municipality != null && a.Municipality != "").Select(a => a.Municipality!))
@@ -67,7 +70,7 @@ public class AdminApplicationService(IServiceScopeFactory scopes)
             .OrderBy(m => m.CreatedAtUtc).ThenBy(m => m.Id)
             .Select(m => new AdminCommunication(m.SenderName, m.Content, m.CreatedAtUtc, m.ReadAtUtc)).ToListAsync();
         return new(application,
-            string.IsNullOrWhiteSpace(application.Details?.ApplicantName) ? applicant?.FullName ?? "" : application.Details.ApplicantName,
+            string.IsNullOrWhiteSpace(ApplicationEntry.FullName(application.Details)) ? applicant?.FullName ?? "" : ApplicationEntry.FullName(application.Details),
             application.Details?.ApplicantEmail ?? applicant?.Email,
             application.Details?.ApplicantTelephone ?? applicant?.PhoneNumber, communications);
     }

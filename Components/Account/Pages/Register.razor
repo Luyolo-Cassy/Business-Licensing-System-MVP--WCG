@@ -35,7 +35,8 @@
         <EditForm Model="Input"
                   method="post"
                   OnValidSubmit="RegisterUser"
-                  FormName="register">
+                  FormName="register"
+                  data-busy-form="register">
 
             <DataAnnotationsValidator />
 
@@ -129,7 +130,9 @@
 
 
             <button type="submit"
-                    class="auth-submit btn btn-primary">
+                    class="auth-submit btn btn-primary"
+                    data-busy-submit
+                    data-busy-text="Creating account...">
 
                 Create account
 

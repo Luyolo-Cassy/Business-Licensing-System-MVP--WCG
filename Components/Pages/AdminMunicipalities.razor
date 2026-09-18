@@ -21,6 +21,7 @@
 {
     <div class="alert @(isError ? "alert-danger" : "alert-success")" role="alert">@message</div>
 }
+@if (busyAction != null) { <p class="text-muted" role="status">@(busyAction == "save" ? "Saving municipality..." : "Updating municipality status...")</p> }
 <div class="card shadow-sm mb-4"><div class="card-body">
     <h2 class="h5">@(editingId == null ? "Add Municipality" : "Edit Municipality")</h2>
     <EditForm Model="input" OnValidSubmit="Save" FormName="municipality">
@@ -29,7 +30,7 @@
         <fieldset disabled="@busy">
             <label for="municipality-name" class="form-label">Municipality name</label>
             <InputText id="municipality-name" class="form-control mb-3" @bind-Value="input.Name" maxlength="200" />
-            <button class="btn btn-primary" type="submit">@(editingId == null ? "Add Municipality" : "Save Name")</button>
+            <button class="btn btn-primary" type="submit">@if (busy && busyAction == "save") { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> }@(busy && busyAction == "save" ? "Saving municipality..." : editingId == null ? "Add Municipality" : "Save Name")</button>
             @if (editingId != null)
             {
                 <button class="btn btn-outline-secondary ms-2" type="button" @onclick="Cancel">Cancel</button>
@@ -49,7 +50,7 @@
                     <td>@(municipality.RoutingName == null ? "Not supported" : "Supported")</td>
                     <td>
                         <button class="btn btn-outline-primary btn-sm me-2" disabled="@busy" @onclick="() => Edit(municipality)" aria-label="Edit @municipality.Name">Edit</button>
-                        <button class="btn btn-outline-secondary btn-sm" disabled="@busy" @onclick="() => SetActive(municipality)" aria-label="@((municipality.IsActive ? "Deactivate " : "Activate ") + municipality.Name)">@(municipality.IsActive ? "Deactivate" : "Activate")</button>
+                        <button class="btn btn-outline-secondary btn-sm" disabled="@busy" @onclick="() => SetActive(municipality)" aria-label="@((municipality.IsActive ? "Deactivate " : "Activate ") + municipality.Name)">@if (busy && busyAction == "status" && busyTargetId == municipality.Id) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> }@(busy && busyAction == "status" && busyTargetId == municipality.Id ? "Updating municipality status..." : municipality.IsActive ? "Deactivate" : "Activate")</button>
                     </td>
                 </tr>
             }
@@ -64,6 +65,8 @@
     private string? originalName;
     private string? message;
     private bool busy;
+    private string? busyAction;
+    private int? busyTargetId;
     private bool isError;
 
     protected override async Task OnInitializedAsync() => await Run(async () => { });
@@ -80,16 +83,16 @@
         await Management.SaveAsync((await Authentication.GetAuthenticationStateAsync()).User, editingId, input.Name, originalName);
         Cancel();
         message = "Municipality saved.";
-    });
+    }, "save");
     private async Task SetActive(Municipality municipality) => await Run(async () =>
     {
         await Management.SetActiveAsync((await Authentication.GetAuthenticationStateAsync()).User, municipality.Id, !municipality.IsActive);
         message = municipality.IsActive ? "Municipality deactivated. Historical applications remain accessible." : "Municipality activated.";
-    });
-    private async Task Run(Func<Task> action)
+    }, "status", municipality.Id);
+    private async Task Run(Func<Task> action, string? actionName = null, int? targetId = null)
     {
         if (busy) return;
-        busy = true; message = null; isError = false;
+        busy = true; busyAction = actionName; busyTargetId = targetId; message = null; isError = false;
         try
         {
             await action();
@@ -102,7 +105,7 @@
             Logger.LogError(error, "Municipality management operation failed.");
             isError = true; message = "The operation could not be completed. Refresh the page and try again.";
         }
-        finally { busy = false; }
+        finally { busy = false; busyAction = null; busyTargetId = null; }
     }
     private sealed class NameInput
     {

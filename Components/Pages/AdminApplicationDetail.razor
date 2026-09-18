@@ -3,6 +3,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using BusinessLicensing_Practice.Services
+@using BusinessLicensing_Practice.Models
 @inject AdminApplicationService Oversight
 @inject AuthenticationStateProvider Authentication
 @inject ApplicationFileService Files
@@ -35,8 +36,8 @@ else
             @Field("Applicant", detail.ApplicantName)
             @Field("Email", detail.ApplicantEmail)
             @Field("Telephone", detail.ApplicantTelephone)
-            @Field("Applicant Address", application.Details?.ApplicantAddress)
-            @Field("Postal Address", application.Details?.PostalAddress)
+            @Field("Applicant Address", ApplicationEntry.ApplicantAddress(application.Details))
+            @Field("Postal Address", ApplicationEntry.PostalAddress(application))
             @Field("Contact Person", application.Details?.ContactPerson)
         </dl></div>
     </section>
@@ -51,7 +52,7 @@ else
             @Field("Place of Business / Trading Address", TradingAddress)
             @Field("Business Telephone", application.Details?.BusinessTelephone)
             @Field("Business Email", application.Details?.BusinessEmail)
-            @Field("Trading Hours", application.Details?.TradingHours)
+            @Field("Trading Hours", ApplicationEntry.FormatTradingHours(application.Details?.TradingHours))
             @Field("Erf Number", application.Details?.ErfNumber)
             @Field("Zoning", application.Details?.Zoning)
         </dl></div>
@@ -143,6 +144,6 @@ else
             detail.Application.PlaceOfBusinessSuburb, detail.Application.PlaceOfBusinessCity, detail.Application.PlaceOfBusinessPostalCode }.Where(s => !string.IsNullOrWhiteSpace(s)));
     private static bool IsUpload(string? path) => path?.StartsWith("/uploads/", StringComparison.Ordinal) == true;
     private RenderFragment Field(string label, string? value, string missing = "Not recorded") => @<div class="col-md-6 mb-3">
-        <dt>@label</dt><dd class="mb-0">@(string.IsNullOrWhiteSpace(value) ? missing : value)</dd>
+        <dt>@label</dt><dd class="mb-0" style="white-space: pre-line">@(string.IsNullOrWhiteSpace(value) ? missing : value)</dd>
     </div>;
 }

@@ -105,11 +105,7 @@ else
             <h5>Place of Business / Trading Address</h5>
 
             <p>
-                @application.PlaceOfBusinessAddressLine1 <br />
-                @application.PlaceOfBusinessAddressLine2 <br />
-                @application.PlaceOfBusinessSuburb <br />
-                @application.PlaceOfBusinessCity <br />
-                @application.PlaceOfBusinessPostalCode
+                @ApplicationEntry.PlaceOfBusinessAddress(application)
             </p>
 
             @if (application.Details != null)
@@ -117,10 +113,13 @@ else
                 <hr />
                 <h5>Applicant Information</h5>
                 <div class="row mb-3">
-                    <div class="col-md-6"><strong>Applicant</strong><br />@application.Details.ApplicantName</div>
+                    <div class="col-md-6"><strong>Applicant</strong><br />@ApplicationEntry.FullName(application.Details)</div>
                     <div class="col-md-6"><strong>Application Type</strong><br />@application.Details.ApplicationType</div>
                     <div class="col-md-6 mt-3"><strong>Telephone</strong><br />@application.Details.ApplicantTelephone</div>
                     <div class="col-md-6 mt-3"><strong>Email</strong><br />@application.Details.ApplicantEmail</div>
+                    <div class="col-md-6 mt-3"><strong>Applicant Address</strong><br />@ApplicationEntry.ApplicantAddress(application.Details)</div>
+                    <div class="col-md-6 mt-3"><strong>Postal Address</strong><br />@ApplicationEntry.PostalAddress(application)</div>
+                    <div class="col-md-6 mt-3"><strong>Trading Hours</strong><br /><span style="white-space: pre-line">@ApplicationEntry.FormatTradingHours(application.Details.TradingHours)</span></div>
                 </div>
 
                 <h5>Licence-Specific Information</h5>
@@ -229,7 +228,7 @@ else
                     Message to applicant
                 </label>
 
-                <InputTextArea class="form-control" @bind-Value="ReviewComments" rows="4">
+                <InputTextArea class="form-control" @bind-Value="ReviewComments" rows="4" disabled="@saving">
                 </InputTextArea>
             </div>
 
@@ -240,7 +239,7 @@ else
 
                 <label class="form-label">Application Status</label>
 
-                <InputSelect class="form-select" @bind-Value="application.Status">
+                <InputSelect class="form-select" @bind-Value="application.Status" disabled="@saving">
                     <option value="Submitted">Submitted</option>
                     <option value="Under Review">Under Review</option>
                     <option value="Department Assessment">Department Assessment</option>
@@ -266,12 +265,12 @@ else
 
             <div class="mt-4">
 
-                <button class="btn btn-success me-2" disabled="@saving" @onclick="SaveReview">
-                    <PhosphorIcon Name="floppy-disk" CssClass="me-1" />
-                    Save Review
+                <button class="btn btn-success me-2" disabled="@saving" @onclick="@(() => SaveReview("save"))">
+                    @if (saving && activeReviewAction == "save") { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> } else { <PhosphorIcon Name="floppy-disk" CssClass="me-1" /> }
+                    @(saving && activeReviewAction == "save" ? "Saving review..." : "Save Review")
                 </button>
 
-                <button class="btn btn-secondary me-2" @onclick="@(() => Navigation.NavigateTo("/official-dashboard"))">
+                <button class="btn btn-secondary me-2" disabled="@saving" @onclick="@(() => Navigation.NavigateTo("/official-dashboard"))">
 
                     <PhosphorIcon Name="arrow-left" CssClass="me-1" />
 
@@ -280,18 +279,19 @@ else
 
                 @if (application?.Status == "Final Decision")
                 {
-                    <button class="btn btn-primary me-2" @onclick="ApproveApplication">
-                        <PhosphorIcon Name="check-circle" />
-                        Approve
+                    <button class="btn btn-primary me-2" disabled="@saving" @onclick="ApproveApplication">
+                        @if (saving && activeReviewAction == "approve") { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> } else { <PhosphorIcon Name="check-circle" /> }
+                        @(saving && activeReviewAction == "approve" ? "Approving application..." : "Approve")
                     </button>
 
-                    <button class="btn btn-danger" @onclick="RejectApplication">
-                        <PhosphorIcon Name="x-circle" />
-                        Reject
+                    <button class="btn btn-danger" disabled="@saving" @onclick="RejectApplication">
+                        @if (saving && activeReviewAction == "reject") { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> } else { <PhosphorIcon Name="x-circle" /> }
+                        @(saving && activeReviewAction == "reject" ? "Rejecting application..." : "Reject")
                     </button>
                 }
 
             </div>
+            @if (saving) { <p class="mt-2 text-muted" role="status">@ReviewStatus</p> }
 
         </div>
     </div>
@@ -306,6 +306,8 @@ else
     private string ReviewComments = "";
     private bool ShowSuccess = false;
     private bool saving;
+    private string? activeReviewAction;
+    private string ReviewStatus => activeReviewAction switch { "approve" => "Approving application...", "reject" => "Rejecting application...", _ => "Saving review..." };
     private string? saveError;
     private Dictionary<string, string> LicenceAnswers = new();
 
@@ -324,11 +326,12 @@ else
         LicenceAnswers = ApplicationPdfService.DeserializeAnswers(application?.Details?.LicenceSpecificDetailsJson);
     }
 
-    private async Task SaveReview()
+    private async Task SaveReview(string action)
     {
         if (application != null && !saving)
         {
             saving = true;
+            activeReviewAction = action;
             saveError = null;
             try
             {
@@ -349,6 +352,7 @@ else
             finally
             {
                 saving = false;
+                activeReviewAction = null;
             }
 
             ShowSuccess = true;
@@ -361,14 +365,20 @@ else
 
     private async Task ApproveApplication()
     {
+        if (saving) return;
+        var previousStatus = application!.Status;
         application!.Status = "Licence Issued";
-        await SaveReview();
+        await SaveReview("approve");
+        if (saveError != null) application.Status = previousStatus;
     }
 
     private async Task RejectApplication()
     {
+        if (saving) return;
+        var previousStatus = application!.Status;
         application!.Status = "Rejected";
-        await SaveReview();
+        await SaveReview("reject");
+        if (saveError != null) application.Status = previousStatus;
     }
 
     private string GetBadge(string? status)
