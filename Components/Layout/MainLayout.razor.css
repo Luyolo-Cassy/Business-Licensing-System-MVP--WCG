@@ -1,32 +1,141 @@
-.page {
+.app-shell {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    min-height: 100vh;
+    transition: grid-template-columns .2s ease;
+}
+
+.app-shell.is-collapsed {
+    grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.app-sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    min-width: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: #fff;
+    border-right: 1px solid var(--wcg-border);
+    z-index: 30;
+}
+
+.app-main,
+.app-content,
+.app-content article {
+    min-width: 0;
+}
+
+.app-content article {
+    overflow-x: auto;
+    padding: 1.5rem clamp(1rem, 2.5vw, 2rem) 2rem !important;
+}
+
+.app-header {
     position: relative;
+    z-index: 20;
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    min-height: 4.5rem;
+    padding: .65rem clamp(1rem, 2.5vw, 2rem);
+    border-bottom: 1px solid var(--wcg-border);
+    background: #fff;
 }
 
-main {
-    flex: 1;
+.app-header-title {
+    min-width: 0;
+    margin-right: auto;
+    color: var(--wcg-blue);
+    font-weight: 700;
+    line-height: 1.25;
 }
 
-.sidebar {
-    background-color: #ffffff;
+.app-mobile-menu,
+.app-drawer-backdrop {
+    display: none;
 }
 
-@media (min-width: 641px) {
-    .page {
-        flex-direction: row;
+.app-shell.is-collapsed .app-sidebar ::deep .side-label {
+    display: none;
+}
+
+.app-shell.is-collapsed .app-sidebar ::deep .side-brand-link,
+.app-shell.is-collapsed .app-sidebar ::deep .side-collapse,
+.app-shell.is-collapsed .app-sidebar ::deep .side-link {
+    justify-content: center;
+    padding-inline: .65rem;
+}
+
+.app-shell.is-collapsed .app-sidebar ::deep .side-collapse .ph-icon {
+    transform: rotate(180deg);
+}
+
+@media (max-width: 800px) {
+    .app-shell,
+    .app-shell.is-collapsed {
+        display: block;
     }
 
-    .sidebar {
-        width: 250px;
-        height: 100vh;
-        position: sticky;
-        top: 0;
+    .app-sidebar {
+        position: fixed;
+        width: min(82vw, 300px);
+        transform: translateX(-101%);
+        transition: transform .2s ease;
+        box-shadow: 8px 0 24px rgba(16, 34, 70, .12);
     }
 
-    article {
-        padding-left: 2rem !important;
-        padding-right: 1.5rem !important;
+    .app-shell.is-drawer-open .app-sidebar {
+        transform: translateX(0);
+    }
+
+    .app-shell.is-collapsed .app-sidebar ::deep .side-label {
+        display: inline;
+    }
+
+    .app-shell.is-collapsed .app-sidebar ::deep .side-brand-link,
+    .app-shell.is-collapsed .app-sidebar ::deep .side-link {
+        justify-content: flex-start;
+        padding-inline: .85rem;
+    }
+
+    .app-header-title {
+        font-size: .9rem;
+    }
+
+    .app-mobile-menu {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        width: 2.75rem;
+        height: 2.75rem;
+        border: 1px solid var(--wcg-border);
+        border-radius: var(--wcg-radius);
+        background: #fff;
+    }
+
+    .app-mobile-menu ::deep .ph-icon {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+
+    .app-shell.is-drawer-open .app-drawer-backdrop {
+        position: fixed;
+        inset: 0;
+        display: block;
+        z-index: 25;
+        border: 0;
+        background: rgba(15, 23, 42, .42);
+        cursor: pointer;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-shell,
+    .app-sidebar {
+        transition: none;
     }
 }
 
@@ -44,9 +153,9 @@ main {
     z-index: 1000;
 }
 
-    #blazor-error-ui .dismiss {
-        cursor: pointer;
-        position: absolute;
-        right: 0.75rem;
-        top: 0.5rem;
-    }
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}

@@ -19,14 +19,15 @@
 @inject RoleManager<IdentityRole> RoleManager
 
 
-<PageTitle>Register</PageTitle>
+<PageTitle>Create your account</PageTitle>
 
-
-<h1>Register</h1>
-
-
-<div class="row">
-    <div class="col-lg-6">
+<main class="auth-page">
+    <section class="auth-panel" aria-labelledby="auth-heading">
+        <a class="auth-logo" href="/" aria-label="Western Cape Government home">
+            <img src="/images/WCG_logo.jpg" alt="Western Cape Government" />
+        </a>
+        <h1 id="auth-heading">Create your account</h1>
+        <p class="auth-intro">Enter your details to get started.</p>
 
         <StatusMessage Message="@Message" />
 
@@ -38,16 +39,12 @@
 
             <DataAnnotationsValidator />
 
-            <h2>Create a new account.</h2>
-
-            <hr />
-
             <ValidationSummary class="text-danger" />
 
 
             <!-- Full Name -->
 
-            <div class="form-floating mb-3">
+            <div class="auth-field form-floating">
 
                 <InputText @bind-Value="Input.FullName"
                            id="Input.FullName"
@@ -68,7 +65,7 @@
 
             <!-- Email -->
 
-            <div class="form-floating mb-3">
+            <div class="auth-field form-floating">
 
                 <InputText @bind-Value="Input.Email"
                            id="Input.Email"
@@ -89,7 +86,7 @@
 
             <!-- Password -->
 
-            <div class="form-floating mb-3">
+            <div class="auth-field form-floating">
 
                 <InputText @bind-Value="Input.Password"
                            id="Input.Password"
@@ -111,7 +108,7 @@
 
             <!-- Confirm Password -->
 
-            <div class="form-floating mb-3">
+            <div class="auth-field form-floating">
 
                 <InputText @bind-Value="Input.ConfirmPassword"
                            id="Input.ConfirmPassword"
@@ -132,17 +129,18 @@
 
 
             <button type="submit"
-                    class="w-100 btn btn-lg btn-primary">
+                    class="auth-submit btn btn-primary">
 
-                Register
+                Create account
 
             </button>
 
 
         </EditForm>
 
-    </div>
-</div>
+        <p class="auth-register-link">Already have an account? <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Sign in</a></p>
+    </section>
+</main>
 
 
 

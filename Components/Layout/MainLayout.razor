@@ -1,17 +1,25 @@
 @inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
 
-<AuthorizeView>
+<AuthorizeView Context="auth">
     <Authorized>
-        <div class="page">
-            <div class="sidebar">
+        <div class="app-shell" data-app-shell>
+            <aside class="app-sidebar" id="app-navigation" aria-label="Main navigation">
                 <NavMenu />
+            </aside>
+            <div class="app-main">
+                <header class="app-header">
+                    <button type="button" class="app-mobile-menu" data-mobile-toggle aria-label="Open navigation" aria-controls="app-navigation" aria-expanded="false">
+                        <PhosphorIcon Name="list" />
+                    </button>
+                    <span class="app-header-title">Provincial Business Licensing System</span>
+                    <AccountMenu User="auth.User" />
+                </header>
+                <main class="app-content">
+                    <article class="content px-4">@Body</article>
+                </main>
             </div>
-            <main>
-                <article class="content px-4">
-                    @Body
-                </article>
-            </main>
+            <button type="button" class="app-drawer-backdrop" data-mobile-close aria-label="Close navigation"></button>
         </div>
     </Authorized>
     <NotAuthorized>
@@ -22,5 +30,5 @@
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+    <span class="dismiss">×</span>
 </div>

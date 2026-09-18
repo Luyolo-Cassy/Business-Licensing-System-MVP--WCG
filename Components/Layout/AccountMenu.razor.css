@@ -1,0 +1,97 @@
+.account-menu {
+    position: relative;
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.account-summary-name {
+    display: block;
+    max-width: 14rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.account-menu summary {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    min-height: 2.75rem;
+    padding: .4rem .65rem;
+    border: 1px solid var(--wcg-border);
+    border-radius: var(--wcg-radius);
+    color: var(--wcg-blue);
+    background: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+}
+
+.account-menu summary::-webkit-details-marker { display: none; }
+.account-menu summary::marker { content: ""; }
+.account-menu summary:hover { background: #f6f7fb; }
+.account-menu summary:focus-visible,
+.account-sign-out:focus-visible {
+    outline: 3px solid var(--wcg-blue);
+    outline-offset: 2px;
+}
+
+.account-menu ::deep .ph-icon {
+    width: 1.2rem;
+    height: 1.2rem;
+}
+
+.account-chevron {
+    width: .5rem;
+    height: .5rem;
+    margin: -.2rem .15rem 0 .05rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+}
+
+.account-dropdown {
+    position: absolute;
+    top: calc(100% + .45rem);
+    right: 0;
+    width: min(18rem, calc(100vw - 2rem));
+    padding: .35rem;
+    border: 1px solid var(--wcg-border);
+    border-radius: var(--wcg-radius);
+    background: #fff;
+    box-shadow: 0 8px 22px rgba(20, 33, 61, .12);
+    z-index: 40;
+}
+
+.account-identity {
+    display: grid;
+    gap: .15rem;
+    padding: .8rem .75rem;
+    border-bottom: 1px solid var(--wcg-border);
+    overflow-wrap: anywhere;
+}
+
+.account-identity strong { color: var(--wcg-text); }
+.account-identity span { color: var(--wcg-muted); font-size: .9rem; }
+.account-dropdown form { margin: 0; }
+
+.account-sign-out {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    width: 100%;
+    min-height: 2.8rem;
+    padding: .55rem .75rem;
+    border: 0;
+    border-radius: var(--wcg-radius);
+    color: var(--wcg-text);
+    background: #fff;
+    text-align: left;
+    cursor: pointer;
+}
+
+.account-sign-out:hover { background: #f6f7fb; }
+
+@media (max-width: 600px) {
+    .account-summary-name { display: none; }
+}

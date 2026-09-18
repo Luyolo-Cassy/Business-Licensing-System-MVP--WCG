@@ -1,119 +1,63 @@
 @using Microsoft.AspNetCore.Components.Authorization
 
-<div class="top-row navbar">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">
-            <PhosphorIcon Name="buildings" CssClass="nav-brand-icon" />
-            <span>Provincial Business Licensing System</span>
-        </a>
-    </div>
+<div class="side-brand">
+    <a href="/" class="side-brand-link" title="Provincial Business Licensing System" aria-label="Provincial Business Licensing System home">
+        <PhosphorIcon Name="buildings" CssClass="nav-brand-icon" />
+        <span class="side-label">Business Licensing</span>
+    </a>
+    <button type="button" class="side-mobile-close" data-mobile-close aria-label="Close navigation">
+        <PhosphorIcon Name="x-circle" />
+    </button>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<button type="button" class="side-collapse" data-sidebar-toggle aria-label="Collapse sidebar" aria-controls="app-navigation" aria-expanded="true" title="Collapse sidebar">
+    <PhosphorIcon Name="arrow-left" />
+    <span class="side-label">Collapse menu</span>
+</button>
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+<nav class="side-nav" aria-label="Role navigation">
+    <AuthorizeView Roles="BusinessOwner">
+        <Authorized>
+            <NavLink class="side-link" href="" Match="NavLinkMatch.All" title="Home" aria-label="Home">
+                <PhosphorIcon Name="house" CssClass="nav-menu-icon" /><span class="side-label">Home</span>
+            </NavLink>
+            <NavLink class="side-link" href="dashboard" title="Dashboard" aria-label="Dashboard">
+                <PhosphorIcon Name="gauge" CssClass="nav-menu-icon" /><span class="side-label">Dashboard</span>
+            </NavLink>
+            <NavLink class="side-link" href="new-application" title="New Application" aria-label="New Application">
+                <PhosphorIcon Name="file-plus" CssClass="nav-menu-icon" /><span class="side-label">New Application</span>
+            </NavLink>
+        </Authorized>
+    </AuthorizeView>
 
-    <nav class="nav flex-column">
+    <AuthorizeView Roles="MunicipalOfficial">
+        <Authorized>
+            <NavLink class="side-link" href="official-dashboard" title="Dashboard" aria-label="Dashboard">
+                <PhosphorIcon Name="gauge" CssClass="nav-menu-icon" /><span class="side-label">Dashboard</span>
+            </NavLink>
+            <NavLink class="side-link" href="generate-report" title="Reports" aria-label="Reports">
+                <PhosphorIcon Name="chart-bar" CssClass="nav-menu-icon" /><span class="side-label">Reports</span>
+            </NavLink>
+        </Authorized>
+    </AuthorizeView>
 
-        <!-- Business Owner Menu -->
-        <AuthorizeView Roles="BusinessOwner">
-            <Authorized>
-
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                        <PhosphorIcon Name="house" CssClass="nav-menu-icon" />
-                        Home
-                    </NavLink>
-                </div>
-
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="dashboard">
-                        <PhosphorIcon Name="gauge" CssClass="nav-menu-icon" />
-                        Dashboard
-                    </NavLink>
-                </div>
-
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="new-application">
-                        <PhosphorIcon Name="file-plus" CssClass="nav-menu-icon" />
-                        New Application
-                    </NavLink>
-                </div>
-
-
-            </Authorized>
-        </AuthorizeView>
-
-        <!-- Municipal Official Menu -->
-        <AuthorizeView Roles="MunicipalOfficial">
-            <Authorized>
-
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="official-dashboard">
-                        <PhosphorIcon Name="gauge" CssClass="nav-menu-icon" />
-                        Dashboard
-                    </NavLink>
-                </div>
-
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="generate-report">
-                        <PhosphorIcon Name="chart-bar" CssClass="nav-menu-icon" />
-                        Reports
-                    </NavLink>
-                </div>
-
-            </Authorized>
-        </AuthorizeView>
-
-        <AuthorizeView Roles="DEDATAdmin">
-            <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="admin-dashboard">
-                        <PhosphorIcon Name="gauge" CssClass="nav-menu-icon" />
-                        Admin Dashboard
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="admin/applications">
-                        <PhosphorIcon Name="files" CssClass="nav-menu-icon" />
-                        Applications
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="admin/reports">
-                        <PhosphorIcon Name="chart-bar" CssClass="nav-menu-icon" />
-                        Reports
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="admin/municipalities">
-                        <PhosphorIcon Name="buildings" CssClass="nav-menu-icon" />
-                        Municipalities
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="admin/officials">
-                        <PhosphorIcon Name="users" CssClass="nav-menu-icon" />
-                        Municipal Officials
-                    </NavLink>
-                </div>
-            </Authorized>
-        </AuthorizeView>
-
-        <!-- Logout (all logged-in users) -->
-        <AuthorizeView>
-            <Authorized Context="authContext">
-
-                <div class="nav-item px-3 mt-4">
-                    <NavLink class="nav-link text-danger" href="logout">
-                        <PhosphorIcon Name="sign-out" CssClass="nav-menu-icon" />
-                        Logout
-                    </NavLink>
-                </div>
-
-            </Authorized>
-        </AuthorizeView>
-
-    </nav>
-
-</div>
+    <AuthorizeView Roles="DEDATAdmin">
+        <Authorized>
+            <NavLink class="side-link" href="admin-dashboard" title="Admin Dashboard" aria-label="Admin Dashboard">
+                <PhosphorIcon Name="gauge" CssClass="nav-menu-icon" /><span class="side-label">Admin Dashboard</span>
+            </NavLink>
+            <NavLink class="side-link" href="admin/applications" title="Applications" aria-label="Applications">
+                <PhosphorIcon Name="files" CssClass="nav-menu-icon" /><span class="side-label">Applications</span>
+            </NavLink>
+            <NavLink class="side-link" href="admin/reports" title="Reports" aria-label="Reports">
+                <PhosphorIcon Name="chart-bar" CssClass="nav-menu-icon" /><span class="side-label">Reports</span>
+            </NavLink>
+            <NavLink class="side-link" href="admin/municipalities" title="Municipalities" aria-label="Municipalities">
+                <PhosphorIcon Name="buildings" CssClass="nav-menu-icon" /><span class="side-label">Municipalities</span>
+            </NavLink>
+            <NavLink class="side-link" href="admin/officials" title="Municipal Officials" aria-label="Municipal Officials">
+                <PhosphorIcon Name="users" CssClass="nav-menu-icon" /><span class="side-label">Municipal Officials</span>
+            </NavLink>
+        </Authorized>
+    </AuthorizeView>
+</nav>

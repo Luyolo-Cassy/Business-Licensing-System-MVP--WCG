@@ -1,0 +1,46 @@
+@using System.Security.Claims
+@using BusinessLicensing_Practice.Models
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+<details class="account-menu" data-account-menu>
+    <summary aria-label="Account menu for @DisplayName">
+        <PhosphorIcon Name="user" />
+        <span class="account-summary-name">@DisplayName</span>
+        <span class="account-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="account-dropdown">
+        <div class="account-identity">
+            <strong>@DisplayName</strong>
+            <span>@RoleLabel</span>
+        </div>
+        <form action="/Account/Logout" method="post">
+            <AntiforgeryToken />
+            <input type="hidden" name="returnUrl" value="" />
+            <button type="submit" class="account-sign-out">
+                <PhosphorIcon Name="sign-out" />
+                Sign out
+            </button>
+        </form>
+    </div>
+</details>
+
+@code {
+    [Parameter, EditorRequired]
+    public ClaimsPrincipal User { get; set; } = default!;
+
+    private string DisplayName { get; set; } = "Account";
+
+    private string RoleLabel => User.IsInRole("BusinessOwner") ? "Business Owner"
+        : User.IsInRole("MunicipalOfficial") ? "Municipal Official"
+        : User.IsInRole("DEDATAdmin") ? "DEDAT Administrator"
+        : "User";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var identityUser = await UserManager.GetUserAsync(User);
+        DisplayName = !string.IsNullOrWhiteSpace(identityUser?.FullName)
+            ? identityUser.FullName
+            : User.Identity?.Name ?? "Account";
+    }
+}
