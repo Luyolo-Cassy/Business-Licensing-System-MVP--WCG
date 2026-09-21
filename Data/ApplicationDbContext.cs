@@ -16,6 +16,7 @@ namespace BusinessLicensing_Practice.Data
         public DbSet<ApplicationDetails> ApplicationDetails { get; set; }
         public DbSet<MunicipalMessage> MunicipalMessages { get; set; }
         public DbSet<Municipality> Municipalities { get; set; }
+        public DbSet<AiSettings> AiSettings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -32,6 +33,12 @@ namespace BusinessLicensing_Practice.Data
                     new Municipality { Id = 3, Name = "Hessequa Municipality", RoutingName = "Hessequa Municipality", IsActive = true },
                     new Municipality { Id = 4, Name = "Swartland Municipality", RoutingName = "Swartland Municipality", IsActive = true },
                     new Municipality { Id = 5, Name = "Witzenberg Municipality", RoutingName = "Witzenberg Municipality", IsActive = true });
+            });
+
+            builder.Entity<AiSettings>().HasData(new AiSettings
+            {
+                Id = BusinessLicensing_Practice.Models.AiSettings.SingletonId,
+                DocumentValidationEnabled = false
             });
 
             builder.Entity<MunicipalMessage>(message =>

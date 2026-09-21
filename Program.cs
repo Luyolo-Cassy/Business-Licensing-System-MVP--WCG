@@ -54,6 +54,11 @@ builder.Services.AddScoped<MunicipalityManagementService>();
 builder.Services.AddScoped<OfficialManagementService>();
 builder.Services.AddScoped<AdminApplicationService>();
 builder.Services.AddScoped<ApplicantApplicationService>();
+builder.Services.AddScoped<AiSettingsService>();
+builder.Services.AddScoped<AiDocumentValidationPolicy>();
+builder.Services.AddHttpClient<IAiDocumentValidationService, GeminiDocumentValidationService>(client =>
+    client.Timeout = TimeSpan.FromSeconds(45))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddHttpClient<ArcGisGeocodingService>(client => client.Timeout = TimeSpan.FromSeconds(30))
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddHttpClient<WcgMunicipalBoundaryService>(client => client.Timeout = TimeSpan.FromSeconds(30))

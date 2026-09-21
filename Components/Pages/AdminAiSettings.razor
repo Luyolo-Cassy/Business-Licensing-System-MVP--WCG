@@ -1,0 +1,74 @@
+@page "/admin/ai-settings"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "DEDATAdmin")]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using BusinessLicensing_Practice.Services
+@inject AiSettingsService Settings
+@inject AuthenticationStateProvider Authentication
+
+<PageTitle>AI Settings</PageTitle>
+<h1 class="fw-bold">AI Settings</h1>
+<p class="text-muted">Manage optional AI-assisted features. API credentials are configured securely outside this page.</p>
+
+@if (message != null)
+{
+    <div class="alert @(isError ? "alert-danger" : "alert-success")" role="alert">@message</div>
+}
+
+<div class="card shadow-sm"><div class="card-body">
+    <h2 class="h5">AI Document Validation</h2>
+    <p>Automatically checks whether uploaded documents appear to match the required document type.</p>
+    <p><strong>Currently supported document:</strong> Owner ID Document</p>
+    <div class="form-check form-switch mb-3">
+        <input id="ai-document-validation" class="form-check-input" type="checkbox" role="switch"
+               checked="@enabled" disabled="@busy" @onchange="Toggle" />
+        <label class="form-check-label" for="ai-document-validation">Enable AI Document Validation: @(enabled ? "ON" : "OFF")</label>
+    </div>
+    <p class="text-muted mb-0">This checks document type only. It does not authenticate documents or verify a person's identity.</p>
+</div></div>
+
+@code {
+    private bool enabled;
+    private bool busy;
+    private bool isError;
+    private string? message;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        try
+        {
+            var principal = (await Authentication.GetAuthenticationStateAsync()).User;
+            enabled = await Settings.GetDocumentValidationEnabledAsync(principal);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            isError = true; message = "You do not have permission to manage AI settings.";
+        }
+    }
+
+    private async Task Toggle(ChangeEventArgs args)
+    {
+        if (busy) return;
+        busy = true; message = null; isError = false;
+        var requested = args.Value is true || string.Equals(args.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+        try
+        {
+            var principal = (await Authentication.GetAuthenticationStateAsync()).User;
+            await Settings.SetDocumentValidationEnabledAsync(principal, requested);
+            enabled = requested;
+            message = $"AI Document Validation is now {(enabled ? "enabled" : "disabled")}.";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            isError = true; message = "You do not have permission to manage AI settings.";
+        }
+        catch
+        {
+            isError = true; message = "The setting could not be updated. Refresh the page and try again.";
+        }
+        finally { busy = false; }
+    }
+}

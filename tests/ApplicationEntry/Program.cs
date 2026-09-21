@@ -61,6 +61,17 @@ Check(ApplicationEntry.ValidatePostalAddress(null, "", "", "", "") != null, "pos
 Check(ApplicationEntry.ValidatePostalAddress(false, "", "Central", "Cape Town", "8000") != null, "manual postal fields required");
 Check(ApplicationEntry.ValidatePostalAddress(true, "", "", "", "") == null, "same as business needs no duplicate fields");
 
+var standardDocumentNames = new[] { "Certificate of Incorporation", "Proof of Address", "Tax Clearance Certificate", "Owner ID Document" };
+var foodDocumentNames = standardDocumentNames.Append("Certificate of Acceptability (CoA)").ToArray();
+foreach (var licence in LicenceApplicationCatalog.Licences)
+{
+    var expected = licence.Id is "sale-of-meals" or "sale-of-perishable-foodstuffs" or "hawker-street-trading"
+        ? foodDocumentNames
+        : standardDocumentNames;
+    Check(licence.Documents.Select(document => document.DocumentType).SequenceEqual(expected), $"{licence.Name} has the expected supporting documents");
+    Check(licence.Documents.All(document => document.Required), $"{licence.Name} supporting documents remain required");
+}
+
 var details = new ApplicationDetails
 {
     ApplicantFirstName = "Ada", ApplicantLastName = "Lovelace", ApplicantAddressLine1 = "1 Main Road",
@@ -73,6 +84,8 @@ var application = new Application
     TaxNumber = "0123456789", PlaceOfBusinessAddressLine1 = "2 Market Street", PlaceOfBusinessSuburb = "CBD",
     PlaceOfBusinessCity = "Cape Town", PlaceOfBusinessPostalCode = "8000", Details = details
 };
+application.Documents.Add(new ApplicationDocument { DocumentType = "Certificate of Acceptability Application", FileName = "legacy-coa.pdf", FilePath = "/uploads/legacy-coa.pdf" });
+application.Documents.Add(new ApplicationDocument { DocumentType = "Proof of Soundproofing", FileName = "legacy-soundproofing.pdf", FilePath = "/uploads/legacy-soundproofing.pdf" });
 Check(ApplicationEntry.FullName(details) == "Ada Lovelace", "full applicant name");
 Check(ApplicationEntry.ApplicantAddress(details) == "1 Main Road, Gardens, Cape Town, 8001", "optional address line omitted");
 Check(ApplicationEntry.PostalAddress(application) == "2 Market Street, CBD, Cape Town, 8000", "same as business ignores stale postal fields");
@@ -107,8 +120,11 @@ try
         application.UserId = owner.Id;
         db.Applications.Add(application);
         await db.SaveChangesAsync();
-        var saved = await db.Applications.AsNoTracking().Include(item => item.Details).SingleAsync(item => item.Id == application.Id);
+        var saved = await db.Applications.AsNoTracking().Include(item => item.Details).Include(item => item.Documents).SingleAsync(item => item.Id == application.Id);
         Check(saved.TaxNumber == "0123456789" && saved.Details?.ApplicantFirstName == "Ada" && saved.Details.ApplicantAddressLine2 == null, "structured applicant and tax persistence");
+        Check(await db.ApplicationDocuments.CountAsync(document => document.ApplicationId == saved.Id &&
+            (document.DocumentType == "Certificate of Acceptability Application" || document.DocumentType == "Proof of Soundproofing")) == 2,
+            "legacy supporting document labels remain stored");
         Check(saved.Details?.PostalAddressSameAsBusiness == false && ApplicationEntry.PostalAddress(saved).StartsWith("PO Box 12"), "separate postal persistence");
         Check(ApplicationEntry.FormatTradingHours(saved.Details!.TradingHours).Contains("Sunday: Closed"), "trading hours persistence");
         GlobalFontSettings.UseWindowsFontsUnderWindows = true;
@@ -129,6 +145,7 @@ try
             .SelectMany(page => PdfStrings(ContentReader.ReadContent(page))));
         Check(pdfText.Contains("Ada Lovelace") && pdfText.Contains("1 Main Road") && pdfText.Contains("PO Box 12"), "PDF includes applicant and structured addresses");
         Check(pdfText.Contains("2024/123456/07") && pdfText.Contains("0123456789") && pdfText.Contains("Monday"), "PDF includes registration, tax and daily trading hours");
+        Check(pdfText.Contains("legacy-coa.pdf") && pdfText.Contains("legacy-soundproofing.pdf"), "PDF includes legacy supporting documents");
     }
 }
 finally

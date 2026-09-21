@@ -26,13 +26,7 @@ namespace BusinessLicensing_Practice.Services
         private static readonly IReadOnlyList<DocumentRequirement> FoodDocuments =
         [
             .. StandardDocuments,
-            Document("Certificate of Acceptability Application", "Proof of application for a Certificate of Acceptability.")
-        ];
-
-        private static readonly IReadOnlyList<DocumentRequirement> EntertainmentDocuments =
-        [
-            .. StandardDocuments,
-            Document("Proof of Soundproofing", "Evidence of appropriate soundproofing or noise-control measures.")
+            Document("Certificate of Acceptability (CoA)", "Proof of application for a Certificate of Acceptability.")
         ];
 
         public static readonly IReadOnlyList<LicenceDefinition> Licences =
@@ -65,14 +59,14 @@ namespace BusinessLicensing_Practice.Services
                 Text("noiseControl", "Noise-control measures"),
                 Text("toiletFacilities", "Toilet facilities"),
                 YesNo("smokingArea", "Is there a designated smoking area?")
-            ], EntertainmentDocuments),
+            ], StandardDocuments),
             new("gaming-amusement", "Gaming / Amusement Licence", "Operate gaming or amusement activities such as billiards or slot machines.", "game-controller",
             [
                 Text("activityType", "Type of gaming or amusement activity"),
                 Text("machineCount", "Number and type of machines, games or tables"),
                 Text("supervision", "Supervision and access-control arrangements"),
                 Text("operatingTimes", "Operating times")
-            ], EntertainmentDocuments),
+            ], StandardDocuments),
             new("adult-premises-escort-services", "Adult Premises / Escort Services Licence", "Operate regulated adult entertainment or escort service businesses.", "prohibit",
             [
                 Choice("premisesType", "Type of regulated activity", "Adult premises", "Escort service", "Both"),

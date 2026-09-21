@@ -22,6 +22,8 @@
 @inject ApplicationFileService FileService
 @inject ProtectedUploadService Uploads
 @inject MunicipalRoutingService RoutingService
+@inject AiSettingsService AiSettings
+@inject AiDocumentValidationPolicy AiValidation
 @inject IJSRuntime JS
 
 <div id="application-wizard-top"><h3 class="fw-bold mb-4">New Business Licence Application</h3></div>
@@ -127,7 +129,7 @@
             @foreach (var requirement in SelectedLicence?.Documents ?? [])
             {
                 var selected = SelectedDocuments.FirstOrDefault(document => document.DocumentType == requirement.DocumentType);
-                <div class="supporting-document-item"><div class="supporting-document-details"><span class="supporting-document-icon"><PhosphorIcon Name="file-text" /></span><div><h6 class="fw-bold mb-1">@requirement.DocumentType <span class="text-danger">*</span></h6><p class="text-muted mb-0">@requirement.Description</p></div></div><div class="supporting-document-upload"><label class="form-label fw-semibold">Upload @requirement.DocumentType</label><InputFile class="form-control" accept=".pdf,.png,.jpg,.jpeg" disabled="@(ReadingDocumentType == requirement.DocumentType)" OnChange="@(e => HandleFileSelected(e, requirement.DocumentType))" />@if (ReadingDocumentType == requirement.DocumentType) { <div class="mt-2 text-muted" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Reading document...</div> }@if (selected != null) { <div class="supporting-document-selected-file mt-3"><PhosphorIcon Name="check-circle" CssClass="me-2" /><strong>Selected:</strong> @selected.FileName</div> }</div></div>
+                <div class="supporting-document-item"><div class="supporting-document-details"><span class="supporting-document-icon"><PhosphorIcon Name="file-text" /></span><div><h6 class="fw-bold mb-1">@requirement.DocumentType <span class="text-danger">*</span></h6><p class="text-muted mb-0">@requirement.Description</p></div></div><div class="supporting-document-upload"><label class="form-label fw-semibold">Upload @requirement.DocumentType</label><InputFile class="form-control" accept=".pdf,.png,.jpg,.jpeg" disabled="@(ReadingDocumentType == requirement.DocumentType || (requirement.DocumentType == OwnerIdDocumentType && OwnerIdValidationInProgress))" OnChange="@(e => HandleFileSelected(e, requirement.DocumentType))" />@if (ReadingDocumentType == requirement.DocumentType) { <div class="mt-2 text-muted" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Reading document...</div> }@if (selected != null) { <div class="supporting-document-selected-file mt-3"><PhosphorIcon Name="check-circle" CssClass="me-2" /><strong>Selected:</strong> @selected.FileName</div> }@if (requirement.DocumentType == OwnerIdDocumentType && AiDocumentValidationEnabled) { @if (OwnerIdValidationInProgress) { <div class="mt-2 text-muted" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Verifying document...</div> } else if (OwnerIdValidationStatus == AiDocumentValidationStatus.Match) { <div class="alert alert-success mt-2 mb-0" role="status"><strong>Document verified.</strong> This file appears to be an Owner ID or Passport document. This is a document-type check only, not authentication.</div> } else if (OwnerIdValidationStatus == AiDocumentValidationStatus.NoMatch) { <div class="alert alert-danger mt-2 mb-0" role="alert"><strong>Incorrect document.</strong> This file does not appear to be an Owner ID or Passport. Please upload the correct document.</div> } else if (OwnerIdValidationStatus == AiDocumentValidationStatus.Unavailable) { <div class="alert alert-warning mt-2 mb-0" role="status">Automatic document verification is currently unavailable. Your document can still be submitted for municipal review.</div> } }</div></div>
             }
         </div></div></div>
     </section>
@@ -158,11 +160,14 @@
 @code {
     private const int TotalSteps = 7;
     private const long MaxFileSize = 10 * 1024 * 1024;
+    private const string OwnerIdDocumentType = "Owner ID Document";
     private int CurrentStep = 1;
     private bool IsSubmitting, MessageIsError, DeclarationAccepted, PopiaConsentAccepted, ScrollToStep;
+    private bool AiDocumentValidationEnabled, OwnerIdValidationInProgress;
     private bool? PostalSameAsBusiness;
     private string? InvalidFieldId;
     private string? ReadingDocumentType;
+    private AiDocumentValidationStatus? OwnerIdValidationStatus;
     private string Message = "", LicenceType = "", ApplicationType = "", ApplicantFirstName = "", ApplicantLastName = "", ApplicantAddressLine1 = "", ApplicantAddressLine2 = "", ApplicantSuburb = "", ApplicantCity = "", ApplicantPostalCode = "", ApplicantTelephone = "", ApplicantEmail = "";
     private string BusinessName = "", RegistrationNumber = "", TaxNumber = "", BusinessCategory = "", ContactPerson = "", BusinessTelephone = "", BusinessEmail = "";
     private string PlaceOfBusinessAddressLine1 = "", PlaceOfBusinessAddressLine2 = "", PlaceOfBusinessSuburb = "", PlaceOfBusinessCity = "", PlaceOfBusinessPostalCode = "", PostalAddressLine1 = "", PostalAddressLine2 = "", PostalSuburb = "", PostalCity = "", PostalPostalCode = "";
@@ -182,12 +187,13 @@
         var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = await UserManager.GetUserAsync(state.User);
         if (user != null) { var split = user.FullName.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries); ApplicantFirstName = split.ElementAtOrDefault(0) ?? ""; ApplicantLastName = split.ElementAtOrDefault(1) ?? ""; ApplicantEmail = user.Email ?? ""; ApplicantTelephone = user.PhoneNumber ?? ""; }
+        AiDocumentValidationEnabled = await AiSettings.IsDocumentValidationEnabledAsync();
     }
 
     private void SelectLicence(LicenceDefinition definition)
     {
         if (LicenceType == definition.Name) return;
-        LicenceType = definition.Name; LicenceAnswers.Clear(); SelectedDocuments.Clear();
+        LicenceType = definition.Name; LicenceAnswers.Clear(); SelectedDocuments.Clear(); OwnerIdValidationStatus = null; OwnerIdValidationInProgress = false;
         foreach (var question in definition.Questions) LicenceAnswers[question.Key] = "";
     }
 
@@ -224,6 +230,8 @@
             3 when PostalSameAsBusiness == false && (PostalAddressLine1.Trim().Length > 150 || PostalAddressLine2.Trim().Length > 150 || PostalSuburb.Trim().Length > 100 || PostalCity.Trim().Length > 100 || PostalPostalCode.Trim().Length > 12) => "One or more postal address fields exceed the allowed length.",
             4 when SelectedLicence?.Questions.Any(question => question.Required && string.IsNullOrWhiteSpace(GetAnswer(question.Key))) == true => "Please answer every required licence-specific question.",
             5 when SelectedLicence?.Documents.Any(requirement => requirement.Required && !SelectedDocuments.Any(document => document.DocumentType == requirement.DocumentType)) == true => "Please upload every required supporting document.",
+            5 when AiDocumentValidationEnabled && SelectedDocuments.Any(document => document.DocumentType == OwnerIdDocumentType) && (OwnerIdValidationInProgress || OwnerIdValidationStatus == null) => "Please wait for Owner ID document verification to finish.",
+            5 when AiDocumentValidationEnabled && OwnerIdValidationStatus is { } status && AiDocumentValidationPolicy.BlocksProgress(status) => "The Owner ID document is the incorrect document type. Please upload an Owner ID or Passport document.",
             6 when !DeclarationAccepted || !PopiaConsentAccepted => "Please accept both the declaration and POPIA consent before continuing.",
             _ => null
         };
@@ -247,13 +255,27 @@
 
     private async Task HandleFileSelected(InputFileChangeEventArgs args, string documentType)
     {
-        if (ReadingDocumentType == documentType || IsSubmitting) return;
+        if (ReadingDocumentType == documentType || OwnerIdValidationInProgress || IsSubmitting) return;
         Message = ""; var file = args.File; var extension = Path.GetExtension(file.Name).ToLowerInvariant();
         if (extension is not (".pdf" or ".png" or ".jpg" or ".jpeg")) { SetError("Supporting documents must be PDF, PNG or JPEG files."); return; }
         ReadingDocumentType = documentType;
-        try { using var stream = new MemoryStream(); await file.OpenReadStream(MaxFileSize).CopyToAsync(stream); SelectedDocuments.RemoveAll(item => item.DocumentType == documentType); SelectedDocuments.Add(new(documentType, Path.GetFileName(file.Name), stream.ToArray())); }
+        SelectedDocument? selected = null;
+        try { using var stream = new MemoryStream(); await file.OpenReadStream(MaxFileSize).CopyToAsync(stream); selected = new(documentType, Path.GetFileName(file.Name), stream.ToArray()); SelectedDocuments.RemoveAll(item => item.DocumentType == documentType); SelectedDocuments.Add(selected); if (documentType == OwnerIdDocumentType) OwnerIdValidationStatus = null; }
         catch (IOException) { SetError("The selected document exceeds the 10 MB file limit."); }
         finally { ReadingDocumentType = null; }
+        if (selected == null || documentType != OwnerIdDocumentType) return;
+        AiDocumentValidationEnabled = await AiSettings.IsDocumentValidationEnabledAsync();
+        if (!AiDocumentValidationEnabled) return;
+        OwnerIdValidationInProgress = true;
+        StateHasChanged();
+        try
+        {
+            OwnerIdValidationStatus = (await AiValidation.EvaluateAsync(true, documentType, selected.FileName, selected.FileBytes)).Status;
+        }
+        finally
+        {
+            OwnerIdValidationInProgress = false;
+        }
     }
 
     private async Task SubmitApplication()
