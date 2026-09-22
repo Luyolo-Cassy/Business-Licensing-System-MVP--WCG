@@ -42,7 +42,16 @@ internal static class PoiTests
                 if (!body.Contains("21.25907") || !body.Contains("-34.09196") || body.Contains("token=")) errors.Add("Boundary coordinate or secret isolation failed");
                 return JsonSerializer.Serialize(new { features = (boundaries ?? ["Hessequa Local Municipality"]).Select(name => new
                 {
-                    attributes = new Dictionary<string, string> { ["AFRIGIS_LocalMunicipalities.S12_NAME"] = name, ["AFRIGIS_LocalMunicipalities.MUN_CODE"] = "WC042" }
+                    attributes = new Dictionary<string, string>
+                    {
+                        ["AFRIGIS_LocalMunicipalities.S12_NAME"] = name,
+                        ["AFRIGIS_LocalMunicipalities.MUN_CODE"] = name switch
+                        {
+                            "Hessequa Local Municipality" => "WC042",
+                            "Swartland Local Municipality" => "WC015",
+                            _ => "unknown-code"
+                        }
+                    }
                 }) });
             }));
             var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["ArcGIS:ApiKey"] = "test-only-placeholder" }).Build();

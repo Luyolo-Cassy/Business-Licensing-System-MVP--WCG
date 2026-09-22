@@ -15,7 +15,7 @@ public sealed record MunicipalRoutingResult(string? Municipality, RoutingFailure
         RoutingFailure.AddressNotPrecise => "We couldn’t locate your exact trading address. Please check the street number, street name, town and postal code.",
         RoutingFailure.NoMunicipality => "We couldn’t determine the municipality for this trading address. Please check the address.",
         RoutingFailure.MultipleMunicipalities => "We couldn’t determine a single municipality. Please check the exact trading address.",
-        RoutingFailure.Unsupported => $"This address falls within {BoundaryName}. Online applications currently support Hessequa, Bergrivier, Cederberg, Swartland and Witzenberg only.",
+        RoutingFailure.Unsupported => "This trading address is outside the Western Cape municipalities currently recognised for online applications.",
         _ => "Address verification is temporarily unavailable. Your application has not been submitted. Please try again."
     };
 }

@@ -219,7 +219,9 @@
         Message = "Checking your trading address...";
         try
         {
-            var attempt = await RoutingState.RouteAsync(address, item => RoutingService.ResolveAsync(item));
+            var attempt = await RoutingState.RouteAsync(address,
+                item => RoutingService.ResolveAsync(item),
+                async routingName => { await MunicipalityManagementService.RequireActiveRoutingAsync(Db, routingName); });
             if (!attempt.Completed) return;
             if (attempt.Result is not { Success: true })
             {
@@ -229,6 +231,11 @@
             CurrentStep++;
             Message = "";
             ScrollToStep = true;
+        }
+        catch (System.ComponentModel.DataAnnotations.ValidationException)
+        {
+            RoutingState.Clear();
+            SetError(MunicipalityManagementService.UnavailableRoutingMessage);
         }
         catch (Exception)
         {

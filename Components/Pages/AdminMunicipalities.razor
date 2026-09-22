@@ -13,30 +13,44 @@
 <PageTitle>Municipality Management</PageTitle>
 <h1 class="fw-bold">Municipality Management</h1>
 <p class="text-muted">Manage participating municipalities. Inactive municipalities retain their historical applications and Official access.</p>
-<div class="alert alert-info">
-    Adding a municipality does not enable geographic routing for it. Only municipalities marked “Supported” can receive new applications, and they must also be active.
-    Renaming preserves existing assignments and routing support.
-</div>
-@if (message != null)
-{
-    <div class="alert @(isError ? "alert-danger" : "alert-success")" role="alert">@message</div>
-}
+<div class="alert alert-info">Add a predefined Western Cape municipality to make it available for geographic routing. It must remain active to receive new applications. Renaming preserves existing assignments and routing support.</div>
+@if (message != null) { <div class="alert @(isError ? "alert-danger" : "alert-success")" role="alert">@message</div> }
 @if (busyAction != null) { <p class="text-muted" role="status">@(busyAction == "save" ? "Saving municipality..." : "Updating municipality status...")</p> }
 <div class="card shadow-sm mb-4"><div class="card-body">
     <h2 class="h5">@(editingId == null ? "Add Municipality" : "Edit Municipality")</h2>
-    <EditForm Model="input" OnValidSubmit="Save" FormName="municipality">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
-        <fieldset disabled="@busy">
-            <label for="municipality-name" class="form-label">Municipality name</label>
-            <InputText id="municipality-name" class="form-control mb-3" @bind-Value="input.Name" maxlength="200" />
-            <button class="btn btn-primary" type="submit">@if (busy && busyAction == "save") { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> }@(busy && busyAction == "save" ? "Saving municipality..." : editingId == null ? "Add Municipality" : "Save Name")</button>
-            @if (editingId != null)
-            {
+    @if (editingId == null)
+    {
+        @if (eligibleMunicipalities.Count == 0)
+        {
+            <p class="text-muted mb-0">All predefined Western Cape municipalities are already represented.</p>
+        }
+        else
+        {
+            <EditForm Model="addInput" OnValidSubmit="Add" FormName="municipality-add">
+                <DataAnnotationsValidator /><ValidationSummary />
+                <fieldset disabled="@busy">
+                    <label for="municipality-selection" class="form-label">Municipality</label>
+                    <InputSelect id="municipality-selection" class="form-select mb-3" @bind-Value="addInput.RoutingName">
+                        <option value="">Select a municipality</option>
+                        @foreach (var municipality in eligibleMunicipalities) { <option value="@municipality.RoutingName">@municipality.DefaultName</option> }
+                    </InputSelect>
+                    <button class="btn btn-primary" type="submit">@if (busy && busyAction == "save") { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> }@(busy && busyAction == "save" ? "Adding municipality..." : "Add Municipality")</button>
+                </fieldset>
+            </EditForm>
+        }
+    }
+    else
+    {
+        <EditForm Model="input" OnValidSubmit="Save" FormName="municipality-edit">
+            <DataAnnotationsValidator /><ValidationSummary />
+            <fieldset disabled="@busy">
+                <label for="municipality-name" class="form-label">Municipality name</label>
+                <InputText id="municipality-name" class="form-control mb-3" @bind-Value="input.Name" maxlength="200" />
+                <button class="btn btn-primary" type="submit">@if (busy && busyAction == "save") { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> }@(busy && busyAction == "save" ? "Saving municipality..." : "Save Name")</button>
                 <button class="btn btn-outline-secondary ms-2" type="button" @onclick="Cancel">Cancel</button>
-            }
-        </fieldset>
-    </EditForm>
+            </fieldset>
+        </EditForm>
+    }
 </div></div>
 <div class="card shadow-sm"><div class="table-responsive">
     <table class="table table-hover align-middle mb-0">
@@ -60,7 +74,9 @@
 
 @code {
     private List<Municipality> municipalities = [];
+    private List<WesternCapeMunicipalityDefinition> eligibleMunicipalities = [];
     private NameInput input = new();
+    private AddInput addInput = new();
     private int? editingId;
     private string? originalName;
     private string? message;
@@ -78,6 +94,12 @@
         message = null;
     }
     private void Cancel() { editingId = null; originalName = null; input = new(); }
+    private async Task Add() => await Run(async () =>
+    {
+        await Management.AddFromCatalogAsync((await Authentication.GetAuthenticationStateAsync()).User, addInput.RoutingName);
+        addInput = new();
+        message = "Municipality added and activated.";
+    }, "save");
     private async Task Save() => await Run(async () =>
     {
         await Management.SaveAsync((await Authentication.GetAuthenticationStateAsync()).User, editingId, input.Name, originalName);
@@ -96,10 +118,12 @@
         try
         {
             await action();
-            municipalities = await Management.ListAsync((await Authentication.GetAuthenticationStateAsync()).User);
+            var principal = (await Authentication.GetAuthenticationStateAsync()).User;
+            municipalities = await Management.ListAsync(principal);
+            eligibleMunicipalities = await Management.EligibleForAddAsync(principal);
         }
         catch (ValidationException error) { isError = true; message = error.Message; }
-        catch (UnauthorizedAccessException) { isError = true; message = "You do not have permission to manage municipalities."; municipalities = []; }
+        catch (UnauthorizedAccessException) { isError = true; message = "You do not have permission to manage municipalities."; municipalities = []; eligibleMunicipalities = []; }
         catch (Exception error)
         {
             Logger.LogError(error, "Municipality management operation failed.");
@@ -109,8 +133,10 @@
     }
     private sealed class NameInput
     {
-        [Required, StringLength(200)]
-        public string Name { get; set; } = "";
+        [Required, StringLength(200)] public string Name { get; set; } = "";
+    }
+    private sealed class AddInput
+    {
+        [Required] public string RoutingName { get; set; } = "";
     }
 }
-

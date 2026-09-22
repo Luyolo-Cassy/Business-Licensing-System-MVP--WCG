@@ -11,24 +11,34 @@ public sealed class RetainedMunicipalRoutingState
 
     public async Task<RetainedRoutingAttempt> RouteAsync(
         TradingAddress address,
-        Func<TradingAddress, Task<MunicipalRoutingResult>> resolveAsync)
+        Func<TradingAddress, Task<MunicipalRoutingResult>> resolveAsync,
+        Func<string, Task> requireActiveAsync)
     {
-        if (IsValidFor(address))
-            return new(true, true, new(Municipality, RoutingFailure.None));
         if (IsRouting)
             return new(false, false, null);
 
-        Clear();
+        var reused = IsValidFor(address);
+        if (!reused) Clear();
         IsRouting = true;
         try
         {
-            var result = await resolveAsync(address);
-            if (result.Success)
+            var result = reused
+                ? new MunicipalRoutingResult(Municipality, RoutingFailure.None)
+                : await resolveAsync(address);
+            if (!result.Success)
             {
-                Municipality = result.Municipality;
-                Address = address;
+                Clear();
+                return new(true, false, result);
             }
-            return new(true, false, result);
+            await requireActiveAsync(result.Municipality!);
+            Municipality = result.Municipality;
+            Address = address;
+            return new(true, reused, result);
+        }
+        catch
+        {
+            Clear();
+            throw;
         }
         finally
         {

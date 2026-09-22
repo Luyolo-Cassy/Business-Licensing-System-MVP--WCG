@@ -1,4 +1,5 @@
 using BusinessLicensing_Practice.Services;
+using System.ComponentModel.DataAnnotations;
 
 internal static class RetainedRoutingStateTests
 {
@@ -12,21 +13,28 @@ internal static class RetainedRoutingStateTests
             calls++;
             return Task.FromResult(new MunicipalRoutingResult("Swartland Municipality", RoutingFailure.None));
         }
+        var participationChecks = 0;
+        Task Active(string _)
+        {
+            participationChecks++;
+            return Task.CompletedTask;
+        }
 
         // Component validation guards this call: invalid Step 3 input therefore cannot invoke routing.
         var stepIsValid = false;
-        if (stepIsValid) await state.RouteAsync(original, Success);
+        if (stepIsValid) await state.RouteAsync(original, Success, Active);
         Check(calls == 0, "Invalid Step 3 does not invoke routing");
 
-        var success = await state.RouteAsync(original, Success);
+        var success = await state.RouteAsync(original, Success, Active);
         Check(success.Completed && !success.Reused && success.Result?.Success == true,
             "Valid Step 3 routes successfully and permits progression");
         Check(state.Municipality == "Swartland Municipality", "Canonical municipality retained");
         Check(state.Address == original && state.IsValidFor(original), "Normalized address snapshot retained");
         Check(!state.IsRouting, "Busy state resets after success");
 
-        var reused = await state.RouteAsync(original, Success);
-        Check(reused.Completed && reused.Reused && calls == 1, "Unchanged address reuses successful routing");
+        var reused = await state.RouteAsync(original, Success, Active);
+        Check(reused.Completed && reused.Reused && calls == 1 && participationChecks == 2,
+            "Unchanged address reuses geographic routing but rechecks participation");
 
         var changedAddresses = new[]
         {
@@ -40,7 +48,7 @@ internal static class RetainedRoutingStateTests
         foreach (var changed in changedAddresses)
         {
             Check(!state.IsValidFor(changed), "Changed routing-relevant address invalidates snapshot");
-            await state.RouteAsync(changed, Success);
+            await state.RouteAsync(changed, Success, Active);
             expectedCalls++;
             Check(calls == expectedCalls && state.IsValidFor(changed), "Changed address requires a new successful route");
         }
@@ -50,16 +58,16 @@ internal static class RetainedRoutingStateTests
             "Missing routing state blocks final submission");
 
         var failure = await state.RouteAsync(original, _ =>
-            Task.FromResult(new MunicipalRoutingResult(null, RoutingFailure.AddressNotPrecise)));
+            Task.FromResult(new MunicipalRoutingResult(null, RoutingFailure.AddressNotPrecise)), Active);
         Check(failure.Completed && failure.Result?.Failure == RoutingFailure.AddressNotPrecise
             && !state.IsValidFor(original), "Routing failure prevents progression and retains no stale result");
         Check(!state.IsRouting, "Busy state resets after routing failure");
 
         var release = new TaskCompletionSource<MunicipalRoutingResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var first = state.RouteAsync(original, _ => release.Task);
+        var first = state.RouteAsync(original, _ => release.Task, Active);
         await Task.Yield();
         Check(state.IsRouting, "Routing exposes busy state");
-        var duplicate = await state.RouteAsync(original, Success);
+        var duplicate = await state.RouteAsync(original, Success, Active);
         Check(!duplicate.Completed && calls == expectedCalls, "Duplicate routing action is prevented");
         release.SetResult(new("Swartland Municipality", RoutingFailure.None));
         await first;
@@ -68,12 +76,45 @@ internal static class RetainedRoutingStateTests
         state.Clear();
         try
         {
-            await state.RouteAsync(original, _ => throw new InvalidOperationException("test"));
+            await state.RouteAsync(original, _ => throw new InvalidOperationException("test"), Active);
             throw new Exception("Expected routing exception");
         }
         catch (InvalidOperationException)
         {
             Check(!state.IsRouting && !state.IsValidFor(original), "Busy state resets after routing exception");
+        }
+
+        async Task ParticipationFailure(string label)
+        {
+            state.Clear();
+            try
+            {
+                await state.RouteAsync(original, Success, _ =>
+                    throw new ValidationException(MunicipalityManagementService.UnavailableRoutingMessage));
+                throw new Exception("Expected participation failure");
+            }
+            catch (ValidationException error)
+            {
+                Check(error.Message == MunicipalityManagementService.UnavailableRoutingMessage
+                    && !state.IsValidFor(original) && state.Municipality is null && state.Address is null,
+                    label + " blocks Step 3 and retains no successful routing state");
+            }
+        }
+        await ParticipationFailure("Missing participating municipality");
+        await ParticipationFailure("Inactive participating municipality");
+
+        var newlyParticipating = await state.RouteAsync(original, Success, Active);
+        Check(newlyParticipating.Result?.Success == true && state.IsValidFor(original),
+            "Newly active catalogue municipality can retain routing and proceed");
+        try
+        {
+            await state.RouteAsync(original, Success, _ =>
+                throw new ValidationException(MunicipalityManagementService.UnavailableRoutingMessage));
+            throw new Exception("Expected deactivation failure");
+        }
+        catch (ValidationException)
+        {
+            Check(!state.IsValidFor(original), "Municipality deactivated after success clears reused retained state");
         }
     }
 

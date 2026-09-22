@@ -10,7 +10,7 @@ void Check(bool condition, string message)
     Console.WriteLine("PASS: " + message);
 }
 var address = new TradingAddress("1 Church Street", "", "Central", "Malmesbury", "7300");
-async Task<MunicipalRoutingResult> Run(string type, string[] names, string geocodeOverride = "", bool configured = true, bool networkError = false)
+async Task<MunicipalRoutingResult> Run(string type, string[] names, string[]? codes = null, string geocodeOverride = "", bool configured = true, bool networkError = false)
 {
     var geocode = new Handler(async request =>
     {
@@ -26,10 +26,10 @@ async Task<MunicipalRoutingResult> Run(string type, string[] names, string geoco
     {
         var body = await request.Content!.ReadAsStringAsync();
         Check(body.Contains("18.729966980745") && body.Contains("-33.462424796756") && body.Contains("returnGeometry=false") && !body.Contains("token"), "Boundary uses returned coordinates anonymously without geometry");
-        return JsonSerializer.Serialize(new { features = names.Select(name => new { attributes = new Dictionary<string, string>
+        return JsonSerializer.Serialize(new { features = names.Select((name, index) => new { attributes = new Dictionary<string, string>
         {
             ["AFRIGIS_LocalMunicipalities.S12_NAME"] = name,
-            ["AFRIGIS_LocalMunicipalities.MUN_CODE"] = "test-code"
+            ["AFRIGIS_LocalMunicipalities.MUN_CODE"] = codes?[index] ?? "unknown-code"
         } }) });
     });
     using var gc = new HttpClient(geocode);
@@ -41,26 +41,35 @@ async Task<MunicipalRoutingResult> Run(string type, string[] names, string geoco
         Check(boundary.Calls == 0, "Rejected geocode never reaches boundary service");
     return result;
 }
-foreach (var municipality in LicenceApplicationCatalog.Municipalities)
+Check(WesternCapeMunicipalityCatalog.Municipalities.Length == 25, "All Western Cape metro/local municipalities catalogued");
+Check(WesternCapeMunicipalityCatalog.Municipalities.Select(item => item.RoutingName).Distinct().Count() == 25, "Catalogue routing names unique");
+Check(WesternCapeMunicipalityCatalog.Municipalities.Select(item => item.WcgCode).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 25, "Catalogue WCG codes unique");
+Check(WesternCapeMunicipalityCatalog.Municipalities.Select(item => item.DefaultName).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 25, "Catalogue default names unique");
+Check(WesternCapeMunicipalityCatalog.Municipalities.All(item => item.WcgCode == "CPT" || item.WcgCode.StartsWith("WC"))
+    && WesternCapeMunicipalityCatalog.Municipalities.All(item => !item.WcgCode.StartsWith("DC")), "District municipalities excluded");
+var originalRoutingNames = new[] { "Hessequa Municipality", "Bergrivier Municipality", "Cederberg Municipality", "Swartland Municipality", "Witzenberg Municipality" };
+Check(originalRoutingNames.All(name => WesternCapeMunicipalityCatalog.FindByRoutingName(name)?.RoutingName == name), "Original five RoutingNames preserved exactly");
+foreach (var municipality in WesternCapeMunicipalityCatalog.Municipalities)
 {
-    var shortName = municipality[..^" Municipality".Length];
-    Check(LicenceApplicationCatalog.MapMunicipality(" " + shortName.ToLowerInvariant() + " ") == municipality, "Explicit short alias: " + shortName);
-    var result = await Run("PointAddress", [shortName + " Local Municipality"]);
-    Check(result.Success && result.Municipality == municipality, "Canonical mapping: " + municipality);
+    Check(WesternCapeMunicipalityCatalog.FindByCode(" " + municipality.WcgCode.ToLowerInvariant() + " ") == municipality,
+        "WCG code lookup: " + municipality.WcgCode);
+    var result = await Run("PointAddress", [municipality.WcgBoundaryName], [municipality.WcgCode]);
+    Check(result.Success && result.Municipality == municipality.RoutingName, "Canonical mapping: " + municipality.RoutingName);
 }
 foreach (var type in new[] { "Subaddress", "StreetAddress" })
-    Check((await Run(type, ["Swartland Municipality"])).Success, "Precise type accepted without score threshold: " + type);
+    Check((await Run(type, ["Misleading Name"], ["WC015"])).Success, "Precise type accepted and valid code wins over name: " + type);
 foreach (var type in new[] { "Postal", "Locality", "StreetName", "StreetAddressExt", "POI", "Unknown" })
     Check((await Run(type, [])).Failure == RoutingFailure.AddressNotPrecise, "Coarse type rejected: " + type);
-Check((await Run("PointAddress", [], "{\"candidates\":[]}")).Failure == RoutingFailure.AddressNotPrecise, "No geocode rejected");
+Check((await Run("PointAddress", [], geocodeOverride: "{\"candidates\":[]}")).Failure == RoutingFailure.AddressNotPrecise, "No geocode rejected");
 Check((await Run("PointAddress", [])).Failure == RoutingFailure.NoMunicipality, "No boundary rejected");
-Check((await Run("PointAddress", ["Swartland Municipality", "Bergrivier Municipality"])).Failure == RoutingFailure.MultipleMunicipalities, "Multiple boundaries rejected");
-Check((await Run("PointAddress", ["City of Cape Town Metropolitan Municipality"])).Failure == RoutingFailure.Unsupported, "Cape Town rejected");
+Check((await Run("PointAddress", ["Swartland Local Municipality", "Bergrivier Local Municipality"], ["WC015", "WC013"])).Failure == RoutingFailure.MultipleMunicipalities, "Multiple boundaries rejected");
+Check((await Run("PointAddress", ["Swartland Local Municipality"], ["unknown-code"])).Failure == RoutingFailure.Unsupported, "Unknown code rejected despite recognised name");
+Check((await Run("PointAddress", ["Misleading Name"], ["WC015"])).Municipality == "Swartland Municipality", "Boundary code is authoritative over name");
 Check((await Run("PointAddress", [], configured: false)).Failure == RoutingFailure.Unavailable, "Missing key blocks routing");
 Check((await Run("PointAddress", [], networkError: true)).Failure == RoutingFailure.Unavailable, "Network failure blocks routing");
-Check((await Run("PointAddress", [], "not json")).Failure == RoutingFailure.Unavailable, "Malformed response blocks routing");
-Check((await Run("PointAddress", [], "{\"candidates\":[{\"address\":\"Test\",\"attributes\":{\"Addr_type\":\"PointAddress\"},\"location\":{\"x\":18,\"y\":91}}]}")).Failure == RoutingFailure.AddressNotPrecise, "Out-of-range coordinates rejected");
-Check((await Run("PointAddress", [], "{\"error\":{\"code\":498}}")).Failure == RoutingFailure.Unavailable, "API error in HTTP success response blocks routing");
+Check((await Run("PointAddress", [], geocodeOverride: "not json")).Failure == RoutingFailure.Unavailable, "Malformed response blocks routing");
+Check((await Run("PointAddress", [], geocodeOverride: "{\"candidates\":[{\"address\":\"Test\",\"attributes\":{\"Addr_type\":\"PointAddress\"},\"location\":{\"x\":18,\"y\":91}}]}")).Failure == RoutingFailure.AddressNotPrecise, "Out-of-range coordinates rejected");
+Check((await Run("PointAddress", [], geocodeOverride: "{\"error\":{\"code\":498}}")).Failure == RoutingFailure.Unavailable, "API error in HTTP success response blocks routing");
 Console.WriteLine("All routing checks passed; no real APIs or database used.");
 await PoiTests.RunAsync();
 await RetainedRoutingStateTests.RunAsync();

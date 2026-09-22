@@ -2,19 +2,6 @@ namespace BusinessLicensing_Practice.Services
 {
     public static class LicenceApplicationCatalog
     {
-        public static string? MapMunicipality(string name)
-        {
-            var aliases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var canonical in Municipalities)
-            {
-                var shortName = canonical[..^" Municipality".Length];
-                aliases[canonical] = canonical;
-                aliases[shortName] = canonical;
-                aliases[shortName + " Local Municipality"] = canonical;
-            }
-            return aliases.GetValueOrDefault(name.Trim());
-        }
-
         private static readonly IReadOnlyList<DocumentRequirement> StandardDocuments =
         [
             Document("Certificate of Incorporation", "Proof that the business is legally registered."),
@@ -82,15 +69,6 @@ namespace BusinessLicensing_Practice.Services
                 Text("wasteDisposal", "Waste and wastewater disposal arrangements"),
                 Text("tradingTimes", "Trading days and hours")
             ], FoodDocuments)
-        ];
-
-        public static readonly IReadOnlyList<string> Municipalities =
-        [
-            "Hessequa Municipality",
-            "Bergrivier Municipality",
-            "Cederberg Municipality",
-            "Swartland Municipality",
-            "Witzenberg Municipality"
         ];
 
         public static LicenceDefinition? Find(string licenceName) =>

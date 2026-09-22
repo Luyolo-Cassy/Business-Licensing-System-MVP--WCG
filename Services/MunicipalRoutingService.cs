@@ -12,9 +12,9 @@ public sealed class MunicipalRoutingService(ArcGisGeocodingService geocoder, Wcg
             var matches = await boundaries.FindMunicipalitiesAsync(point, cancellationToken);
             if (matches.Count == 0) return new(null, RoutingFailure.NoMunicipality);
             if (matches.Count != 1) return new(null, RoutingFailure.MultipleMunicipalities);
-            var canonical = LicenceApplicationCatalog.MapMunicipality(matches[0].Name);
-            return canonical is null ? new(null, RoutingFailure.Unsupported, matches[0].Name)
-                : new(canonical, RoutingFailure.None);
+            var municipality = WesternCapeMunicipalityCatalog.FindByCode(matches[0].Code);
+            return municipality is null ? new(null, RoutingFailure.Unsupported, matches[0].Name)
+                : new(municipality.RoutingName, RoutingFailure.None);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception)
