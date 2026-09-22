@@ -33,7 +33,8 @@
 }
 
 .app-header {
-    position: relative;
+    position: sticky;
+    top: 0;
     z-index: 20;
     display: flex;
     align-items: center;
@@ -59,6 +60,14 @@
 
 .app-shell.is-collapsed .app-sidebar ::deep .side-label {
     display: none;
+}
+
+.app-shell.is-collapsed .app-sidebar ::deep .side-brand-logo-full {
+    display: none;
+}
+
+.app-shell.is-collapsed .app-sidebar ::deep .side-brand-logo-compact {
+    display: block;
 }
 
 .app-shell.is-collapsed .app-sidebar ::deep .side-brand-link,
@@ -92,6 +101,14 @@
 
     .app-shell.is-collapsed .app-sidebar ::deep .side-label {
         display: inline;
+    }
+
+    .app-shell.is-collapsed .app-sidebar ::deep .side-brand-logo-full {
+        display: block;
+    }
+
+    .app-shell.is-collapsed .app-sidebar ::deep .side-brand-logo-compact {
+        display: none;
     }
 
     .app-shell.is-collapsed .app-sidebar ::deep .side-brand-link,

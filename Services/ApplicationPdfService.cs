@@ -117,7 +117,7 @@ namespace BusinessLicensing_Practice.Services
             private readonly XFont regular = new("Arial", 9);
             private readonly XFont bold = new("Arial", 9, XFontStyleEx.Bold);
             private readonly XFont sectionFont = new("Arial", 12, XFontStyleEx.Bold);
-            private readonly XFont titleFont = new("Arial", 16, XFontStyleEx.Bold);
+            private readonly XFont titleFont = new("Arial", 13, XFontStyleEx.Bold);
             private PdfPage page = null!;
             private XGraphics graphics = null!;
             private double y;
@@ -132,10 +132,42 @@ namespace BusinessLicensing_Practice.Services
             public void AddHeader(Application application)
             {
                 graphics.DrawRectangle(new XSolidBrush(BrandBlue), 0, 0, page.Width.Point, 84);
-                graphics.DrawString("WESTERN CAPE GOVERNMENT", titleFont, XBrushes.White, new XPoint(Margin, 35));
-                graphics.DrawString("DEPARTMENT OF ECONOMIC DEVELOPMENT AND TOURISM", bold, XBrushes.White, new XPoint(Margin, 56));
-                graphics.DrawString("PROVINCIAL BUSINESS LICENCE APPLICATION", bold, XBrushes.White, new XPoint(Margin, 72));
+                const double logoX = Margin;
+                const double logoY = 13;
+                const double logoWidth = 174;
+                const double logoHeight = 58;
+                graphics.DrawRectangle(XBrushes.White, logoX, logoY, logoWidth, logoHeight);
+                using (var logo = XImage.FromFile(FindWcgLogoPath()))
+                {
+                    const double logoPadding = 6;
+                    var availableWidth = logoWidth - (logoPadding * 2);
+                    var availableHeight = logoHeight - (logoPadding * 2);
+                    var scale = Math.Min(availableWidth / logo.PixelWidth, availableHeight / logo.PixelHeight);
+                    var renderedWidth = logo.PixelWidth * scale;
+                    var renderedHeight = logo.PixelHeight * scale;
+                    graphics.DrawImage(logo,
+                        logoX + ((logoWidth - renderedWidth) / 2),
+                        logoY + ((logoHeight - renderedHeight) / 2),
+                        renderedWidth,
+                        renderedHeight);
+                }
+
+                const double headingX = logoX + logoWidth + 18;
+                graphics.DrawString("DEPARTMENT OF ECONOMIC DEVELOPMENT AND TOURISM", bold, XBrushes.White, new XPoint(headingX, 36));
+                graphics.DrawString("PROVINCIAL BUSINESS LICENCE APPLICATION", titleFont, XBrushes.White, new XPoint(headingX, 59));
                 y = 105;
+            }
+
+            private static string FindWcgLogoPath()
+            {
+                var relativePath = Path.Combine("wwwroot", "images", "WCG_logo.jpg");
+                var contentRootPath = Path.Combine(Directory.GetCurrentDirectory(), relativePath);
+                if (File.Exists(contentRootPath)) return contentRootPath;
+
+                var applicationPath = Path.Combine(AppContext.BaseDirectory, relativePath);
+                if (File.Exists(applicationPath)) return applicationPath;
+
+                throw new FileNotFoundException("The Western Cape Government logo asset could not be found.", relativePath);
             }
 
             public void AddSection(string title)

@@ -382,11 +382,9 @@
         builder.OpenElement(0, "label"); builder.AddAttribute(1, "class", "form-label fw-semibold"); builder.AddAttribute(2, "for", id);
         builder.AddContent(3, label + " "); builder.OpenElement(4, "span"); builder.AddAttribute(5, "class", "text-danger"); builder.AddContent(6, "*"); builder.CloseElement(); builder.CloseElement();
     };
-    private RenderFragment ReviewItem(string label, string? value) => builder =>
-    {
-        builder.OpenElement(0, "div"); builder.AddAttribute(1, "class", "review-item");
-        builder.OpenElement(2, "span"); builder.AddAttribute(3, "class", "review-label"); builder.AddContent(4, label + ":"); builder.CloseElement();
-        builder.OpenElement(5, "span"); builder.AddAttribute(6, "class", "review-value"); builder.AddContent(7, string.IsNullOrWhiteSpace(value) ? "Not provided" : value); builder.CloseElement(); builder.CloseElement();
-    };
+    private RenderFragment ReviewItem(string label, string? value) => @<div class="review-item">
+        <span class="review-label">@label:</span>
+        <span class="review-value">@(string.IsNullOrWhiteSpace(value) ? "Not provided" : value)</span>
+    </div>;
     private sealed record SelectedDocument(string DocumentType, string FileName, byte[] FileBytes);
 }

@@ -9,20 +9,24 @@
 .side-brand-link {
     display: flex;
     align-items: center;
-    gap: .65rem;
+    justify-content: center;
+    width: 100%;
     min-width: 0;
-    color: var(--wcg-blue);
-    font-weight: 700;
     text-decoration: none;
 }
 
-.side-brand-link:hover {
-    color: var(--wcg-blue);
+.side-brand-logo-full {
+    display: block;
+    width: min(100%, 150px);
+    height: auto;
 }
 
-.side-brand-link ::deep .ph-icon {
+.side-brand-link ::deep .side-brand-logo-compact {
+    display: none;
     width: 1.65rem;
     height: 1.65rem;
+    flex: 0 0 auto;
+    color: var(--wcg-blue);
 }
 
 .side-label {
