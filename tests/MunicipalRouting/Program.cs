@@ -63,6 +63,7 @@ Check((await Run("PointAddress", [], "{\"candidates\":[{\"address\":\"Test\",\"a
 Check((await Run("PointAddress", [], "{\"error\":{\"code\":498}}")).Failure == RoutingFailure.Unavailable, "API error in HTTP success response blocks routing");
 Console.WriteLine("All routing checks passed; no real APIs or database used.");
 await PoiTests.RunAsync();
+await RetainedRoutingStateTests.RunAsync();
 
 sealed class Handler(Func<HttpRequestMessage, Task<string>> respond) : HttpMessageHandler
 {

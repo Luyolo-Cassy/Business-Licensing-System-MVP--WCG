@@ -33,7 +33,7 @@
 <div class="mb-4"><span class="badge bg-primary">Step @CurrentStep of @TotalSteps</span><span class="ms-2 text-muted">@StepTitle</span></div>
 
 @if (!string.IsNullOrWhiteSpace(Message)) { <div class="alert @(MessageIsError ? "alert-danger" : "alert-info") mb-3" role="@(MessageIsError ? "alert" : "status")" aria-live="polite">@Message</div> }
-<fieldset class="application-fields wizard-step-enter" @key="CurrentStep" disabled="@IsSubmitting" aria-busy="@IsSubmitting">
+<fieldset class="application-fields wizard-step-enter" @key="CurrentStep" disabled="@IsBusy" aria-busy="@IsBusy">
 @if (CurrentStep == 1)
 {
     <section class="licence-type-step" aria-labelledby="licence-type-heading">
@@ -102,7 +102,7 @@
                 <div class="col-12 col-md-6">@FieldLabel("suburb", "Suburb")<input id="suburb" class="form-control" @bind="PlaceOfBusinessSuburb" /></div>
                 <div class="col-12 col-md-6">@FieldLabel("city", "Town / City")<input id="city" class="form-control" @bind="PlaceOfBusinessCity" /></div>
                 <div class="col-12 col-md-4">@FieldLabel("postalCode", "Postal Code")<input id="postalCode" class="form-control" @bind="PlaceOfBusinessPostalCode" /></div>
-                <div class="col-12 col-md-8"><p class="text-muted">Your responsible municipality will be determined from your trading address when you submit.</p></div>
+                <div class="col-12 col-md-8"><p class="text-muted">We will check your trading address and determine the responsible municipality before you continue.</p></div>
                 <div class="col-12"><fieldset><legend class="form-label fw-semibold fs-6">Is your postal address the same as your Place of Business / Trading Address? <span class="text-danger">*</span></legend><div id="postalSameAsBusiness" class="d-flex gap-4"><label><input type="radio" name="postalSame" checked="@(PostalSameAsBusiness == true)" @onchange="() => SetPostalSelection(true)" /> Yes</label><label><input type="radio" name="postalSame" checked="@(PostalSameAsBusiness == false)" @onchange="() => SetPostalSelection(false)" /> No</label></div></fieldset></div>
                 @if (PostalSameAsBusiness == false) { <div class="col-12">@FieldLabel("postalAddressLine1", "Postal Address Line 1")<input id="postalAddressLine1" class="form-control" maxlength="150" @bind="PostalAddressLine1" /></div><div class="col-12"><label class="form-label fw-semibold" for="postalAddressLine2">Postal Address Line 2</label><input id="postalAddressLine2" class="form-control" maxlength="150" @bind="PostalAddressLine2" /></div><div class="col-12 col-md-6">@FieldLabel("postalSuburb", "Suburb")<input id="postalSuburb" class="form-control" maxlength="100" @bind="PostalSuburb" /></div><div class="col-12 col-md-6">@FieldLabel("postalCity", "City / Town")<input id="postalCity" class="form-control" maxlength="100" @bind="PostalCity" /></div><div class="col-12 col-md-4">@FieldLabel("postalPostalCode", "Postal Code")<input id="postalPostalCode" class="form-control" maxlength="12" inputmode="numeric" @bind="PostalPostalCode" /></div> }
             </div>
@@ -141,7 +141,7 @@
         <div class="review-submit-header"><h4 id="review-heading" class="fw-bold mb-2">Review & Declaration</h4><p class="text-muted mb-0">Verify all information before making the declaration.</p></div>
         <div class="row g-4">
             <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Applicant</h5>@ReviewItem("Application Type", ApplicationType)@ReviewItem("Licence Type", LicenceType)@ReviewItem("Applicant Name", FullApplicantName)@ReviewItem("Address", FormattedApplicantAddress)@ReviewItem("Telephone", ApplicantTelephone)@ReviewItem("Email", ApplicantEmail)</div></div></div>
-            <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Business</h5>@ReviewItem("Business Name", BusinessName)@ReviewItem("Nature", BusinessCategory)@ReviewItem("Place of Business / Trading Address", FormattedPlaceOfBusinessAddress)@ReviewItem("Postal Address", FormattedPostalAddress)@ReviewItem("Responsible Municipality", "Determined automatically on submission")@ReviewItem("Trading Hours", ApplicationEntry.FormatTradingHours(ApplicationEntry.SerializeTradingHours(TradingDays)))</div></div></div>
+            <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Business</h5>@ReviewItem("Business Name", BusinessName)@ReviewItem("Nature", BusinessCategory)@ReviewItem("Place of Business / Trading Address", FormattedPlaceOfBusinessAddress)@ReviewItem("Postal Address", FormattedPostalAddress)@ReviewItem("Responsible Municipality", RoutingState.Municipality)@ReviewItem("Trading Hours", ApplicationEntry.FormatTradingHours(ApplicationEntry.SerializeTradingHours(TradingDays)))</div></div></div>
             <div class="col-12"><div class="card review-submit-card"><div class="card-body"><h5 class="mb-3">@LicenceType Details</h5>@foreach (var question in SelectedLicence?.Questions ?? []) { @ReviewItem(question.Label, GetAnswer(question.Key)) }</div></div></div>
             <div class="col-12"><div class="card review-submit-card"><div class="card-body"><h5 class="mb-3">Supporting Documents</h5>@foreach (var document in SelectedDocuments) { @ReviewItem(document.DocumentType, document.FileName) }</div></div></div>
         </div>
@@ -151,11 +151,11 @@
 
 @if (CurrentStep == 7)
 {
-    <section class="review-submit-step" aria-labelledby="submit-heading"><div class="card review-submit-card review-submit-summary-card"><div class="card-body text-center py-5"><PhosphorIcon Name="file-pdf" CssClass="ph-icon-lg" /><h4 id="submit-heading" class="fw-bold mt-3">Ready to Submit</h4><p class="text-muted mx-auto" style="max-width:680px">Submitting will save the application, generate the official completed PDF, and route it to the municipality determined from your trading address. Supporting documents remain separate.</p><div class="alert alert-info text-start mt-4 mb-0">After submission, use your dashboard to track progress and download the generated application PDF.</div></div></div></section>
+    <section class="review-submit-step" aria-labelledby="submit-heading"><div class="card review-submit-card review-submit-summary-card"><div class="card-body text-center py-5"><PhosphorIcon Name="file-pdf" CssClass="ph-icon-lg" /><h4 id="submit-heading" class="fw-bold mt-3">Ready to Submit</h4><p class="text-muted mx-auto" style="max-width:680px">Submitting will save the application, generate the official completed PDF, and send it to the municipality determined from your checked trading address. Supporting documents remain separate.</p><div class="alert alert-info text-start mt-4 mb-0">After submission, use your dashboard to track progress and download the generated application PDF.</div></div></div></section>
 }
 
 </fieldset>
-<div class="mt-5 d-flex flex-wrap gap-2">@if (CurrentStep > 1) { <button class="btn btn-outline-secondary" disabled="@IsSubmitting" @onclick="PreviousStep"><PhosphorIcon Name="arrow-left" /> Back</button> } @if (CurrentStep < TotalSteps) { <button class="btn btn-primary" disabled="@IsSubmitting" @onclick="NextStep">Next <PhosphorIcon Name="arrow-right" /></button> } else { <button class="btn btn-success" disabled="@IsSubmitting" aria-busy="@IsSubmitting" @onclick="SubmitApplication">@if (IsSubmitting) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> } else { <PhosphorIcon Name="check-circle" /> } @(IsSubmitting ? "Submitting application..." : "Submit Application")</button> }</div>
+<div class="mt-5 d-flex flex-wrap gap-2">@if (CurrentStep > 1) { <button class="btn btn-outline-secondary" disabled="@IsBusy" @onclick="PreviousStep"><PhosphorIcon Name="arrow-left" /> Back</button> } @if (CurrentStep < TotalSteps) { <button class="btn btn-primary" disabled="@IsBusy" aria-busy="@RoutingState.IsRouting" @onclick="NextStep">@if (RoutingState.IsRouting) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> } else { <span>Next </span><PhosphorIcon Name="arrow-right" /> } @(RoutingState.IsRouting ? "Checking address..." : "")</button> } else { <button class="btn btn-success" disabled="@IsBusy" aria-busy="@IsSubmitting" @onclick="SubmitApplication">@if (IsSubmitting) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> } else { <PhosphorIcon Name="check-circle" /> } @(IsSubmitting ? "Submitting application..." : "Submit Application")</button> }</div>
 
 @code {
     private const int TotalSteps = 7;
@@ -174,8 +174,10 @@
     private readonly List<TradingDay> TradingDays = ApplicationEntry.Days.Select(day => new TradingDay { Day = day }).ToList();
     private readonly Dictionary<string, string> LicenceAnswers = new();
     private readonly List<SelectedDocument> SelectedDocuments = new();
+    private readonly RetainedMunicipalRoutingState RoutingState = new();
 
     private LicenceDefinition? SelectedLicence => LicenceApplicationCatalog.Find(LicenceType);
+    private bool IsBusy => IsSubmitting || RoutingState.IsRouting;
     private string FormattedPlaceOfBusinessAddress => string.Join(", ", new[] { PlaceOfBusinessAddressLine1, PlaceOfBusinessAddressLine2, PlaceOfBusinessSuburb, PlaceOfBusinessCity, PlaceOfBusinessPostalCode }.Where(value => !string.IsNullOrWhiteSpace(value)));
     private string FullApplicantName => $"{ApplicantFirstName.Trim()} {ApplicantLastName.Trim()}".Trim();
     private string FormattedApplicantAddress => ApplicationEntry.FormatAddress(ApplicantAddressLine1, ApplicantAddressLine2, ApplicantSuburb, ApplicantCity, ApplicantPostalCode);
@@ -199,8 +201,43 @@
 
     private string GetAnswer(string key) => LicenceAnswers.GetValueOrDefault(key, "");
     private void SetAnswer(string key, string? value) => LicenceAnswers[key] = value?.Trim() ?? "";
-    private void NextStep() { if (IsSubmitting) return; Message = ""; InvalidFieldId = null; if (ValidateStep(CurrentStep)) { CurrentStep++; ScrollToStep = true; } }
-    private void PreviousStep() { if (IsSubmitting) return; Message = ""; InvalidFieldId = null; CurrentStep--; ScrollToStep = true; }
+    private async Task NextStep()
+    {
+        if (IsBusy) return;
+        Message = "";
+        InvalidFieldId = null;
+        if (!ValidateStep(CurrentStep)) return;
+        if (CurrentStep != 3)
+        {
+            CurrentStep++;
+            ScrollToStep = true;
+            return;
+        }
+
+        var address = CurrentTradingAddress();
+        MessageIsError = false;
+        Message = "Checking your trading address...";
+        try
+        {
+            var attempt = await RoutingState.RouteAsync(address, item => RoutingService.ResolveAsync(item));
+            if (!attempt.Completed) return;
+            if (attempt.Result is not { Success: true })
+            {
+                SetError(attempt.Result?.Message ?? new MunicipalRoutingResult(null, RoutingFailure.Unavailable).Message);
+                return;
+            }
+            CurrentStep++;
+            Message = "";
+            ScrollToStep = true;
+        }
+        catch (Exception)
+        {
+            RoutingState.Clear();
+            SetError(new MunicipalRoutingResult(null, RoutingFailure.Unavailable).Message);
+        }
+    }
+
+    private void PreviousStep() { if (IsBusy) return; Message = ""; InvalidFieldId = null; CurrentStep--; ScrollToStep = true; }
     private void SetPostalSelection(bool same) { PostalSameAsBusiness = same; if (same) { PostalAddressLine1 = PostalAddressLine2 = PostalSuburb = PostalCity = PostalPostalCode = ""; } }
     private static void SetDayStatus(TradingDay day, string? status)
     {
@@ -252,6 +289,9 @@
     private static bool AnyBlank(params string[] values) => values.Any(string.IsNullOrWhiteSpace);
     private static string? FirstBlank(params (string Id, string Value)[] fields) => fields.FirstOrDefault(field => string.IsNullOrWhiteSpace(field.Value)).Id;
     private void SetError(string message) { Message = message; MessageIsError = true; }
+    private TradingAddress CurrentTradingAddress() => new(
+        PlaceOfBusinessAddressLine1.Trim(), PlaceOfBusinessAddressLine2.Trim(), PlaceOfBusinessSuburb.Trim(),
+        PlaceOfBusinessCity.Trim(), PlaceOfBusinessPostalCode.Trim());
 
     private async Task HandleFileSelected(InputFileChangeEventArgs args, string documentType)
     {
@@ -280,7 +320,7 @@
 
     private async Task SubmitApplication()
     {
-        if (IsSubmitting) return;
+        if (IsBusy) return;
         Message = ""; for (var step = 1; step <= 6; step++) if (!ValidateStep(step)) { CurrentStep = step; StateHasChanged(); return; }
         IsSubmitting = true;
 
@@ -288,25 +328,26 @@
         {
             var state = await AuthenticationStateProvider.GetAuthenticationStateAsync(); var user = await UserManager.GetUserAsync(state.User);
             if (user == null) { SetError("You must be logged in to submit an application."); return; }
-            var address = new TradingAddress(PlaceOfBusinessAddressLine1.Trim(), PlaceOfBusinessAddressLine2.Trim(), PlaceOfBusinessSuburb.Trim(), PlaceOfBusinessCity.Trim(), PlaceOfBusinessPostalCode.Trim());
-            MessageIsError = false; Message = "Checking your trading address...";
-            var routing = await RoutingService.ResolveAsync(address);
-            if (!routing.Success)
+            var address = CurrentTradingAddress();
+            if (!RoutingState.IsValidFor(address))
             {
-                if (routing.Failure != RoutingFailure.Unavailable) CurrentStep = 3;
-                SetError(routing.Message);
+                CurrentStep = 3;
+                SetError("Your trading address needs to be checked again before you can submit. Please review it and click Next.");
                 return;
             }
+            MessageIsError = false;
             Message = "Saving application and generating PDF...";
             StateHasChanged();
             await using var transaction = await Db.Database.BeginTransactionAsync();
             BusinessLicensing_Practice.Models.Municipality participatingMunicipality;
             try
             {
-                participatingMunicipality = await MunicipalityManagementService.RequireActiveRoutingAsync(Db, routing.Municipality!);
+                participatingMunicipality = await MunicipalityManagementService.RequireActiveRoutingAsync(Db, RoutingState.Municipality!);
             }
             catch (System.ComponentModel.DataAnnotations.ValidationException error)
             {
+                RoutingState.Clear();
+                CurrentStep = 3;
                 SetError(error.Message);
                 return;
             }
