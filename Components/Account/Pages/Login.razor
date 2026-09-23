@@ -145,7 +145,12 @@ false);
         else if (result.IsLockedOut)
         {
             Logger.LogWarning("User account locked out.");
-            RedirectManager.RedirectTo("Account/Lockout");
+            var user = await UserManager.FindByEmailAsync(Input.Email);
+            var isAdminDeactivatedOfficial = user != null &&
+                await UserManager.IsInRoleAsync(user, "MunicipalOfficial") &&
+                user.LockoutEnabled && user.LockoutEnd == DateTimeOffset.MaxValue;
+            RedirectManager.RedirectTo("Account/Lockout",
+                new() { ["deactivated"] = isAdminDeactivatedOfficial });
         }
         else
         {

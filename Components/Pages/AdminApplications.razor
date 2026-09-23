@@ -2,6 +2,7 @@
 @attribute [Authorize(Roles = "DEDATAdmin")]
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.WebUtilities
 @using BusinessLicensing_Practice.Services
 @inject AdminApplicationService Oversight
 @inject AuthenticationStateProvider Authentication
@@ -10,6 +11,7 @@
 <h1 class="fw-bold">Applications</h1>
 <p class="text-muted">Read-only oversight across all municipalities, including historical applications.</p>
 <form method="get" action="admin/applications" class="card card-body shadow-sm mb-4">
+    @HiddenInputs("search", "municipality", "status")
     <div class="row g-3 align-items-end">
         <div class="col-md-4"><label for="search" class="form-label">Reference or applicant</label><input id="search" name="search" class="form-control" value="@Search" /></div>
         <div class="col-md-3"><label for="municipality" class="form-label">Municipality</label><select id="municipality" name="municipality" class="form-select">
@@ -27,10 +29,18 @@
 {
     <p role="status">@result.Applications.Count application(s) found.</p>
     @if (result.Applications.Count == 0) { <div class="alert alert-info">No applications match these filters.</div> }
-    else
+    @if (result.Applications.Count > 0 || HasAnyColumnFilter)
     {
         <div class="card shadow-sm table-responsive"><table class="table table-hover align-middle mb-0">
-            <thead><tr><th>Reference</th><th>Applicant</th><th>Licence / Application Type</th><th>Municipality</th><th>Submitted</th><th>Status</th><th>View</th></tr></thead>
+            <thead><tr>
+                <th>@FilterHeader("Reference", "reference", !string.IsNullOrWhiteSpace(Reference), ReferenceFilter())</th>
+                <th>@FilterHeader("Applicant", "applicant", !string.IsNullOrWhiteSpace(Applicant), ApplicantFilter())</th>
+                <th>@FilterHeader("Licence / Application Type", "type", HasTypeFilter, TypeFilter())</th>
+                <th>@FilterHeader("Municipality", "columnMunicipality", !string.IsNullOrEmpty(ColumnMunicipality), MunicipalityFilter())</th>
+                <th>@FilterHeader("Submitted", "submitted", Submitted.HasValue, SubmittedFilter())</th>
+                <th>@FilterHeader("Status", "columnStatus", !string.IsNullOrEmpty(ColumnStatus), StatusFilter())</th>
+                <th>View</th>
+            </tr></thead>
             <tbody>@foreach (var application in result.Applications)
             {
                 <tr>
@@ -49,7 +59,74 @@
     [SupplyParameterFromQuery] public string? Search { get; set; }
     [SupplyParameterFromQuery] public string? Municipality { get; set; }
     [SupplyParameterFromQuery] public string? Status { get; set; }
+    [SupplyParameterFromQuery] public string? Reference { get; set; }
+    [SupplyParameterFromQuery] public string? Applicant { get; set; }
+    [SupplyParameterFromQuery] public string? LicenceType { get; set; }
+    [SupplyParameterFromQuery] public string? ApplicationType { get; set; }
+    [SupplyParameterFromQuery] public string? ColumnMunicipality { get; set; }
+    [SupplyParameterFromQuery] public DateTime? Submitted { get; set; }
+    [SupplyParameterFromQuery] public string? ColumnStatus { get; set; }
     private AdminApplicationList? result;
+    private bool HasTypeFilter => !string.IsNullOrEmpty(LicenceType) || !string.IsNullOrEmpty(ApplicationType);
+    private bool HasAnyColumnFilter => HasTypeFilter || !string.IsNullOrWhiteSpace(Reference) || !string.IsNullOrWhiteSpace(Applicant) ||
+        !string.IsNullOrEmpty(ColumnMunicipality) || Submitted.HasValue || !string.IsNullOrEmpty(ColumnStatus);
+
     protected override async Task OnParametersSetAsync() =>
-        result = await Oversight.ListAsync((await Authentication.GetAuthenticationStateAsync()).User, Search, Municipality, Status);
+        result = await Oversight.ListAsync((await Authentication.GetAuthenticationStateAsync()).User, Search, Municipality, Status,
+            Reference, Applicant, LicenceType, ApplicationType, ColumnMunicipality, Submitted, ColumnStatus);
+
+    private RenderFragment FilterHeader(string label, string key, bool active, RenderFragment content) => @<div class="column-heading">
+        <span>@label</span>
+        <details class="column-filter @(active ? "active" : null)">
+            <summary aria-label="Filter @label" title="Filter @label">
+                <img src="/icons/phosphor/magnifying-glass.svg" alt="" aria-hidden="true" />
+                @if (active) { <span class="visually-hidden">Filter applied</span><span class="filter-dot" aria-hidden="true"></span> }
+            </summary>
+            <div class="column-filter-menu">@content</div>
+        </details>
+    </div>;
+
+    private RenderFragment FilterForm(string key, RenderFragment fields) => @<form method="get" action="admin/applications">
+        @HiddenInputs(key == "type" ? new[] { "licenceType", "applicationType" } : new[] { key })
+        @fields
+        <div class="column-filter-actions">
+            <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+            <a class="btn btn-link btn-sm" href="@ClearUrl(key)">Clear</a>
+        </div>
+    </form>;
+
+    private RenderFragment ReferenceFilter() => FilterForm("reference", @<div><label for="column-reference" class="form-label">Reference contains</label><input id="column-reference" name="reference" value="@Reference" class="form-control form-control-sm" /></div>);
+    private RenderFragment ApplicantFilter() => FilterForm("applicant", @<div><label for="column-applicant" class="form-label">Applicant contains</label><input id="column-applicant" name="applicant" value="@Applicant" class="form-control form-control-sm" /></div>);
+    private RenderFragment TypeFilter() => FilterForm("type", @<div>
+        <label for="column-licence" class="form-label">Licence type</label><select id="column-licence" name="licenceType" class="form-select form-select-sm"><option value="">All licence types</option>@foreach (var value in result?.LicenceTypes ?? []) { <option value="@value" selected="@(value == LicenceType)">@value</option> }</select>
+        <label for="column-application-type" class="form-label mt-2">Application type</label><select id="column-application-type" name="applicationType" class="form-select form-select-sm"><option value="">All application types</option>@foreach (var value in result?.ApplicationTypes ?? []) { <option value="@value" selected="@(value == ApplicationType)">@value</option> }</select>
+    </div>);
+    private RenderFragment MunicipalityFilter() => FilterForm("columnMunicipality", @<div><label for="column-municipality" class="form-label">Municipality</label><select id="column-municipality" name="columnMunicipality" class="form-select form-select-sm"><option value="">All municipalities</option>@foreach (var value in result?.Municipalities ?? []) { <option value="@value" selected="@(value == ColumnMunicipality)">@value</option> }</select></div>);
+    private RenderFragment SubmittedFilter() => FilterForm("submitted", @<div><label for="column-submitted" class="form-label">Submitted on</label><input id="column-submitted" name="submitted" type="date" value="@Submitted?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" /></div>);
+    private RenderFragment StatusFilter() => FilterForm("columnStatus", @<div><label for="column-status" class="form-label">Status</label><select id="column-status" name="columnStatus" class="form-select form-select-sm"><option value="">All statuses</option>@foreach (var value in result?.Statuses ?? []) { <option value="@value" selected="@(value == ColumnStatus)">@value</option> }</select></div>);
+
+    private RenderFragment HiddenInputs(params string[] excluded) => builder =>
+    {
+        var sequence = 0;
+        foreach (var pair in CurrentFilters().Where(pair => !excluded.Contains(pair.Key) && !string.IsNullOrWhiteSpace(pair.Value)))
+        {
+            builder.OpenElement(sequence++, "input"); builder.AddAttribute(sequence++, "type", "hidden");
+            builder.AddAttribute(sequence++, "name", pair.Key); builder.AddAttribute(sequence++, "value", pair.Value); builder.CloseElement();
+        }
+    };
+
+    private Dictionary<string, string?> CurrentFilters() => new()
+    {
+        ["search"] = Search, ["municipality"] = Municipality, ["status"] = Status, ["reference"] = Reference,
+        ["applicant"] = Applicant, ["licenceType"] = LicenceType, ["applicationType"] = ApplicationType,
+        ["columnMunicipality"] = ColumnMunicipality, ["submitted"] = Submitted?.ToString("yyyy-MM-dd"), ["columnStatus"] = ColumnStatus
+    };
+
+    private string ClearUrl(string key)
+    {
+        var excluded = key == "type" ? new[] { "licenceType", "applicationType" } : new[] { key };
+        var remaining = CurrentFilters().Where(pair => !excluded.Contains(pair.Key) && !string.IsNullOrWhiteSpace(pair.Value))
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+        return QueryHelpers.AddQueryString("/admin/applications", remaining);
+    }
 }

@@ -225,9 +225,22 @@ try
     using (var deniedClient = Client())
     {
         var response = await Form(deniedClient, "/Account/Login", new() { ["_handler"] = "login", ["Input.Email"] = "sarah.updated@example.test", ["Input.Password"] = "OfficialOwn!2026#" });
-        Check(response.Headers.Location?.ToString().Contains("Lockout") == true, "Deactivated Official cannot log in");
+        Check(response.Headers.Location?.ToString().Contains("Lockout") == true && response.Headers.Location.ToString().Contains("deactivated=true", StringComparison.OrdinalIgnoreCase), "Deactivated Official cannot log in and receives deactivation state");
+        var unavailable = await deniedClient.GetStringAsync(response.Headers.Location);
+        Check(unavailable.Contains("Account unavailable") && unavailable.Contains("has been deactivated") && unavailable.Contains("Return to sign in") &&
+            !unavailable.Contains("try again later", StringComparison.OrdinalIgnoreCase), "Deactivated-account page uses accurate WCG-styled content");
     }
     await management.SetActiveAsync(admin, sarah.Id, true);
+    db.ChangeTracker.Clear(); sarah = (await users.FindByIdAsync(sarah.Id))!;
+    Check((await users.SetLockoutEndDateAsync(sarah, DateTimeOffset.UtcNow.AddMinutes(5))).Succeeded, "Create finite temporary lockout fixture");
+    using (var temporaryClient = Client())
+    {
+        var response = await Form(temporaryClient, "/Account/Login", new() { ["_handler"] = "login", ["Input.Email"] = "sarah.updated@example.test", ["Input.Password"] = "OfficialOwn!2026#" });
+        Check(response.Headers.Location?.ToString().Contains("deactivated=false", StringComparison.OrdinalIgnoreCase) == true, "Finite Identity lockout is not labelled as Admin deactivation");
+        var locked = await temporaryClient.GetStringAsync(response.Headers.Location);
+        Check(locked.Contains("temporarily locked") && locked.Contains("try again later") && !locked.Contains("has been deactivated"), "Temporary-lockout message remains accurate");
+    }
+    Check((await users.SetLockoutEndDateAsync(sarah, null)).Succeeded, "Clear finite temporary lockout fixture");
     using (var reactivated = await Login("sarah.updated@example.test", "OfficialOwn!2026#", "/official-dashboard"))
         Check((await reactivated.GetAsync($"/applications/{newApp.Id}/official-pdf")).StatusCode == HttpStatusCode.OK, "Reactivation preserves password and assignment");
     await management.SaveAsync(admin, legacy.Id, "Edited Legacy Official", "legacy.edited@example.test", 3);

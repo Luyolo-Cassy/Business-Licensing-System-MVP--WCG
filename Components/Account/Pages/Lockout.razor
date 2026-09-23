@@ -1,8 +1,31 @@
 ﻿@page "/Account/Lockout"
 
-<PageTitle>Locked out</PageTitle>
+<PageTitle>@(Deactivated ? "Account unavailable" : "Account temporarily locked")</PageTitle>
 
-<header>
-    <h1 class="text-danger">Locked out</h1>
-    <p class="text-danger" role="alert">This account has been locked out, please try again later.</p>
-</header>
+<main class="auth-page">
+    <section class="auth-panel" aria-labelledby="auth-heading">
+        <a class="auth-logo" href="/" aria-label="Western Cape Government home">
+            <img src="/images/WCG_logo.jpg" alt="Western Cape Government" />
+        </a>
+        <h1 id="auth-heading">@(Deactivated ? "Account unavailable" : "Account temporarily locked")</h1>
+        @if (Deactivated)
+        {
+            <div class="auth-status" role="alert">
+                <p>Your account has been deactivated and you can no longer access the Provincial Business Licensing System.</p>
+                <p>Please contact your DEDAT administrator if you believe your account should be reactivated.</p>
+            </div>
+        }
+        else
+        {
+            <div class="auth-status" role="alert">
+                <p>Your account is temporarily locked. Please try again later.</p>
+            </div>
+        }
+        <a class="auth-submit btn btn-primary" href="/Account/Login">Return to sign in</a>
+    </section>
+</main>
+
+@code {
+    [SupplyParameterFromQuery]
+    private bool Deactivated { get; set; }
+}

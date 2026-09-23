@@ -70,6 +70,26 @@
     font-weight: 700;
 }
 
+.auth-status {
+    margin: 0 0 1.75rem;
+    padding: 1rem 1.1rem;
+    color: var(--wcg-text);
+    background: var(--wcg-blue-tint);
+    border-left: .25rem solid var(--wcg-blue);
+    line-height: 1.55;
+}
+
+.auth-status p:last-child {
+    margin-bottom: 0;
+}
+
+a.auth-submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
 .auth-links,
 .auth-register-link {
     margin-top: 1.55rem;

@@ -119,6 +119,7 @@ try
     };
     var a = Fixture("OV-A", owner, "Bergrivier Municipality", "Submitted", "Sale of Meals Licence", "New");
     var b = Fixture("OV-B", owner, "Bergrivier Municipality", "Licence Issued", "Sale of Meals Licence", "Renewal");
+    b.DateSubmitted = new DateTime(2026, 9, 2, 11, 0, 0);
     var c = Fixture("OV-C", otherOwner, "Swartland Municipality", "Rejected", "Health Facility Licence", "New");
     var d = Fixture("OV-D", otherOwner, "Swartland Municipality", "Under Review", "Health Facility Licence", "New");
     var e = Fixture("OV-E", owner, "City of Cape Town", "Withdrawn", "Gaming / Amusement Licence", null);
@@ -144,6 +145,14 @@ try
     Check((await oversight.ListAsync(admin, search: "alpha")).Applications.Count == 4, "Applicant search includes submitted name and legacy Identity-name fallback");
     Check((await oversight.ListAsync(admin, search: "beta", municipality: "Swartland Municipality", status: "Rejected")).Applications.Single().Id == c.Id, "Combined filters");
     Check((await oversight.ListAsync(admin, search: "no match")).Applications.Count == 0, "No-match filter");
+    Check((await oversight.ListAsync(admin, reference: "v-b")).Applications.Single().Id == b.Id, "Reference column filter is partial and case-insensitive");
+    Check((await oversight.ListAsync(admin, applicant: "beta")).Applications.Count == 2, "Applicant column filter");
+    Check((await oversight.ListAsync(admin, licenceType: "Health Facility Licence", applicationType: "New")).Applications.Count == 2, "Licence and application type column filters combine");
+    Check((await oversight.ListAsync(admin, columnMunicipality: "Bergrivier Municipality")).Applications.Count == 2, "Municipality column filter");
+    Check((await oversight.ListAsync(admin, submitted: new DateTime(2026, 9, 2))).Applications.Single().Id == b.Id, "Submitted-date column filter uses the complete selected day");
+    Check((await oversight.ListAsync(admin, columnStatus: "Under Review")).Applications.Single().Id == d.Id, "Status column filter");
+    Check((await oversight.ListAsync(admin, applicant: "beta", licenceType: "Health Facility Licence", columnMunicipality: "Swartland Municipality", columnStatus: "Rejected")).Applications.Single().Id == c.Id, "Multiple column filters combine");
+    Check((await oversight.ListAsync(admin, search: "alpha", municipality: "Bergrivier Municipality", status: "Licence Issued", reference: "OV-B", applicationType: "Renewal", submitted: new DateTime(2026, 9, 2), columnStatus: "Licence Issued")).Applications.Single().Id == b.Id, "Top and column filters combine with AND semantics");
     var report = await oversight.ReportAsync(admin);
     Check(report.Total == 6 && report.Statuses.Single(x => x.Name == "Submitted").Count == 2 && report.Statuses.Sum(x => x.Count) == 6, "Report total and status counts come from database");
     Check(report.Municipalities.Single(x => x.Name == "Bergrivier Municipality").Count == 2 &&
@@ -182,6 +191,10 @@ try
     var filterUrl = QueryHelpers.AddQueryString("/admin/applications", new Dictionary<string, string?> { ["municipality"] = "Swartland Municipality", ["status"] = "Rejected", ["search"] = "beta" });
     var filteredHtml = await adminClient.GetStringAsync(filterUrl);
     Check(filteredHtml.Contains("OV-C") && !filteredHtml.Contains("OV-A") && !filteredHtml.Contains("OV-D"), "HTTP query-string filters work together");
+    var columnUrl = QueryHelpers.AddQueryString("/admin/applications", new Dictionary<string, string?> { ["search"] = "beta", ["columnMunicipality"] = "Swartland Municipality", ["columnStatus"] = "Rejected", ["reference"] = "OV-C" });
+    var columnHtml = await adminClient.GetStringAsync(columnUrl);
+    Check(columnHtml.Contains("OV-C") && !columnHtml.Contains("OV-D") && columnHtml.Contains("Filter applied") &&
+        columnHtml.Contains("Licence / Application Type") && !Regex.IsMatch(columnHtml, @"<th>\s*View\s*<details", RegexOptions.IgnoreCase), "Column-filter UI combines filters, indicates active state and leaves View action-only");
     var detailHtml = await adminClient.GetStringAsync($"/admin/applications/{a.Id}");
     Check(detailHtml.Contains("REG-TEST") && detailHtml.Contains("Fresh meals") && detailHtml.Contains("proof.pdf") && detailHtml.Contains("History &lt;script&gt;"), "Admin HTTP detail renders application, licence, document and escaped communication data");
     Check(!Regex.IsMatch(detailHtml, @"<button\b[^>]*>\s*(Approve|Reject|Save Review|Send)", RegexOptions.IgnoreCase) &&

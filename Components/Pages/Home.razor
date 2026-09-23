@@ -5,14 +5,59 @@
 
 <AuthorizeView Context="auth">
     <Authorized>
-        <div class="authenticated-home">
-            <h1>Provincial Business Licensing System</h1>
-            <p>Welcome back. Continue using your dashboard.</p>
-            @if (auth.User.IsInRole("BusinessOwner"))
-            {
-                <a class="btn btn-primary" href="/dashboard">Go to dashboard</a>
-            }
-            else if (auth.User.IsInRole("MunicipalOfficial"))
+        @if (auth.User.IsInRole("BusinessOwner"))
+        {
+            <main class="applicant-home">
+                <header class="applicant-home-intro">
+                    <span class="applicant-home-eyebrow">Applicant guidance</span>
+                    <h1>Business Licensing</h1>
+                    <p>Everything you need to know before applying for a business licence.</p>
+                </header>
+
+                <section class="applicant-guidance" aria-labelledby="before-start-heading">
+                    <div class="applicant-section-heading">
+                        <span class="applicant-section-icon" aria-hidden="true"><PhosphorIcon Name="clipboard-text" /></span>
+                        <div><h2 id="before-start-heading">Before you start</h2><p>Having this information ready will make your application easier to complete.</p></div>
+                    </div>
+                    <ul class="applicant-checklist">
+                        <li><PhosphorIcon Name="check-circle" /><span><strong>Applicant details</strong> — your name, contact information and residential or applicant address.</span></li>
+                        <li><PhosphorIcon Name="check-circle" /><span><strong>Business details</strong> — the business name, activity, contact details, company registration number and tax number.</span></li>
+                        <li><PhosphorIcon Name="check-circle" /><span><strong>Addresses</strong> — the physical Place of Business / Trading Address and, if different, the postal address.</span></li>
+                        <li><PhosphorIcon Name="check-circle" /><span><strong>Trading information</strong> — operating days, opening and closing times, and information relevant to the selected licence.</span></li>
+                        <li><PhosphorIcon Name="check-circle" /><span><strong>Supporting documents</strong> — requirements depend on the licence you select. The application will show the relevant documents when you reach that step.</span></li>
+                    </ul>
+                </section>
+
+                <section class="applicant-guidance" aria-labelledby="application-process-heading">
+                    <div class="applicant-section-heading">
+                        <span class="applicant-section-icon" aria-hidden="true"><PhosphorIcon Name="list" /></span>
+                        <div><h2 id="application-process-heading">How the application works</h2><p>Follow the guided steps from licence selection through to submission.</p></div>
+                    </div>
+                    <ol class="applicant-journey">
+                        <li><span class="applicant-step-number">1</span><div><h3>Choose your licence</h3><p>Select the business licence that matches your business activity.</p></div></li>
+                        <li><span class="applicant-step-number">2</span><div><h3>Complete your application</h3><p>Provide the applicant, business, contact, trading-address, trading-hours and licence-specific information requested.</p></div></li>
+                        <li><span class="applicant-step-number">3</span><div><h3>Provide supporting documents</h3><p>The system shows the documents required for your selected licence and allows you to upload them securely.</p></div></li>
+                        <li><span class="applicant-step-number">4</span><div><h3>Confirm the responsible municipality</h3><p>Your Place of Business / Trading Address is checked to identify the participating municipality responsible for your application.</p></div></li>
+                        <li><span class="applicant-step-number">5</span><div><h3>Review and submit</h3><p>Review your information, complete the declarations and submit. The system then generates your official application PDF.</p></div></li>
+                        <li><span class="applicant-step-number">6</span><div><h3>Track your application</h3><p>Use your dashboard to follow progress, view application information and read relevant municipal messages and updates.</p></div></li>
+                    </ol>
+                </section>
+
+                <section class="applicant-ready" aria-labelledby="ready-heading">
+                    <div><h2 id="ready-heading">Ready to apply?</h2><p>Start the guided application now, or review applications you have already submitted.</p></div>
+                    <div class="applicant-ready-actions">
+                        <a class="btn btn-primary btn-lg" href="/new-application"><PhosphorIcon Name="file-plus" /> Start a new application</a>
+                        <a class="btn btn-outline-primary btn-lg" href="/dashboard">View my applications</a>
+                    </div>
+                </section>
+            </main>
+        }
+        else
+        {
+            <div class="authenticated-home">
+                <h1>Provincial Business Licensing System</h1>
+                <p>Welcome back. Continue using your dashboard.</p>
+            @if (auth.User.IsInRole("MunicipalOfficial"))
             {
                 <a class="btn btn-primary" href="/official-dashboard">Go to dashboard</a>
             }
@@ -20,7 +65,8 @@
             {
                 <a class="btn btn-primary" href="/admin-dashboard">Go to dashboard</a>
             }
-        </div>
+            </div>
+        }
     </Authorized>
     <NotAuthorized>
         <div class="public-home">

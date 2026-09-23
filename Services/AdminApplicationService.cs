@@ -8,7 +8,8 @@ namespace BusinessLicensing_Practice.Services;
 
 public record AdminApplicationRow(int Id, string ApplicationNumber, string Applicant, string LicenceType,
     string? ApplicationType, string? Municipality, DateTime DateSubmitted, string Status);
-public record AdminApplicationList(List<AdminApplicationRow> Applications, List<string> Municipalities, List<string> Statuses);
+public record AdminApplicationList(List<AdminApplicationRow> Applications, List<string> Municipalities, List<string> Statuses,
+    List<string> LicenceTypes, List<string> ApplicationTypes);
 public record AdminCommunication(string SenderName, string Content, DateTime CreatedAtUtc, DateTime? ReadAtUtc);
 public record AdminApplicationDetail(Application Application, string ApplicantName, string? ApplicantEmail,
     string? ApplicantTelephone, List<AdminCommunication> Communications);
@@ -28,7 +29,9 @@ public class AdminApplicationService(IServiceScopeFactory scopes)
         return services.GetRequiredService<ApplicationDbContext>();
     }
 
-    public async Task<AdminApplicationList> ListAsync(ClaimsPrincipal principal, string? search = null, string? municipality = null, string? status = null)
+    public async Task<AdminApplicationList> ListAsync(ClaimsPrincipal principal, string? search = null, string? municipality = null, string? status = null,
+        string? reference = null, string? applicant = null, string? licenceType = null, string? applicationType = null,
+        string? columnMunicipality = null, DateTime? submitted = null, string? columnStatus = null)
     {
         await using var scope = scopes.CreateAsyncScope();
         var db = await AuthorizeAsync(scope.ServiceProvider, principal);
@@ -44,6 +47,29 @@ public class AdminApplicationService(IServiceScopeFactory scopes)
         }
         if (!string.IsNullOrEmpty(municipality)) rows = rows.Where(a => a.Municipality == municipality);
         if (!string.IsNullOrEmpty(status)) rows = rows.Where(a => a.Status == status);
+        if (!string.IsNullOrWhiteSpace(reference))
+        {
+            var term = reference.Trim().ToLowerInvariant();
+            rows = rows.Where(a => a.ApplicationNumber.ToLower().Contains(term));
+        }
+        if (!string.IsNullOrWhiteSpace(applicant))
+        {
+            var term = applicant.Trim().ToLowerInvariant();
+            rows = rows.Where(a => (a.Details != null && a.Details.ApplicantFirstName != null && a.Details.ApplicantFirstName != ""
+                ? a.Details.ApplicantFirstName + " " + a.Details.ApplicantLastName
+                : a.Details != null && a.Details.ApplicantName != null && a.Details.ApplicantName != ""
+                    ? a.Details.ApplicantName : a.User != null ? a.User.FullName : "").ToLower().Contains(term));
+        }
+        if (!string.IsNullOrEmpty(licenceType)) rows = rows.Where(a => a.LicenceType == licenceType);
+        if (!string.IsNullOrEmpty(applicationType)) rows = rows.Where(a => a.Details != null && a.Details.ApplicationType == applicationType);
+        if (!string.IsNullOrEmpty(columnMunicipality)) rows = rows.Where(a => a.Municipality == columnMunicipality);
+        if (submitted.HasValue)
+        {
+            var from = submitted.Value.Date;
+            var until = from.AddDays(1);
+            rows = rows.Where(a => a.DateSubmitted >= from && a.DateSubmitted < until);
+        }
+        if (!string.IsNullOrEmpty(columnStatus)) rows = rows.Where(a => a.Status == columnStatus);
         var applications = await rows.OrderByDescending(a => a.DateSubmitted).ThenByDescending(a => a.Id)
             .Select(a => new AdminApplicationRow(a.Id, a.ApplicationNumber,
                 a.Details != null && a.Details.ApplicantFirstName != null && a.Details.ApplicantFirstName != "" ? a.Details.ApplicantFirstName + " " + a.Details.ApplicantLastName :
@@ -53,7 +79,10 @@ public class AdminApplicationService(IServiceScopeFactory scopes)
             .Union(db.Applications.Where(a => a.Municipality != null && a.Municipality != "").Select(a => a.Municipality!))
             .OrderBy(name => name).ToListAsync();
         var statuses = await db.Applications.Where(a => a.Status != "").Select(a => a.Status).Distinct().OrderBy(s => s).ToListAsync();
-        return new(applications, municipalities, statuses);
+        var licenceTypes = await db.Applications.Where(a => a.LicenceType != "").Select(a => a.LicenceType).Distinct().OrderBy(s => s).ToListAsync();
+        var applicationTypes = await db.ApplicationDetails.Where(d => d.ApplicationType != null && d.ApplicationType != "")
+            .Select(d => d.ApplicationType!).Distinct().OrderBy(s => s).ToListAsync();
+        return new(applications, municipalities, statuses, licenceTypes, applicationTypes);
     }
 
     public async Task<AdminApplicationDetail?> DetailAsync(ClaimsPrincipal principal, int id)
