@@ -1,0 +1,64 @@
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Authorization
+@using BusinessLicensing_Practice.Services
+@inject ReportingService Reports
+@inject AuthenticationStateProvider Authentication
+@inject IJSRuntime JS
+
+<PageTitle>@(Audience == ReportAudience.DedatAdmin ? "Province-wide Reports" : "Municipal Reports")</PageTitle>
+<h1 class="fw-bold">@(Audience == ReportAudience.DedatAdmin ? "Province-wide Reports" : "Municipal Reports")</h1>
+<p class="text-muted">Choose a report to understand application volumes, current workload and municipal decisions.</p>
+@if (selectedKey == null)
+{
+    <div class="row g-4">@foreach (var card in ReportingService.Cards(Audience)) { <div class="col-md-6 col-xl-4"><section class="card shadow-sm h-100"><div class="card-body d-flex flex-column"><h2 class="h5">@card.Name</h2><p class="text-muted flex-grow-1">@card.Description</p><button class="btn btn-primary align-self-start" @onclick="() => Open(card.Key)">View Report</button></div></section></div> }</div>
+}
+else
+{
+    <button class="btn btn-link px-0 mb-2" @onclick="Back">← All reports</button><h2>@result?.Title</h2><p class="text-muted">@result?.Description</p>
+    <EditForm Model="filter" OnValidSubmit="Apply"><div class="card card-body shadow-sm mb-4"><div class="row g-3 align-items-end">
+        <div class="col-sm-6 col-lg-3"><label class="form-label">@FromLabel</label><InputDate class="form-control" @bind-Value="filter.From" /></div>
+        <div class="col-sm-6 col-lg-3"><label class="form-label">@ToLabel</label><InputDate class="form-control" @bind-Value="filter.To" /></div>
+        @if (Audience == ReportAudience.DedatAdmin) { <div class="col-sm-6 col-lg-3"><label class="form-label">Municipality</label><InputSelect class="form-select" @bind-Value="filter.Municipality"><option value="">All municipalities</option>@foreach (var x in result?.Options.Municipalities ?? []) { <option value="@x">@x</option> }</InputSelect></div> }
+        @if (UsesLicence) { <div class="col-sm-6 col-lg-3"><label class="form-label">Licence type</label><InputSelect class="form-select" @bind-Value="filter.LicenceType"><option value="">All licence types</option>@foreach (var x in result?.Options.LicenceTypes ?? []) { <option value="@x">@x</option> }</InputSelect></div> }
+        @if (UsesApplicationType) { <div class="col-sm-6 col-lg-3"><label class="form-label">Application type</label><InputSelect class="form-select" @bind-Value="filter.ApplicationType"><option value="">All application types</option>@foreach (var x in result?.Options.ApplicationTypes ?? []) { <option value="@x">@x</option> }</InputSelect></div> }
+        @if (UsesStatus) { <div class="col-sm-6 col-lg-3"><label class="form-label">@(selectedKey == ReportKeys.Pending ? "Pending status" : "Status")</label><InputSelect class="form-select" @bind-Value="filter.Status"><option value="">All statuses</option>@foreach (var x in StatusOptions) { <option value="@x">@x</option> }</InputSelect></div> }
+        @if (UsesOutcome) { <div class="col-sm-6 col-lg-3"><label class="form-label">Outcome</label><InputSelect class="form-select" @bind-Value="filter.Outcome"><option value="">All outcomes</option>@foreach (var x in OutcomeOptions) { <option value="@x">@x</option> }</InputSelect></div> }
+        @if (UsesGrouping) { <div class="col-sm-6 col-lg-3"><label class="form-label">Grouping</label><InputSelect class="form-select" @bind-Value="filter.Grouping"><option>Monthly</option><option>Quarterly</option></InputSelect></div> }
+        <div class="col-12"><button class="btn btn-primary me-2" disabled="@loading" type="submit">Apply Filters</button><button class="btn btn-outline-secondary" disabled="@loading" type="button" @onclick="Reset">Reset Filters</button></div>
+    </div></div></EditForm>
+    @if (error != null) { <div class="alert alert-danger" role="alert">@error</div> }
+    @if (loading) { <p role="status"><span class="spinner-border spinner-border-sm me-2"></span>Loading report...</p> }
+    else if (result != null)
+    {
+        <div class="row g-3 mb-4">@foreach (var item in result.Summaries) { <div class="col-sm-6 col-lg-3"><div class="card shadow-sm p-3 h-100"><div class="text-muted">@item.Label</div><div class="h4 mb-0">@item.Value</div></div></div> }</div>
+        @if (!string.IsNullOrWhiteSpace(result.Insight)) { <div class="alert alert-info py-2">@result.Insight</div> }
+        <div class="d-flex flex-wrap justify-content-between gap-2 mb-3"><div class="btn-group" role="group" aria-label="Report display"><button class="btn @(graph ? "btn-outline-primary" : "btn-primary")" @onclick="ShowTable">Table</button><button class="btn @(graph ? "btn-primary" : "btn-outline-primary")" @onclick="ShowGraph">Graph</button></div><div class="btn-group" role="group" aria-label="Download report"><a class="btn btn-sm btn-outline-secondary" href="@ExportUrl("pdf")">PDF Report</a><a class="btn btn-sm btn-outline-secondary" href="@ExportUrl("xlsx")">Excel Spreadsheet (.xlsx)</a></div></div>
+        @if (!graph) { <ReportTable Columns="result.Columns" Rows="result.Rows" /> @if (result.SecondaryTitle != null && result.SecondaryColumns != null && result.SecondaryRows != null) { <h3 class="h5 mt-4">@result.SecondaryTitle</h3><ReportTable Columns="result.SecondaryColumns" Rows="result.SecondaryRows" /> } }
+        else if (HasChartData) { <div class="card shadow-sm"><div class="card-body" style="height:440px"><canvas id="sharedReportChart"></canvas></div></div> }
+        else { <div class="alert alert-info">No applications match the selected filters.</div> }
+    }
+}
+@code {
+    [Parameter, EditorRequired] public ReportAudience Audience { get; set; }
+    private string? selectedKey; private ReportFilter filter = new(); private ReportResult? result; private bool loading; private bool graph; private bool chartPending; private string? error;
+    private bool UsesLicence => selectedKey != ReportKeys.LicenceTypes;
+    private bool UsesApplicationType => selectedKey is ReportKeys.Status or ReportKeys.Pending or ReportKeys.Outcomes or ReportKeys.LicenceTypes or ReportKeys.MunicipalityActivity;
+    private bool UsesStatus => selectedKey is ReportKeys.Pending or ReportKeys.LicenceTypes;
+    private bool UsesOutcome => selectedKey is ReportKeys.Outcomes or ReportKeys.ProcessingTime;
+    private bool UsesGrouping => selectedKey is ReportKeys.Processing or ReportKeys.Trends;
+    private bool DecisionDates => selectedKey is ReportKeys.ProcessingTime or ReportKeys.MunicipalityProcessing;
+    private bool MixedDates => selectedKey == ReportKeys.Processing;
+    private string FromLabel => DecisionDates ? "Decision From" : MixedDates ? "Period From" : "Submitted From";
+    private string ToLabel => DecisionDates ? "Decision To" : MixedDates ? "Period To" : "Submitted To";
+    private IEnumerable<string> StatusOptions => selectedKey == ReportKeys.Pending ? ReportingService.PendingStatuses : ReportingService.WorkflowStatuses;
+    private IEnumerable<string> OutcomeOptions => selectedKey == ReportKeys.ProcessingTime ? ReportingService.DecisionOutcomes : ReportingService.Outcomes;
+    private bool HasChartData => result != null && result.Chart.Labels.Count > 0 &&
+        (!result.Chart.WholeNumbers || result.Chart.Series.SelectMany(x => x.Values).Any(value => value > 0));
+    private async Task Open(string key) { selectedKey = key; filter = new(); graph = key is not (ReportKeys.Pending or ReportKeys.ProcessingTime); await Load(); }
+    private void Back() { selectedKey = null; result = null; error = null; graph = false; }
+    private async Task Apply() => await Load(); private async Task Reset() { filter = new(); await Load(); }
+    private async Task Load() { loading = true; error = null; try { result = await Reports.GenerateAsync((await Authentication.GetAuthenticationStateAsync()).User, Audience, selectedKey!, filter); chartPending = graph; } catch (ArgumentException ex) { error = ex.Message; } catch (UnauthorizedAccessException) { error = "You no longer have access to this reporting scope."; } finally { loading = false; } }
+    private void ShowTable() => graph = false; private void ShowGraph() { graph = true; chartPending = true; }
+    protected override async Task OnAfterRenderAsync(bool firstRender) { if (chartPending && graph && result != null) { chartPending = false; await JS.InvokeVoidAsync("reportCharts.render", "sharedReportChart", result.Chart); } }
+    private string ExportUrl(string format) { var q = new Dictionary<string, string?> { ["audience"] = Audience.ToString(), ["report"] = selectedKey, ["format"] = format, ["from"] = filter.From?.ToString("yyyy-MM-dd"), ["to"] = filter.To?.ToString("yyyy-MM-dd"), ["municipality"] = filter.Municipality, ["licenceType"] = filter.LicenceType, ["applicationType"] = filter.ApplicationType, ["status"] = filter.Status, ["outcome"] = filter.Outcome, ["grouping"] = filter.Grouping }; return "/reports/export?" + string.Join('&', q.Where(x => !string.IsNullOrWhiteSpace(x.Value)).Select(x => $"{Uri.EscapeDataString(x.Key)}={Uri.EscapeDataString(x.Value!)}")); }
+}

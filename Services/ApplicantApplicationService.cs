@@ -32,6 +32,8 @@ public class ApplicantApplicationService(IServiceScopeFactory scopes)
             await MunicipalityManagementService.RequireActiveRoutingAsync(db, municipality.RoutingName);
             application.Status = "Submitted";
             application.DateSubmitted = DateTime.Now;
+            application.DecisionDateUtc = null;
+            application.DecisionReason = null;
         }
         else
         {

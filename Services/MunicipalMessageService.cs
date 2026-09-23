@@ -21,7 +21,15 @@ public class MunicipalMessageService(ApplicationDbContext db, UserManager<Applic
             && a.Municipality == official.Municipality)
             ?? throw new UnauthorizedAccessException();
 
+        var previousStatus = application.Status;
         application.Status = status;
+        if (status is "Licence Issued" or "Rejected" &&
+            (previousStatus != status || application.DecisionDateUtc == null))
+        {
+            application.DecisionDateUtc = DateTime.UtcNow;
+            if (status == "Rejected" && !string.IsNullOrWhiteSpace(content))
+                application.DecisionReason = content.Trim();
+        }
         if (!string.IsNullOrWhiteSpace(content))
         {
             reviewDb.MunicipalMessages.Add(new MunicipalMessage

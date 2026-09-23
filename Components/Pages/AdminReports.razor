@@ -1,49 +1,5 @@
 @page "/admin/reports"
 @attribute [Authorize(Roles = "DEDATAdmin")]
 @using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Components.Authorization
 @using BusinessLicensing_Practice.Services
-@inject AdminApplicationService Oversight
-@inject AuthenticationStateProvider Authentication
-
-<PageTitle>Province-wide Reports</PageTitle>
-<h1 class="fw-bold">Province-wide Reports</h1>
-<p class="text-muted">Application totals across all municipalities. Inactive municipalities retain their historical reporting.</p>
-<a class="btn btn-outline-primary mb-4" href="admin/reports">Refresh Reports</a>
-@if (report != null)
-{
-    <div class="row g-3 mb-4">
-        @foreach (var metric in new[] { new ApplicationCount("Total Applications", report.Total), new ApplicationCount("Submitted", Count("Submitted")), new ApplicationCount("Approved (Licence Issued)", Count("Licence Issued")), new ApplicationCount("Rejected", Count("Rejected")) })
-        {
-            <div class="col-sm-6 col-xl-3"><div class="card shadow-sm p-3 h-100"><h2 class="h6">@metric.Name</h2><p class="h2 text-primary mb-0">@metric.Count</p></div></div>
-        }
-    </div>
-    <div class="row g-4">
-        <div class="col-lg-6">@CountTable("Applications by Status", report.Statuses)</div>
-        <div class="col-lg-6"><section class="card shadow-sm"><div class="card-header"><h2 class="h5 mb-0">Applications by Municipality</h2></div>
-            <div class="table-responsive"><table class="table mb-0"><thead><tr><th>Municipality</th><th>Participation</th><th>Applications</th></tr></thead>
-                <tbody>@foreach (var municipality in report.Municipalities)
-                {
-                    <tr><td>@municipality.Name</td><td>@(municipality.IsActive == true ? "Active" : municipality.IsActive == false ? "Inactive" : "Historical / unassigned")</td><td>@municipality.Count</td></tr>
-                }</tbody>
-            </table></div>
-        </section></div>
-        <div class="col-lg-6">@CountTable("Applications by Licence Type", report.LicenceTypes)</div>
-        <div class="col-lg-6">@CountTable("Applications by Application Type", report.ApplicationTypes)</div>
-    </div>
-}
-@code {
-    private AdminApplicationReport? report;
-    protected override async Task OnInitializedAsync() => report = await Oversight.ReportAsync((await Authentication.GetAuthenticationStateAsync()).User);
-    private int Count(string status) => report!.Statuses.FirstOrDefault(s => s.Name == status)?.Count ?? 0;
-    private RenderFragment CountTable(string title, List<ApplicationCount> counts) => @<section class="card shadow-sm">
-        <div class="card-header"><h2 class="h5 mb-0">@title</h2></div>
-        @if (counts.Count == 0) { <p class="p-3 mb-0">No applications yet.</p> }
-        else
-        {
-            <div class="table-responsive"><table class="table mb-0"><thead><tr><th>Category</th><th>Applications</th></tr></thead><tbody>
-                @foreach (var item in counts) { <tr><td>@item.Name</td><td>@item.Count</td></tr> }
-            </tbody></table></div>
-        }
-    </section>;
-}
+<ReportingDashboard Audience="ReportAudience.DedatAdmin" />

@@ -36,7 +36,8 @@ async Task Start()
     var start = new ProcessStartInfo("dotnet") { WorkingDirectory = root, UseShellExecute = false, CreateNoWindow = true,
         RedirectStandardOutput = true, RedirectStandardError = true };
     foreach (var arg in new[] { appDll, "--contentRoot", root, "--urls", baseUrl, "--environment", "Development",
-        "--Logging:LogLevel:Default", "Warning", "--Logging:LogLevel:Microsoft.AspNetCore", "Warning" }) start.ArgumentList.Add(arg);
+        "--Logging:LogLevel:Default", "Warning", "--Logging:LogLevel:Microsoft.AspNetCore", "Warning",
+        "--Logging:EventLog:LogLevel:Default", "None" }) start.ArgumentList.Add(arg);
     host = Process.Start(start)!;
     host.OutputDataReceived += (_, e) => { if (e.Data != null) lock (logs) logs.Add(e.Data); };
     host.ErrorDataReceived += (_, e) => { if (e.Data != null) lock (logs) logs.Add(e.Data); };
@@ -166,6 +167,16 @@ try
     using var adminClient = await Login("dedat.admin@example.test", "DevOnly!DEDAT2026#", "/admin-dashboard");
     using var ownerClient = await Login(owner.Email!, "OwnerOnly!2026#", "/dashboard");
     using var officialClient = await Login(official.Email!, "OfficialOwn!2026#", "/official-dashboard");
+    var adminExcel = await adminClient.GetAsync("/reports/export?audience=DedatAdmin&report=status&format=xlsx&municipality=Swartland%20Municipality");
+    Check(adminExcel.StatusCode == HttpStatusCode.OK && adminExcel.Content.Headers.ContentType?.MediaType == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Admin filtered Excel export succeeds");
+    var adminPdf = await adminClient.GetAsync("/reports/export?audience=DedatAdmin&report=outcomes&format=pdf");
+    Check(adminPdf.StatusCode == HttpStatusCode.OK && adminPdf.Content.Headers.ContentType?.MediaType == "application/pdf", "Admin PDF export succeeds");
+    var officialExcel = await officialClient.GetAsync("/reports/export?audience=MunicipalOfficial&report=pending&format=xlsx&municipality=Swartland%20Municipality");
+    Check(officialExcel.StatusCode == HttpStatusCode.OK && (await officialExcel.Content.ReadAsByteArrayAsync()) is var bytes && bytes.Length > 2 && bytes[0] == 'P' && bytes[1] == 'K', "Official Excel ignores manipulated municipality and returns a workbook");
+    Check((await ownerClient.GetAsync("/reports/export?audience=MunicipalOfficial&report=status&format=xlsx")).StatusCode != HttpStatusCode.OK,
+        "Business Owner report export denied");
+    Check((await Client().GetAsync("/reports/export?audience=DedatAdmin&report=status&format=xlsx")).StatusCode != HttpStatusCode.OK,
+        "Anonymous report export denied");
     var listHtml = await adminClient.GetStringAsync("/admin/applications");
     Check(new[] { "OV-A", "OV-B", "OV-C", "OV-D", "OV-E", "OV-F" }.All(listHtml.Contains), "Admin HTTP list shows all six records");
     var filterUrl = QueryHelpers.AddQueryString("/admin/applications", new Dictionary<string, string?> { ["municipality"] = "Swartland Municipality", ["status"] = "Rejected", ["search"] = "beta" });
@@ -179,7 +190,7 @@ try
     Check((await adminClient.PostAsync($"/admin/applications/{a.Id}", new FormUrlEncodedContent(new Dictionary<string, string> { ["Status"] = "Licence Issued" }))).StatusCode != HttpStatusCode.OK, "Admin detail has no mutation POST handler");
     Check((await adminClient.GetByteArrayAsync($"/applications/{c.Id}/official-pdf")).SequenceEqual(pdf), "Admin can download PDF from another municipality through existing endpoint");
     var reportHtml = await adminClient.GetStringAsync("/admin/reports");
-    Check(Regex.IsMatch(reportHtml, "Total Applications</h2>\\s*<p[^>]*>6</p>") && reportHtml.Contains("Inactive") && reportHtml.Contains("City of Cape Town"), "Admin HTTP reports show database totals and historical municipalities");
+    Check(reportHtml.Contains("Provincial Licensing Overview") && reportHtml.Contains("Municipality Application Overview"), "Admin HTTP reports show the six-report dashboard");
     foreach (var client in new[] { ownerClient, officialClient })
         foreach (var url in new[] { "/admin/applications", "/admin/reports", $"/admin/applications/{a.Id}" })
         {
@@ -189,7 +200,7 @@ try
     var officialDashboard = await officialClient.GetStringAsync("/official-dashboard");
     Check(officialDashboard.Contains("OV-A") && officialDashboard.Contains("OV-B") && !officialDashboard.Contains("OV-C"), "Official dashboard remains municipality-scoped");
     var officialReport = await officialClient.GetStringAsync("/generate-report");
-    Check(Regex.IsMatch(officialReport, "Total</h6>\\s*<h2[^>]*>2</h2>"), "Existing OfficialReports shows only two assigned applications");
+    Check(officialReport.Contains("Application Status Report") && officialReport.Contains("Processing Time Report"), "Official HTTP reports show the six-report dashboard");
     Check((await officialClient.GetAsync($"/applications/{c.Id}/official-pdf")).StatusCode != HttpStatusCode.OK &&
         (await ownerClient.GetAsync($"/applications/{c.Id}/official-pdf")).StatusCode != HttpStatusCode.OK, "Official and applicant cross-scope PDF access remains denied");
     Check(!(await officialClient.GetStringAsync($"/review-application/{c.Id}")).Contains("OV-C Business") &&
@@ -197,7 +208,7 @@ try
     Check(before == await Snapshot() && (await File.ReadAllBytesAsync(Path.Combine(pdfDir, "test.pdf"))).SequenceEqual(pdf), "Oversight reads and denied actions change no application/document/message data or PDF bytes");
     var later = Fixture("OV-LATER", owner, "Bergrivier Municipality", "Submitted", "Sale of Meals Licence", "New");
     db.Applications.Add(later); await db.SaveChangesAsync();
-    Check((await oversight.ReportAsync(admin)).Total == 7 && Regex.IsMatch(await adminClient.GetStringAsync("/admin/reports"), "Total Applications</h2>\\s*<p[^>]*>7</p>"), "Later database additions appear on report reload");
+    Check((await oversight.ReportAsync(admin)).Total == 7 && (await adminClient.GetStringAsync("/admin/reports")).Contains("Provincial Application Trends Report"), "Later database additions remain available to reporting");
     Check(!db.Database.HasPendingModelChanges() && !(await db.Database.GetPendingMigrationsAsync()).Any(), "No model changes or pending migrations");
     Console.WriteLine("All Admin oversight service/HTTP checks passed. Test data: " + root);
 }

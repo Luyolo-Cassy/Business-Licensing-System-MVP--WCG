@@ -40,7 +40,7 @@ await using (var provider = CreateProvider())
 {
     await using var scope = provider.CreateAsyncScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await db.GetService<IMigrator>().MigrateAsync("20260909105035_RenamePlaceOfBusinessAddress");
+    await db.Database.MigrateAsync();
     var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
     var roles = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     foreach (var role in new[] { "BusinessOwner", "MunicipalOfficial" })
@@ -63,7 +63,6 @@ await using (var provider = CreateProvider())
     await db.SaveChangesAsync();
     applicationId = application.Id;
     otherApplicationId = other.Id;
-    await db.Database.MigrateAsync();
     Check(!db.Database.HasPendingModelChanges(), "Current model matches migrations; no migration required");
     Check(await db.Applications.CountAsync() == 2, "Migration preserves existing applications");
     var service = scope.ServiceProvider.GetRequiredService<MunicipalMessageService>();

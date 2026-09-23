@@ -1,96 +1,14 @@
 
 
-window.drawStatusChart = (submitted, underReview, approved, rejected, withdrawn) => {
-
-    const ctx = document.getElementById("statusChart");
-
-    new Chart(ctx, {
-        type: "pie",
-        data: {
-            labels: [
-                "Submitted",
-                "Under Review",
-                "Approved",
-                "Rejected",
-                "Withdrawn"
-            ],
-            datasets: [{
-                data: [
-                    submitted,
-                    underReview,
-                    approved,
-                    rejected,
-                    withdrawn
-                ],
-                backgroundColor: [
-                    "#6c757d",
-                    "#0dcaf0",
-                    "#198754",
-                    "#dc3545",
-                    "#212529"
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: "bottom"
-                }
-            }
-        }
-    });
-
-    
-
-};
-
-window.drawMonthlyChart = (labels, values) => {
-
-    const ctx = document.getElementById("monthlyChart");
-
-    new Chart(ctx, {
-        type: "bar",
-        data: {
-            labels: labels,
-            datasets: [{
-                label: "Applications",
-                data: values,
-                backgroundColor: "#0d6efd"
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-
-};
-
-window.drawLicenceChart = (labels, values) => {
-
-    const ctx = document.getElementById("licenceChart");
-
-    new Chart(ctx, {
-        type: "pie",
-        data: {
-            labels: labels,
-            datasets: [{
-                data: values
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: "bottom"
-                }
-            }
-        }
-    });
-
-};
+window.reportCharts = (() => {
+    const charts = new Map();
+    const colors = ["#005a8b", "#2f9e44", "#f59f00", "#c92a2a", "#7048e8", "#0c8599", "#495057"];
+    function render(id, model) {
+        const canvas = document.getElementById(id); if (!canvas || !model) return; charts.get(id)?.destroy();
+        const datasets = model.series.map((s, i) => ({ label: s.name, data: s.values,
+            backgroundColor: model.type === "line" ? undefined : (model.type === "doughnut" || model.type === "pie" ? s.values.map((_, j) => colors[j % colors.length]) : colors[i % colors.length]),
+            borderColor: colors[i % colors.length], borderWidth: 2, tension: .2 }));
+        charts.set(id, new Chart(canvas, { type: model.type, data: { labels: model.labels, datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } }, scales: model.type === "doughnut" || model.type === "pie" ? {} : { x: { stacked: model.stacked }, y: { stacked: model.stacked, beginAtZero: true, title: { display: true, text: model.wholeNumbers ? "Applications" : "Days" }, ticks: model.wholeNumbers ? { precision: 0, stepSize: 1 } : {} } } } }));
+    }
+    return { render };
+})();

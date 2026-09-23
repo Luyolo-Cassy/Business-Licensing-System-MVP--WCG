@@ -1,0 +1,6 @@
+@using BusinessLicensing_Practice.Services
+<div class="card shadow-sm table-responsive"><table class="table table-striped align-middle mb-0"><thead><tr>@foreach (var column in Columns) { <th>@column.Heading</th> }</tr></thead><tbody>
+@if (Rows.Count == 0) { <tr><td colspan="@Columns.Count" class="text-center text-muted py-4">No results match the selected filters.</td></tr> }
+else { @foreach (var row in Rows) { <tr>@foreach (var column in Columns) { <td>@row.Values.GetValueOrDefault(column.Key, "N/A")</td> }</tr> } }
+</tbody></table></div>
+@code { [Parameter, EditorRequired] public IReadOnlyList<ReportColumn> Columns { get; set; } = []; [Parameter, EditorRequired] public IReadOnlyList<ReportRow> Rows { get; set; } = []; }

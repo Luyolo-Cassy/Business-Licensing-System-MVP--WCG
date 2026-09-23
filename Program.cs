@@ -53,6 +53,8 @@ builder.Services.AddScoped<MunicipalMessageService>();
 builder.Services.AddScoped<MunicipalityManagementService>();
 builder.Services.AddScoped<OfficialManagementService>();
 builder.Services.AddScoped<AdminApplicationService>();
+builder.Services.AddScoped<ReportingService>();
+builder.Services.AddSingleton<ReportExportService>();
 builder.Services.AddScoped<ApplicantApplicationService>();
 builder.Services.AddScoped<AiSettingsService>();
 builder.Services.AddScoped<AiDocumentValidationPolicy>();
@@ -146,6 +148,24 @@ app.MapGet("/applications/{id:int}/official-pdf", async (
     }
 
     return Results.File(fullPath, "application/pdf", application.ApplicationFormFileName);
+}).RequireAuthorization();
+
+app.MapGet("/reports/export", async (HttpContext context, ClaimsPrincipal principal, ReportingService reports, ReportExportService exports) =>
+{
+    context.Response.Headers.CacheControl = "private, no-store";
+    var query = context.Request.Query;
+    if (!Enum.TryParse<ReportAudience>(query["audience"], out var audience) || string.IsNullOrWhiteSpace(query["report"])) return Results.BadRequest();
+    DateTime? ParseDate(string value) => DateTime.TryParseExact(value, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsed) ? parsed : null;
+    var filter = new ReportFilter { From = ParseDate(query["from"]!), To = ParseDate(query["to"]!), Municipality = query["municipality"], LicenceType = query["licenceType"], ApplicationType = query["applicationType"], Status = query["status"], Outcome = query["outcome"], Grouping = string.IsNullOrWhiteSpace(query["grouping"]) ? "Monthly" : query["grouping"]! };
+    try
+    {
+        var report = await reports.GenerateAsync(principal, audience, query["report"]!, filter); var now = DateTime.UtcNow;
+        if (string.Equals(query["format"], "xlsx", StringComparison.OrdinalIgnoreCase)) return Results.File(exports.Excel(report), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ReportExportService.FileName(report, "xlsx", now));
+        if (string.Equals(query["format"], "pdf", StringComparison.OrdinalIgnoreCase)) return Results.File(exports.Pdf(report, filter, now), "application/pdf", ReportExportService.FileName(report, "pdf", now));
+        return Results.BadRequest();
+    }
+    catch (UnauthorizedAccessException) { return Results.Forbid(); }
+    catch (ArgumentException error) { return Results.BadRequest(error.Message); }
 }).RequireAuthorization();
 
 using (var scope = app.Services.CreateScope())
