@@ -24,6 +24,8 @@
 @inject MunicipalRoutingService RoutingService
 @inject AiSettingsService AiSettings
 @inject AiDocumentValidationPolicy AiValidation
+@inject IApplicationNotificationService Notifications
+@inject ILogger<NewApplication> Logger
 @inject IJSRuntime JS
 
 <div id="application-wizard-top"><h3 class="fw-bold mb-4">New Business Licence Application</h3></div>
@@ -371,6 +373,13 @@
             application.ApplicationFormFileName = $"{application.ApplicationNumber}-Official-Application.pdf";
             application.ApplicationFormFilePath = await FileService.SaveGeneratedPdfAsync(application.Id, application.ApplicationFormFileName, PdfService.Generate(application));
             await Db.SaveChangesAsync(); await transaction.CommitAsync();
+            try { await Notifications.NotifySubmissionAsync(application.Id); }
+            catch (Exception error)
+            {
+                Logger.LogError(error,
+                    "Post-commit submission notification failed. ApplicationId={ApplicationId} ApplicationNumber={ApplicationNumber} Municipality={Municipality} Outcome=Failed ExceptionType={ExceptionType}",
+                    application.Id, application.ApplicationNumber, application.Municipality, error.GetType().Name);
+            }
             MessageIsError = false; Message = "Application submitted successfully. Your official PDF has been generated."; Nav.NavigateTo($"/tracking/{application.Id}");
         }
         catch (Exception) { SetError("The application could not be submitted. No database changes were saved. Please try again."); }

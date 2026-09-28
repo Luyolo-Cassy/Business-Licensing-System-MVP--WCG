@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using BusinessLicensing_Practice.Components.Account;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using BusinessLicensing_Practice.Services;
+using BusinessLicensing_Practice.Services.Email;
 using System.Security.Claims;
 using PdfSharp.Fonts;
 
@@ -46,6 +47,9 @@ builder.Services.Configure<SecurityStampValidatorOptions>(options => options.Val
 
 // Add services to the container.
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
+builder.Services.AddTransient<IEmailService, SmtpEmailService>();
+builder.Services.AddScoped<IApplicationNotificationService, ApplicationNotificationService>();
 builder.Services.AddSingleton<ApplicationFileService>();
 builder.Services.AddSingleton<ProtectedUploadService>();
 builder.Services.AddSingleton<ApplicationPdfService>();

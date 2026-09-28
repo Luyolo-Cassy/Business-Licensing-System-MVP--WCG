@@ -36,6 +36,7 @@ async Task Start()
     var start = new ProcessStartInfo("dotnet") { WorkingDirectory = root, UseShellExecute = false, CreateNoWindow = true,
         RedirectStandardOutput = true, RedirectStandardError = true };
     foreach (var arg in new[] { appDll, "--contentRoot", root, "--urls", baseUrl, "--environment", "Development",
+        "--Email:Enabled", "false",
         "--Logging:LogLevel:Default", "Warning", "--Logging:LogLevel:Microsoft.AspNetCore", "Warning",
         "--Logging:EventLog:LogLevel:Default", "None" }) start.ArgumentList.Add(arg);
     host = Process.Start(start)!;

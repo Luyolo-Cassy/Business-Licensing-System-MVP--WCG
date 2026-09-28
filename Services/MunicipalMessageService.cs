@@ -6,7 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BusinessLicensing_Practice.Services;
 
-public class MunicipalMessageService(ApplicationDbContext db, UserManager<ApplicationUser> users, IServiceScopeFactory scopes)
+public class MunicipalMessageService(ApplicationDbContext db, UserManager<ApplicationUser> users,
+    IServiceScopeFactory scopes, IApplicationNotificationService? notifications = null,
+    ILogger<MunicipalMessageService>? logger = null)
 {
     public async Task SaveReviewAsync(ClaimsPrincipal principal, int applicationId, string status, string content)
     {
@@ -30,12 +32,13 @@ public class MunicipalMessageService(ApplicationDbContext db, UserManager<Applic
             if (status == "Rejected" && !string.IsNullOrWhiteSpace(content))
                 application.DecisionReason = content.Trim();
         }
-        if (!string.IsNullOrWhiteSpace(content))
+        var newMessage = string.IsNullOrWhiteSpace(content) ? null : content;
+        if (newMessage != null)
         {
             reviewDb.MunicipalMessages.Add(new MunicipalMessage
             {
                 ApplicationId = application.Id,
-                Content = content,
+                Content = newMessage,
                 SenderId = official.Id,
                 SenderName = official.FullName,
                 CreatedAtUtc = DateTime.UtcNow
@@ -53,6 +56,17 @@ public class MunicipalMessageService(ApplicationDbContext db, UserManager<Applic
                          .Where(e => e.State == EntityState.Added).ToList())
                 entry.State = EntityState.Detached;
             throw;
+        }
+        var statusChanged = !string.Equals(previousStatus, application.Status, StringComparison.Ordinal);
+        if (notifications != null && (statusChanged || newMessage != null))
+        {
+            try { await notifications.NotifyReviewAsync(application.Id, previousStatus, application.Status, newMessage); }
+            catch (Exception error)
+            {
+                logger?.LogError(error,
+                    "Post-commit application notification failed. ApplicationId={ApplicationId} PreviousStatus={PreviousStatus} NewStatus={NewStatus} Outcome=Failed ExceptionType={ExceptionType}",
+                    application.Id, previousStatus, application.Status, error.GetType().Name);
+            }
         }
     }
 
