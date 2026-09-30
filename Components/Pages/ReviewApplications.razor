@@ -123,9 +123,9 @@ else
                 </div>
 
                 <h5>Licence-Specific Information</h5>
-                @foreach (var question in LicenceApplicationCatalog.Find(application.LicenceType)?.Questions ?? [])
+                @foreach (var answer in ApplicationPdfService.GetLicenceSpecificRows(application.LicenceType, application.Details.LicenceSpecificDetailsJson))
                 {
-                    <p><strong>@question.Label:</strong> @LicenceAnswers.GetValueOrDefault(question.Key, "Not provided")</p>
+                    <p><strong>@answer.Label:</strong> @(string.IsNullOrWhiteSpace(answer.Value) ? "Not provided" : answer.Value)</p>
                 }
             }
 
@@ -309,7 +309,6 @@ else
     private string? activeReviewAction;
     private string ReviewStatus => activeReviewAction switch { "approve" => "Approving application...", "reject" => "Rejecting application...", _ => "Saving review..." };
     private string? saveError;
-    private Dictionary<string, string> LicenceAnswers = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -323,7 +322,6 @@ else
             .Include(a => a.Details)
             .FirstOrDefaultAsync(a => a.Id == Id && a.Municipality == official.Municipality);
 
-        LicenceAnswers = ApplicationPdfService.DeserializeAnswers(application?.Details?.LicenceSpecificDetailsJson);
     }
 
     private async Task SaveReview(string action)

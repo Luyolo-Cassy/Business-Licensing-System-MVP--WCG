@@ -10,12 +10,6 @@ namespace BusinessLicensing_Practice.Services
             Document("Owner ID Document", "A clear copy of the owner's identification document.")
         ];
 
-        private static readonly IReadOnlyList<DocumentRequirement> FoodDocuments =
-        [
-            .. StandardDocuments,
-            Document("Certificate of Acceptability (CoA)", "Proof of application for a Certificate of Acceptability.")
-        ];
-
         public static readonly IReadOnlyList<LicenceDefinition> Licences =
         [
             new("sale-of-meals", "Sale of Meals Licence", "Prepare and sell meals for immediate consumption.", "storefront",
@@ -23,13 +17,13 @@ namespace BusinessLicensing_Practice.Services
                 Text("foodDescription", "Description of food or meals sold"),
                 Choice("foodHandling", "How will food be handled?", "Pre-packed", "Packed on premises", "Processed", "Prepared on premises"),
                 Text("tradingInformation", "Trading arrangements and service method")
-            ], FoodDocuments),
+            ], StandardDocuments),
             new("sale-of-perishable-foodstuffs", "Sale of Perishable Foodstuffs Licence", "Sell food requiring refrigeration or controlled storage.", "basket",
             [
                 Text("foodDescription", "Description of perishable foodstuffs sold"),
                 Choice("foodHandling", "How will food be handled?", "Pre-packed", "Packed on premises", "Processed", "Prepared on premises"),
                 Text("coldStorage", "Cold-storage and temperature-control arrangements")
-            ], FoodDocuments),
+            ], StandardDocuments),
             new("health-facility", "Health Facility Licence", "Operate facilities such as saunas, massage establishments or Turkish baths.", "first-aid",
             [
                 YesNo("firstAidKit", "Is a first-aid kit available?"),
@@ -51,14 +45,12 @@ namespace BusinessLicensing_Practice.Services
             [
                 Text("activityType", "Type of gaming or amusement activity"),
                 Text("machineCount", "Number and type of machines, games or tables"),
-                Text("supervision", "Supervision and access-control arrangements"),
-                Text("operatingTimes", "Operating times")
+                Text("supervision", "Supervision and access-control arrangements")
             ], StandardDocuments),
             new("adult-premises-escort-services", "Adult Premises / Escort Services Licence", "Operate regulated adult entertainment or escort service businesses.", "prohibit",
             [
                 Choice("premisesType", "Type of regulated activity", "Adult premises", "Escort service", "Both"),
                 Text("managementControls", "Management and access-control measures"),
-                Text("operatingTimes", "Operating times"),
                 Text("safetyMeasures", "Safety and security measures")
             ], StandardDocuments),
             new("hawker-street-trading", "Hawker / Street Trading Licence", "Operate a street trading or mobile food vending business.", "storefront",
@@ -66,9 +58,8 @@ namespace BusinessLicensing_Practice.Services
                 Text("goodsSold", "Meals or perishable foodstuffs to be sold"),
                 Text("tradingLocation", "Trading location or route"),
                 Text("foodStorage", "Food storage and transport arrangements"),
-                Text("wasteDisposal", "Waste and wastewater disposal arrangements"),
-                Text("tradingTimes", "Trading days and hours")
-            ], FoodDocuments)
+                Text("wasteDisposal", "Waste and wastewater disposal arrangements")
+            ], StandardDocuments)
         ];
 
         public static LicenceDefinition? Find(string licenceName) =>

@@ -64,7 +64,7 @@ else
             @Field("Entertainment Activity", application.EntertainmentActivityType)
             @foreach (var answer in answers)
             {
-                @Field(LicenceApplicationCatalog.Find(application.LicenceType)?.Questions.FirstOrDefault(q => q.Key == answer.Key)?.Label ?? answer.Key, answer.Value)
+                @Field(ApplicationPdfService.GetLicenceSpecificLabel(application.LicenceType, answer.Key), answer.Value)
             }
         </dl></div>
     </section>

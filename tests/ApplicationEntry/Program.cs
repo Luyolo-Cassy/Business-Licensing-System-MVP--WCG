@@ -23,6 +23,33 @@ Check(!ApplicationEntry.ValidRegistration("2024-123456-07") && !ApplicationEntry
 Check(ApplicationEntry.ValidTaxNumber("0123456789"), "tax preserves leading zero");
 Check(!ApplicationEntry.ValidTaxNumber("123456789") && !ApplicationEntry.ValidTaxNumber("012345678A"), "tax rejects invalid values");
 
+foreach (var email in new[] { "name@example.com", "name@example.co.za", "accounts+west@example.com" })
+    Check(ApplicationEntry.ValidEmail(email), $"email accepts {email}");
+foreach (var email in new[] { "Cabral.ale", "name@", "example.com", "", "   ", new string('a', ApplicationEntry.MaxEmailLength) + "@example.com" })
+    Check(!ApplicationEntry.ValidEmail(email), $"email rejects invalid value with length {email.Length}");
+
+foreach (var telephone in new[] { "021 123 4567", "082 123 4567", "+27 82 123 4567", "(021) 123 4567" })
+    Check(ApplicationEntry.ValidTelephone(telephone), $"telephone accepts {telephone}");
+foreach (var telephone in new[] { "08184", "phone", "++27 82 123 4567", "082 ABC 4567", "123456", "1234567890123456" })
+    Check(!ApplicationEntry.ValidTelephone(telephone), $"telephone rejects {telephone}");
+
+foreach (var postalCode in new[] { "8001", "7708", "7280" })
+    Check(ApplicationEntry.ValidPostalCode(postalCode), $"postal code accepts {postalCode}");
+foreach (var postalCode in new[] { "80A1", "123", "12345", "", "   " })
+    Check(!ApplicationEntry.ValidPostalCode(postalCode), $"postal code rejects invalid value '{postalCode}'");
+
+foreach (var applicationType in ApplicationEntry.ApplicationTypes)
+    Check(ApplicationEntry.ValidApplicationType(applicationType), $"application type accepts {applicationType}");
+Check(!ApplicationEntry.ValidApplicationType("") && !ApplicationEntry.ValidApplicationType("Other") && !ApplicationEntry.ValidApplicationType(" Renewal "),
+    "application type rejects blank, unsupported and altered values");
+
+Check(ApplicationEntry.ValidLicenceAnswer("Yes", true, ["Yes", "No"]), "Yes/No accepts configured answer");
+Check(!ApplicationEntry.ValidLicenceAnswer("Banana", true, ["Yes", "No"]), "Yes/No rejects arbitrary answer");
+Check(ApplicationEntry.ValidLicenceAnswer("Prepared on premises", true, ["Pre-packed", "Prepared on premises"]), "choice accepts configured answer");
+Check(!ApplicationEntry.ValidLicenceAnswer("Elsewhere", true, ["Pre-packed", "Prepared on premises"]), "choice rejects arbitrary answer");
+Check(ApplicationEntry.ValidLicenceAnswer("Flexible free text: 123 / details", true, []), "free-text answer remains flexible");
+Check(!ApplicationEntry.ValidLicenceAnswer("   ", true, []), "required blank answer remains invalid");
+
 var days = ApplicationEntry.Days.Select(name => new TradingDay { Day = name }).ToList();
 Check(ApplicationEntry.ValidateTradingHours(days) != null, "each day needs an explicit status");
 foreach (var day in days) day.IsOpen = false;
@@ -62,15 +89,33 @@ Check(ApplicationEntry.ValidatePostalAddress(false, "", "Central", "Cape Town", 
 Check(ApplicationEntry.ValidatePostalAddress(true, "", "", "", "") == null, "same as business needs no duplicate fields");
 
 var standardDocumentNames = new[] { "Certificate of Incorporation", "Proof of Address", "Tax Clearance Certificate", "Owner ID Document" };
-var foodDocumentNames = standardDocumentNames.Append("Certificate of Acceptability (CoA)").ToArray();
 foreach (var licence in LicenceApplicationCatalog.Licences)
 {
-    var expected = licence.Id is "sale-of-meals" or "sale-of-perishable-foodstuffs" or "hawker-street-trading"
-        ? foodDocumentNames
-        : standardDocumentNames;
-    Check(licence.Documents.Select(document => document.DocumentType).SequenceEqual(expected), $"{licence.Name} has the expected supporting documents");
+    Check(licence.Documents.Select(document => document.DocumentType).SequenceEqual(standardDocumentNames), $"{licence.Name} has the expected supporting documents without CoA");
     Check(licence.Documents.All(document => document.Required), $"{licence.Name} supporting documents remain required");
 }
+
+var gaming = LicenceApplicationCatalog.Licences.Single(licence => licence.Id == "gaming-amusement");
+var adult = LicenceApplicationCatalog.Licences.Single(licence => licence.Id == "adult-premises-escort-services");
+var hawker = LicenceApplicationCatalog.Licences.Single(licence => licence.Id == "hawker-street-trading");
+var entertainment = LicenceApplicationCatalog.Licences.Single(licence => licence.Id == "entertainment-venue");
+Check(gaming.Questions.All(question => question.Key != "operatingTimes"), "gaming no longer asks for duplicate operating times");
+Check(adult.Questions.All(question => question.Key != "operatingTimes"), "adult premises no longer asks for duplicate operating times");
+Check(hawker.Questions.All(question => question.Key != "tradingTimes"), "hawker no longer asks for duplicate trading days and hours");
+Check(entertainment.Questions.Any(question => question.Key == "performanceTimes" && question.Label == "Performance and entertainment times"),
+    "entertainment performance times remains a current question");
+
+var historicalGamingRows = ApplicationPdfService.GetLicenceSpecificRows(
+    gaming.Name, "{\"activityType\":\"Arcade\",\"operatingTimes\":\"Daily 09:00 to 18:00\"}");
+var historicalHawkerRows = ApplicationPdfService.GetLicenceSpecificRows(
+    hawker.Name, "{\"goodsSold\":\"Fruit\",\"tradingTimes\":\"Weekdays 08:00 to 16:00\"}");
+Check(historicalGamingRows.Any(row => row.Label == "Operating times" && row.Value == "Daily 09:00 to 18:00"),
+    "historical operatingTimes remains readable with its label");
+Check(historicalHawkerRows.Any(row => row.Label == "Trading days and hours" && row.Value == "Weekdays 08:00 to 16:00"),
+    "historical tradingTimes remains readable with its label");
+Check(ApplicationPdfService.GetLicenceSpecificLabel(gaming.Name, "operatingTimes") == "Operating times" &&
+    ApplicationPdfService.GetLicenceSpecificLabel(hawker.Name, "tradingTimes") == "Trading days and hours",
+    "historical admin labels remain human-readable");
 
 var details = new ApplicationDetails
 {
@@ -146,6 +191,34 @@ try
         Check(pdfText.Contains("Ada Lovelace") && pdfText.Contains("1 Main Road") && pdfText.Contains("PO Box 12"), "PDF includes applicant and structured addresses");
         Check(pdfText.Contains("2024/123456/07") && pdfText.Contains("0123456789") && pdfText.Contains("Monday"), "PDF includes registration, tax and daily trading hours");
         Check(pdfText.Contains("legacy-coa.pdf") && pdfText.Contains("legacy-soundproofing.pdf"), "PDF includes legacy supporting documents");
+
+        saved.LicenceType = gaming.Name;
+        saved.Details.LicenceSpecificDetailsJson = "{\"activityType\":\"Arcade\",\"operatingTimes\":\"Daily 09:00 to 18:00\"}";
+        using var historicalPdf = PdfReader.Open(new MemoryStream(new ApplicationPdfService().Generate(saved)), PdfDocumentOpenMode.Import);
+        var historicalPdfText = string.Concat(historicalPdf.Pages.Cast<PdfSharp.Pdf.PdfPage>()
+            .SelectMany(page => PdfStrings(ContentReader.ReadContent(page))));
+        Check(historicalPdfText.Contains("Operating times") && historicalPdfText.Contains("Daily 09:00 to 18:00"),
+            "regenerated historical PDF preserves operatingTimes");
+
+        saved.Details.LicenceSpecificDetailsJson = "{\"activityType\":\"Arcade\"}";
+        using var newPdf = PdfReader.Open(new MemoryStream(new ApplicationPdfService().Generate(saved)), PdfDocumentOpenMode.Import);
+        var newPdfText = string.Concat(newPdf.Pages.Cast<PdfSharp.Pdf.PdfPage>()
+            .SelectMany(page => PdfStrings(ContentReader.ReadContent(page))));
+        Check(!newPdfText.Contains("Operating times"), "new PDF does not introduce duplicate operating times");
+
+        saved.LicenceType = hawker.Name;
+        saved.Details.LicenceSpecificDetailsJson = "{\"goodsSold\":\"Fruit\",\"tradingTimes\":\"Weekdays 08:00 to 16:00\"}";
+        using var historicalHawkerPdf = PdfReader.Open(new MemoryStream(new ApplicationPdfService().Generate(saved)), PdfDocumentOpenMode.Import);
+        var historicalHawkerPdfText = string.Concat(historicalHawkerPdf.Pages.Cast<PdfSharp.Pdf.PdfPage>()
+            .SelectMany(page => PdfStrings(ContentReader.ReadContent(page))));
+        Check(historicalHawkerPdfText.Contains("Trading days and hours") && historicalHawkerPdfText.Contains("Weekdays 08:00 to 16:00"),
+            "regenerated historical PDF preserves tradingTimes");
+
+        saved.Details.LicenceSpecificDetailsJson = "{\"goodsSold\":\"Fruit\"}";
+        using var newHawkerPdf = PdfReader.Open(new MemoryStream(new ApplicationPdfService().Generate(saved)), PdfDocumentOpenMode.Import);
+        var newHawkerPdfText = string.Concat(newHawkerPdf.Pages.Cast<PdfSharp.Pdf.PdfPage>()
+            .SelectMany(page => PdfStrings(ContentReader.ReadContent(page))));
+        Check(!newHawkerPdfText.Contains("Trading days and hours"), "new PDF does not introduce duplicate trading days and hours");
     }
 }
 finally

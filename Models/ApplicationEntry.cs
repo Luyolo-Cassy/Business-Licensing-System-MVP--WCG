@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Globalization;
+using System.ComponentModel.DataAnnotations;
 
 namespace BusinessLicensing_Practice.Models;
 
@@ -14,7 +15,10 @@ public sealed class TradingDay
 
 public static class ApplicationEntry
 {
+    public const int MaxEmailLength = 254;
+    public const int MaxTelephoneLength = 32;
     public static readonly string[] Days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    public static readonly string[] ApplicationTypes = ["New application", "Renewal", "Amendment"];
 
     public static string? ValidateName(string? firstName, string? lastName)
     {
@@ -38,6 +42,34 @@ public static class ApplicationEntry
 
     public static bool ValidTaxNumber(string? value) =>
         Regex.IsMatch(value?.Trim() ?? "", @"^[0-9]{10}$", RegexOptions.CultureInvariant);
+
+    public static bool ValidEmail(string? value)
+    {
+        var trimmed = value?.Trim() ?? "";
+        return trimmed.Length is > 0 and <= MaxEmailLength && new EmailAddressAttribute().IsValid(trimmed);
+    }
+
+    public static bool ValidTelephone(string? value)
+    {
+        var trimmed = value?.Trim() ?? "";
+        if (trimmed.Length is 0 or > MaxTelephoneLength ||
+            !Regex.IsMatch(trimmed, @"^\+?[0-9 ()-]+$", RegexOptions.CultureInvariant)) return false;
+        var digitCount = trimmed.Count(char.IsDigit);
+        return digitCount is >= 7 and <= 15;
+    }
+
+    public static bool ValidPostalCode(string? value) =>
+        Regex.IsMatch(value?.Trim() ?? "", @"^[0-9]{4}$", RegexOptions.CultureInvariant);
+
+    public static bool ValidApplicationType(string? value) =>
+        ApplicationTypes.Contains(value, StringComparer.Ordinal);
+
+    public static bool ValidLicenceAnswer(string? value, bool required, IReadOnlyList<string> options)
+    {
+        var trimmed = value?.Trim() ?? "";
+        if (trimmed.Length == 0) return !required;
+        return options.Count == 0 || options.Contains(trimmed, StringComparer.Ordinal);
+    }
 
     public static string? ValidateTradingHours(IReadOnlyList<TradingDay> days)
     {

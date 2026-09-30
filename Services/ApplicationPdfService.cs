@@ -7,6 +7,13 @@ namespace BusinessLicensing_Practice.Services
 {
     public class ApplicationPdfService
     {
+        private static readonly IReadOnlyDictionary<string, string> HistoricalQuestionLabels =
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["operatingTimes"] = "Operating times",
+                ["tradingTimes"] = "Trading days and hours"
+            };
+
         private static readonly XColor BrandBlue = XColor.FromArgb(0, 91, 150);
         private static readonly XColor LightBlue = XColor.FromArgb(229, 241, 248);
         private static readonly XColor TextGrey = XColor.FromArgb(70, 70, 70);
@@ -62,13 +69,8 @@ namespace BusinessLicensing_Practice.Services
             else renderer.AddRows([("Trading hours", tradingHours)]);
 
             renderer.AddSection("Section C - Licence-Specific Information");
-            var answers = DeserializeAnswers(application.Details?.LicenceSpecificDetailsJson);
-            var definition = LicenceApplicationCatalog.Find(application.LicenceType);
-            if (definition != null)
-            {
-                renderer.AddLicenceSpecificRows(definition.Questions.Select(question =>
-                    (question.Label, answers.GetValueOrDefault(question.Key))));
-            }
+            renderer.AddLicenceSpecificRows(GetLicenceSpecificRows(
+                application.LicenceType, application.Details?.LicenceSpecificDetailsJson));
 
             renderer.AddSection("Supporting Documents");
             renderer.AddRows(application.Documents.Select(documentItem =>
@@ -107,6 +109,29 @@ namespace BusinessLicensing_Practice.Services
                 return new Dictionary<string, string>();
             }
         }
+
+        public static IReadOnlyList<(string Label, string? Value)> GetLicenceSpecificRows(
+            string licenceType, string? json)
+        {
+            var answers = DeserializeAnswers(json);
+            var questions = LicenceApplicationCatalog.Find(licenceType)?.Questions ?? [];
+            var rows = questions.Select(question =>
+                (question.Label, (string?)answers.GetValueOrDefault(question.Key))).ToList();
+            var currentKeys = questions.Select(question => question.Key).ToHashSet(StringComparer.Ordinal);
+
+            foreach (var historical in HistoricalQuestionLabels)
+            {
+                if (!currentKeys.Contains(historical.Key) && answers.TryGetValue(historical.Key, out var value))
+                    rows.Add((historical.Value, value));
+            }
+
+            return rows;
+        }
+
+        public static string GetLicenceSpecificLabel(string licenceType, string key) =>
+            LicenceApplicationCatalog.Find(licenceType)?.Questions.FirstOrDefault(question => question.Key == key)?.Label
+            ?? HistoricalQuestionLabels.GetValueOrDefault(key)
+            ?? key;
 
         private sealed class PdfRenderer
         {
