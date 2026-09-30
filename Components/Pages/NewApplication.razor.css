@@ -657,6 +657,81 @@
     border: 0;
 }
 
+.wizard-progress-summary {
+    margin-bottom: 1rem;
+    color: var(--wcg-muted, #5f6b7a);
+}
+
+.wizard-progress-list {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.wizard-progress-step {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: .55rem;
+    padding: 0 .25rem;
+    color: #6b7482;
+    text-align: center;
+}
+
+.wizard-progress-step::before {
+    position: absolute;
+    top: 1rem;
+    right: 50%;
+    left: -50%;
+    z-index: 0;
+    height: 2px;
+    background: #d7dce5;
+    content: "";
+}
+
+.wizard-progress-step:first-child::before { display: none; }
+.wizard-progress-step.completed::before,
+.wizard-progress-step.current::before { background: var(--wcg-blue); }
+
+.wizard-progress-marker {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #aeb6c3;
+    border-radius: 50%;
+    background: #fff;
+    font-weight: 700;
+}
+
+.wizard-progress-step.completed .wizard-progress-marker {
+    border-color: #198754;
+    color: #fff;
+    background: #198754;
+}
+
+.wizard-progress-step.current .wizard-progress-marker {
+    border-color: var(--wcg-blue);
+    color: #fff;
+    background: var(--wcg-blue);
+}
+
+.wizard-progress-label {
+    max-width: 9rem;
+    font-size: .8rem;
+    line-height: 1.25;
+}
+
+.wizard-progress-step.completed .wizard-progress-label { color: #146c43; }
+.wizard-progress-step.current .wizard-progress-label { color: var(--wcg-blue); font-weight: 700; }
+
 .wizard-step-enter { animation: wizard-step-in 160ms ease-out; }
 @keyframes wizard-step-in { from { opacity: .65; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .wizard-step-enter { animation: none; } }
@@ -667,5 +742,22 @@
 .trading-hours-row input[type="text"] { width: 100%; min-width: 0; }
 .review-value { white-space: pre-line; }
 @media (max-width: 767.98px) {
+    .wizard-progress-list { display: block; }
+    .wizard-progress-step {
+        min-height: 3.25rem;
+        flex-direction: row;
+        gap: .75rem;
+        padding: 0 0 .75rem;
+        text-align: left;
+    }
+    .wizard-progress-step::before {
+        top: -1.25rem;
+        bottom: 2rem;
+        left: .9375rem;
+        width: 2px;
+        height: auto;
+    }
+    .wizard-progress-marker { flex: 0 0 2rem; }
+    .wizard-progress-label { max-width: none; font-size: .9rem; }
     .trading-hours-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem .75rem; }
 }

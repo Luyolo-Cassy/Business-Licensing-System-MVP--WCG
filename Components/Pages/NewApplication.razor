@@ -29,10 +29,21 @@
 @inject IJSRuntime JS
 
 <div id="application-wizard-top"><h3 class="fw-bold mb-4">New Business Licence Application</h3></div>
-<div class="progress mb-3" aria-label="Application progress">
-    <div class="progress-bar bg-success" role="progressbar" style="width:@((CurrentStep * 100) / TotalSteps)%" aria-valuenow="@CurrentStep" aria-valuemin="1" aria-valuemax="@TotalSteps">Step @CurrentStep of @TotalSteps</div>
-</div>
-<div class="mb-4"><span class="badge bg-primary">Step @CurrentStep of @TotalSteps</span><span class="ms-2 text-muted">@StepTitle</span></div>
+<nav class="wizard-progress mb-4" aria-label="Application progress">
+    <p class="wizard-progress-summary">Step @CurrentStep of @TotalSteps: <strong>@StepTitle</strong></p>
+    <ol class="wizard-progress-list">
+        @foreach (var step in WizardSteps)
+        {
+            var state = step.Number < CurrentStep ? "completed" : step.Number == CurrentStep ? "current" : "upcoming";
+            <li class="wizard-progress-step @state" aria-current="@(step.Number == CurrentStep ? "step" : null)">
+                <span class="wizard-progress-marker" aria-hidden="true">
+                    @if (step.Number < CurrentStep) { <PhosphorIcon Name="check" /> } else { @step.Number }
+                </span>
+                <span class="wizard-progress-label"><span class="visually-hidden">Step @step.Number of @TotalSteps. @ProgressStateLabel(state): </span>@step.Label</span>
+            </li>
+        }
+    </ol>
+</nav>
 
 @if (!string.IsNullOrWhiteSpace(Message)) { <div class="alert @(MessageIsError ? "alert-danger" : "alert-info") mb-3" role="@(MessageIsError ? "alert" : "status")" aria-live="polite">@Message</div> }
 <fieldset class="application-fields wizard-step-enter" @key="CurrentStep" disabled="@IsBusy" aria-busy="@IsBusy">
@@ -93,6 +104,7 @@
                 <div class="col-12 col-md-6">@FieldLabel("businessTelephone", "Business Telephone")<input id="businessTelephone" class="form-control" type="tel" maxlength="@ApplicationEntry.MaxTelephoneLength" @bind="BusinessTelephone" /></div>
                 <div class="col-12 col-md-6">@FieldLabel("businessEmail", "Business Email")<input id="businessEmail" class="form-control" type="email" maxlength="@ApplicationEntry.MaxEmailLength" @bind="BusinessEmail" /></div>
                 <div class="col-12"><div class="form-label fw-semibold">Trading Hours</div><p class="form-text mt-0">For Open days, enter 24-hour times as HH:mm (for example 08:00 and 17:00).</p><div class="trading-hours-list" id="tradingHours">@foreach (var day in TradingDays) { <div class="trading-hours-row" @key="day.Day"><strong>@day.Day</strong><select class="form-select" aria-label="@day.Day trading status" value="@(day.IsOpen == true ? "open" : day.IsOpen == false ? "closed" : "")" @onchange="e => SetDayStatus(day, e.Value?.ToString())"><option value="">Select status</option><option value="open">Open</option><option value="closed">Closed</option></select>@if (day.IsOpen == true) { <label>Opening Time <input class="form-control" type="text" placeholder="HH:mm" maxlength="5" autocomplete="off" @bind="day.OpeningTime" @bind:event="oninput" /></label><label>Closing Time <input class="form-control" type="text" placeholder="HH:mm" maxlength="5" autocomplete="off" @bind="day.ClosingTime" @bind:event="oninput" /></label> } else if (day.IsOpen == false) { <span class="text-muted">Closed</span> }</div> }</div></div>
+                <div class="col-12"><fieldset id="publicHolidayTrading" tabindex="-1"><legend class="form-label fw-semibold fs-6">Open on public holidays? <span class="text-danger">*</span></legend><div class="d-flex gap-4"><label><input type="radio" name="publicHolidayTrading" checked="@(OpenOnPublicHolidays == true)" @onchange="() => OpenOnPublicHolidays = true" /> Yes</label><label><input type="radio" name="publicHolidayTrading" checked="@(OpenOnPublicHolidays == false)" @onchange="() => OpenOnPublicHolidays = false" /> No</label></div></fieldset></div>
             </div>
         </div></div>
         <div class="card business-info-card mb-4"><div class="card-body">
@@ -143,7 +155,7 @@
         <div class="review-submit-header"><h4 id="review-heading" class="fw-bold mb-2">Review & Declaration</h4><p class="text-muted mb-0">Verify all information before making the declaration.</p></div>
         <div class="row g-4">
             <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Applicant</h5>@ReviewItem("Application Type", ApplicationType)@ReviewItem("Licence Type", LicenceType)@ReviewItem("Applicant Name", FullApplicantName)@ReviewItem("Address", FormattedApplicantAddress)@ReviewItem("Telephone", ApplicantTelephone)@ReviewItem("Email", ApplicantEmail)</div></div></div>
-            <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Business</h5>@ReviewItem("Business Name", BusinessName)@ReviewItem("Nature", BusinessCategory)@ReviewItem("Place of Business / Trading Address", FormattedPlaceOfBusinessAddress)@ReviewItem("Postal Address", FormattedPostalAddress)@ReviewItem("Responsible Municipality", RoutingState.Municipality)@ReviewItem("Trading Hours", ApplicationEntry.FormatTradingHours(ApplicationEntry.SerializeTradingHours(TradingDays)))</div></div></div>
+            <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Business</h5>@ReviewItem("Business Name", BusinessName)@ReviewItem("Nature", BusinessCategory)@ReviewItem("Place of Business / Trading Address", FormattedPlaceOfBusinessAddress)@ReviewItem("Postal Address", FormattedPostalAddress)@ReviewItem("Responsible Municipality", RoutingState.Municipality)@ReviewItem("Trading Hours", ApplicationEntry.FormatTradingHours(ApplicationEntry.SerializeTradingHours(TradingDays)))@ReviewItem("Open on public holidays", ApplicationEntry.FormatPublicHolidayTrading(OpenOnPublicHolidays))</div></div></div>
             <div class="col-12"><div class="card review-submit-card"><div class="card-body"><h5 class="mb-3">@LicenceType Details</h5>@foreach (var question in SelectedLicence?.Questions ?? []) { @ReviewItem(question.Label, GetAnswer(question.Key)) }</div></div></div>
             <div class="col-12"><div class="card review-submit-card"><div class="card-body"><h5 class="mb-3">Supporting Documents</h5>@foreach (var document in SelectedDocuments) { @ReviewItem(document.DocumentType, document.FileName) }</div></div></div>
         </div>
@@ -167,6 +179,7 @@
     private bool IsSubmitting, MessageIsError, DeclarationAccepted, PopiaConsentAccepted, ScrollToStep;
     private bool AiDocumentValidationEnabled, OwnerIdValidationInProgress;
     private bool? PostalSameAsBusiness;
+    private bool? OpenOnPublicHolidays;
     private string? InvalidFieldId;
     private string? ReadingDocumentType;
     private AiDocumentValidationStatus? OwnerIdValidationStatus;
@@ -177,6 +190,12 @@
     private readonly Dictionary<string, string> LicenceAnswers = new();
     private readonly List<SelectedDocument> SelectedDocuments = new();
     private readonly RetainedMunicipalRoutingState RoutingState = new();
+    private static readonly (int Number, string Label)[] WizardSteps =
+    [
+        (1, "Licence Type"), (2, "Applicant Details"), (3, "Business Details"),
+        (4, "Licence-Specific Details"), (5, "Supporting Documents"),
+        (6, "Review & Declaration"), (7, "Submit")
+    ];
 
     private LicenceDefinition? SelectedLicence => LicenceApplicationCatalog.Find(LicenceType);
     private bool IsBusy => IsSubmitting || RoutingState.IsRouting;
@@ -185,6 +204,7 @@
     private string FormattedApplicantAddress => ApplicationEntry.FormatAddress(ApplicantAddressLine1, ApplicantAddressLine2, ApplicantSuburb, ApplicantCity, ApplicantPostalCode);
     private string FormattedPostalAddress => PostalSameAsBusiness == true ? FormattedPlaceOfBusinessAddress : ApplicationEntry.FormatAddress(PostalAddressLine1, PostalAddressLine2, PostalSuburb, PostalCity, PostalPostalCode);
     private string StepTitle => CurrentStep switch { 1 => "Licence Type", 2 => "Applicant Details", 3 => "Business Details", 4 => "Licence-Specific Details", 5 => "Supporting Documents", 6 => "Review & Declaration", 7 => "Submit", _ => "" };
+    private static string ProgressStateLabel(string state) => state switch { "completed" => "Completed", "current" => "Current", _ => "Upcoming" };
 
     protected override async Task OnInitializedAsync()
     {
@@ -279,6 +299,7 @@
             3 when !ApplicationEntry.ValidEmail(BusinessEmail) => "Enter a valid email address, for example name@example.com.",
             3 when !ApplicationEntry.ValidPostalCode(PlaceOfBusinessPostalCode) => "Postal Code must contain exactly 4 digits.",
             3 when ApplicationEntry.ValidateTradingHours(TradingDays) is { } hoursError => hoursError,
+            3 when ApplicationEntry.ValidatePublicHolidayTrading(OpenOnPublicHolidays) is { } publicHolidayError => publicHolidayError,
             3 when ApplicationEntry.ValidatePostalAddress(PostalSameAsBusiness, PostalAddressLine1, PostalSuburb, PostalCity, PostalPostalCode) is { } postalError => postalError,
             3 when PostalSameAsBusiness == false && !ApplicationEntry.ValidPostalCode(PostalPostalCode) => "Postal Code must contain exactly 4 digits.",
             3 when PostalSameAsBusiness == false && (PostalAddressLine1.Trim().Length > 150 || PostalAddressLine2.Trim().Length > 150 || PostalSuburb.Trim().Length > 100 || PostalCity.Trim().Length > 100 || PostalPostalCode.Trim().Length > 12) => "One or more postal address fields exceed the allowed length.",
@@ -298,7 +319,7 @@
             2 => FirstBlank(("applicantFirstName", ApplicantFirstName), ("applicantLastName", ApplicantLastName), ("applicationType", ApplicationType), ("applicantAddressLine1", ApplicantAddressLine1), ("applicantSuburb", ApplicantSuburb), ("applicantCity", ApplicantCity), ("applicantPostalCode", ApplicantPostalCode), ("applicantTelephone", ApplicantTelephone), ("applicantEmail", ApplicantEmail))
                 ?? (!ApplicationEntry.ValidApplicationType(ApplicationType) ? "applicationType" : !ApplicationEntry.ValidPostalCode(ApplicantPostalCode) ? "applicantPostalCode" : !ApplicationEntry.ValidTelephone(ApplicantTelephone) ? "applicantTelephone" : !ApplicationEntry.ValidEmail(ApplicantEmail) ? "applicantEmail" : null),
             3 => FirstBlank(("businessName", BusinessName), ("registrationNumber", RegistrationNumber), ("taxNumber", TaxNumber), ("businessCategory", BusinessCategory), ("contactPerson", ContactPerson), ("businessTelephone", BusinessTelephone), ("businessEmail", BusinessEmail), ("addressLine1", PlaceOfBusinessAddressLine1), ("suburb", PlaceOfBusinessSuburb), ("city", PlaceOfBusinessCity), ("postalCode", PlaceOfBusinessPostalCode))
-                ?? (!ApplicationEntry.ValidRegistration(RegistrationNumber) ? "registrationNumber" : !ApplicationEntry.ValidTaxNumber(TaxNumber) ? "taxNumber" : !ApplicationEntry.ValidTelephone(BusinessTelephone) ? "businessTelephone" : !ApplicationEntry.ValidEmail(BusinessEmail) ? "businessEmail" : !ApplicationEntry.ValidPostalCode(PlaceOfBusinessPostalCode) ? "postalCode" : error.Contains("trading", StringComparison.OrdinalIgnoreCase) || error.Contains("Closing Time") || error.Contains("opening and closing") || error.Contains("Open or Closed") || error.Contains("HH:mm") ? "tradingHours" : PostalSameAsBusiness == null ? "postalSameAsBusiness" : PostalSameAsBusiness == false ? FirstBlank(("postalAddressLine1", PostalAddressLine1), ("postalSuburb", PostalSuburb), ("postalCity", PostalCity), ("postalPostalCode", PostalPostalCode)) ?? (!ApplicationEntry.ValidPostalCode(PostalPostalCode) ? "postalPostalCode" : "postalAddressLine1") : null),
+                ?? (!ApplicationEntry.ValidRegistration(RegistrationNumber) ? "registrationNumber" : !ApplicationEntry.ValidTaxNumber(TaxNumber) ? "taxNumber" : !ApplicationEntry.ValidTelephone(BusinessTelephone) ? "businessTelephone" : !ApplicationEntry.ValidEmail(BusinessEmail) ? "businessEmail" : !ApplicationEntry.ValidPostalCode(PlaceOfBusinessPostalCode) ? "postalCode" : error.Contains("public holidays", StringComparison.OrdinalIgnoreCase) ? "publicHolidayTrading" : error.Contains("trading", StringComparison.OrdinalIgnoreCase) || error.Contains("Closing Time") || error.Contains("opening and closing") || error.Contains("Open or Closed") || error.Contains("HH:mm") ? "tradingHours" : PostalSameAsBusiness == null ? "postalSameAsBusiness" : PostalSameAsBusiness == false ? FirstBlank(("postalAddressLine1", PostalAddressLine1), ("postalSuburb", PostalSuburb), ("postalCity", PostalCity), ("postalPostalCode", PostalPostalCode)) ?? (!ApplicationEntry.ValidPostalCode(PostalPostalCode) ? "postalPostalCode" : "postalAddressLine1") : null),
             4 => SelectedLicence?.Questions.FirstOrDefault(question => !ApplicationEntry.ValidLicenceAnswer(GetAnswer(question.Key), question.Required, question.Options))?.Key,
             6 => !DeclarationAccepted ? "declaration" : "popiaConsent",
             _ => null
@@ -377,7 +398,7 @@
                 ApplicationNumber = $"APP-{now.Year}-{count + 1:D3}", BusinessName = BusinessName.Trim(), RegistrationNumber = RegistrationNumber.Trim(), TaxNumber = TaxNumber.Trim(), BusinessCategory = BusinessCategory.Trim(),
                 PlaceOfBusinessAddress = address.Formatted, PlaceOfBusinessAddressLine1 = address.Line1, PlaceOfBusinessAddressLine2 = address.Line2, PlaceOfBusinessSuburb = address.Suburb, PlaceOfBusinessCity = address.City, PlaceOfBusinessPostalCode = address.PostalCode, LicenceType = LicenceType, Municipality = participatingMunicipality.Name,
                 PopiaConsentAccepted = true, Status = "Submitted", DateSubmitted = now, UserId = user.Id,
-                Details = new ApplicationDetails { ApplicationType = ApplicationType, ApplicantFirstName = ApplicantFirstName.Trim(), ApplicantLastName = ApplicantLastName.Trim(), ApplicantAddressLine1 = ApplicantAddressLine1.Trim(), ApplicantAddressLine2 = ApplicantAddressLine2.Trim(), ApplicantSuburb = ApplicantSuburb.Trim(), ApplicantCity = ApplicantCity.Trim(), ApplicantPostalCode = ApplicantPostalCode.Trim(), ApplicantTelephone = ApplicantTelephone.Trim(), ApplicantEmail = ApplicantEmail.Trim(), PostalAddressSameAsBusiness = PostalSameAsBusiness, PostalAddressLine1 = PostalSameAsBusiness == false ? PostalAddressLine1.Trim() : null, PostalAddressLine2 = PostalSameAsBusiness == false ? PostalAddressLine2.Trim() : null, PostalSuburb = PostalSameAsBusiness == false ? PostalSuburb.Trim() : null, PostalCity = PostalSameAsBusiness == false ? PostalCity.Trim() : null, PostalPostalCode = PostalSameAsBusiness == false ? PostalPostalCode.Trim() : null, ContactPerson = ContactPerson.Trim(), BusinessTelephone = BusinessTelephone.Trim(), BusinessEmail = BusinessEmail.Trim(), TradingHours = ApplicationEntry.SerializeTradingHours(TradingDays), LicenceSpecificDetailsJson = JsonSerializer.Serialize(LicenceAnswers), DeclarationAccepted = true, DeclarationAcceptedAt = now }
+                Details = new ApplicationDetails { ApplicationType = ApplicationType, ApplicantFirstName = ApplicantFirstName.Trim(), ApplicantLastName = ApplicantLastName.Trim(), ApplicantAddressLine1 = ApplicantAddressLine1.Trim(), ApplicantAddressLine2 = ApplicantAddressLine2.Trim(), ApplicantSuburb = ApplicantSuburb.Trim(), ApplicantCity = ApplicantCity.Trim(), ApplicantPostalCode = ApplicantPostalCode.Trim(), ApplicantTelephone = ApplicantTelephone.Trim(), ApplicantEmail = ApplicantEmail.Trim(), PostalAddressSameAsBusiness = PostalSameAsBusiness, PostalAddressLine1 = PostalSameAsBusiness == false ? PostalAddressLine1.Trim() : null, PostalAddressLine2 = PostalSameAsBusiness == false ? PostalAddressLine2.Trim() : null, PostalSuburb = PostalSameAsBusiness == false ? PostalSuburb.Trim() : null, PostalCity = PostalSameAsBusiness == false ? PostalCity.Trim() : null, PostalPostalCode = PostalSameAsBusiness == false ? PostalPostalCode.Trim() : null, ContactPerson = ContactPerson.Trim(), BusinessTelephone = BusinessTelephone.Trim(), BusinessEmail = BusinessEmail.Trim(), TradingHours = ApplicationEntry.SerializeTradingHours(TradingDays), OpenOnPublicHolidays = OpenOnPublicHolidays, LicenceSpecificDetailsJson = JsonSerializer.Serialize(LicenceAnswers), DeclarationAccepted = true, DeclarationAcceptedAt = now }
             };
             foreach (var selected in SelectedDocuments) { var reference = await Uploads.SaveAsync(selected.FileName, selected.FileBytes); application.Documents.Add(new ApplicationDocument { DocumentType = selected.DocumentType, FileName = selected.FileName, FilePath = reference }); }
             Db.Applications.Add(application); await Db.SaveChangesAsync();

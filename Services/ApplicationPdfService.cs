@@ -67,6 +67,7 @@ namespace BusinessLicensing_Practice.Services
                 }));
             }
             else renderer.AddRows([("Trading hours", tradingHours)]);
+            renderer.AddRows([("Open on public holidays", ApplicationEntry.FormatPublicHolidayTrading(application.Details?.OpenOnPublicHolidays))]);
 
             renderer.AddSection("Section C - Licence-Specific Information");
             renderer.AddLicenceSpecificRows(GetLicenceSpecificRows(

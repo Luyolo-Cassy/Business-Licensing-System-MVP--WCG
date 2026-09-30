@@ -98,6 +98,16 @@ public static class ApplicationEntry
 
     public static string SerializeTradingHours(IReadOnlyList<TradingDay> days) => JsonSerializer.Serialize(days);
 
+    public static string FormatPublicHolidayTrading(bool? openOnPublicHolidays) => openOnPublicHolidays switch
+    {
+        true => "Yes",
+        false => "No",
+        null => "Not recorded"
+    };
+
+    public static string? ValidatePublicHolidayTrading(bool? openOnPublicHolidays) =>
+        openOnPublicHolidays == null ? "Please indicate whether the business is open on public holidays." : null;
+
     public static string FormatTradingHours(string? stored)
     {
         if (string.IsNullOrWhiteSpace(stored)) return "";

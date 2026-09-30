@@ -48,6 +48,8 @@ namespace BusinessLicensing_Practice.Models
 
         public string? TradingHours { get; set; }
 
+        public bool? OpenOnPublicHolidays { get; set; }
+
         public string? LicenceSpecificDetailsJson { get; set; }
 
         public bool? DeclarationAccepted { get; set; }

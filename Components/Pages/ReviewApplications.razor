@@ -120,6 +120,7 @@ else
                     <div class="col-md-6 mt-3"><strong>Applicant Address</strong><br />@ApplicationEntry.ApplicantAddress(application.Details)</div>
                     <div class="col-md-6 mt-3"><strong>Postal Address</strong><br />@ApplicationEntry.PostalAddress(application)</div>
                     <div class="col-md-6 mt-3"><strong>Trading Hours</strong><br /><span style="white-space: pre-line">@ApplicationEntry.FormatTradingHours(application.Details.TradingHours)</span></div>
+                    <div class="col-md-6 mt-3"><strong>Open on public holidays</strong><br />@ApplicationEntry.FormatPublicHolidayTrading(application.Details.OpenOnPublicHolidays)</div>
                 </div>
 
                 <h5>Licence-Specific Information</h5>

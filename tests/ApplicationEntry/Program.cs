@@ -8,6 +8,7 @@ using PdfSharp.Fonts;
 using PdfSharp.Pdf.Content;
 using PdfSharp.Pdf.Content.Objects;
 using PdfSharp.Pdf.IO;
+using System.Text.Json;
 
 var checks = 0;
 void Check(bool condition, string name)
@@ -81,9 +82,17 @@ Check(ApplicationEntry.ValidateTradingHours(days) == null, "valid weekly hours")
 days[2].OpeningTime = "bad"; days[2].ClosingTime = "bad";
 Check(ApplicationEntry.ValidateTradingHours(days) == null, "closed day ignores hidden times");
 var hours = ApplicationEntry.SerializeTradingHours(days);
+Check(hours == JsonSerializer.Serialize(days), "seven-day trading hours JSON remains unchanged");
 Check(ApplicationEntry.FormatTradingHours(hours).Contains("Monday: 08:00 – 17:00") &&
     ApplicationEntry.FormatTradingHours(hours).Contains("Sunday: Closed"), "weekly hours format");
 Check(ApplicationEntry.FormatTradingHours("8 till late") == "8 till late", "legacy hours fallback");
+Check(ApplicationEntry.ValidatePublicHolidayTrading(null) == "Please indicate whether the business is open on public holidays.",
+    "public holiday selection is required");
+Check(ApplicationEntry.ValidatePublicHolidayTrading(true) == null && ApplicationEntry.ValidatePublicHolidayTrading(false) == null,
+    "explicit public holiday Yes and No selections are accepted");
+Check(ApplicationEntry.FormatPublicHolidayTrading(true) == "Yes", "public holiday Yes formatting");
+Check(ApplicationEntry.FormatPublicHolidayTrading(false) == "No", "public holiday No formatting");
+Check(ApplicationEntry.FormatPublicHolidayTrading(null) == "Not recorded", "historical public holiday value is not inferred as No");
 Check(ApplicationEntry.ValidatePostalAddress(null, "", "", "", "") != null, "postal choice required");
 Check(ApplicationEntry.ValidatePostalAddress(false, "", "Central", "Cape Town", "8000") != null, "manual postal fields required");
 Check(ApplicationEntry.ValidatePostalAddress(true, "", "", "", "") == null, "same as business needs no duplicate fields");
@@ -121,7 +130,8 @@ var details = new ApplicationDetails
 {
     ApplicantFirstName = "Ada", ApplicantLastName = "Lovelace", ApplicantAddressLine1 = "1 Main Road",
     ApplicantSuburb = "Gardens", ApplicantCity = "Cape Town", ApplicantPostalCode = "8001",
-    PostalAddressSameAsBusiness = true, PostalAddressLine1 = "stale hidden address", TradingHours = hours
+    PostalAddressSameAsBusiness = true, PostalAddressLine1 = "stale hidden address", TradingHours = hours,
+    OpenOnPublicHolidays = true
 };
 var application = new Application
 {
@@ -155,7 +165,8 @@ try
         await db.Database.CloseConnectionAsync();
         await db.Database.MigrateAsync();
         var old = await db.ApplicationDetails.AsNoTracking().SingleAsync(item => item.Id == 9001);
-        Check(ApplicationEntry.FullName(old) == "Legacy Name" && ApplicationEntry.ApplicantAddress(old) == "Legacy Address" && old.TradingHours == "9 to 5", "migration preserves legacy values");
+        Check(ApplicationEntry.FullName(old) == "Legacy Name" && ApplicationEntry.ApplicantAddress(old) == "Legacy Address" &&
+            old.TradingHours == "9 to 5" && old.OpenOnPublicHolidays == null, "migration preserves legacy values with public holiday status not recorded");
     }
 
     await using (var db = new ApplicationDbContext(options))
@@ -172,6 +183,7 @@ try
             "legacy supporting document labels remain stored");
         Check(saved.Details?.PostalAddressSameAsBusiness == false && ApplicationEntry.PostalAddress(saved).StartsWith("PO Box 12"), "separate postal persistence");
         Check(ApplicationEntry.FormatTradingHours(saved.Details!.TradingHours).Contains("Sunday: Closed"), "trading hours persistence");
+        Check(saved.Details.OpenOnPublicHolidays == true, "public holiday Yes persists");
         GlobalFontSettings.UseWindowsFontsUnderWindows = true;
         using var pdf = PdfReader.Open(new MemoryStream(new ApplicationPdfService().Generate(saved)), PdfDocumentOpenMode.Import);
         Check(pdf.PageCount >= 1, "official PDF generated with structured entry");
@@ -190,7 +202,26 @@ try
             .SelectMany(page => PdfStrings(ContentReader.ReadContent(page))));
         Check(pdfText.Contains("Ada Lovelace") && pdfText.Contains("1 Main Road") && pdfText.Contains("PO Box 12"), "PDF includes applicant and structured addresses");
         Check(pdfText.Contains("2024/123456/07") && pdfText.Contains("0123456789") && pdfText.Contains("Monday"), "PDF includes registration, tax and daily trading hours");
+        Check(pdfText.Contains("Open on public holidays") && pdfText.Contains("Yes"), "PDF includes public holiday Yes");
         Check(pdfText.Contains("legacy-coa.pdf") && pdfText.Contains("legacy-soundproofing.pdf"), "PDF includes legacy supporting documents");
+
+        saved.Details.OpenOnPublicHolidays = false;
+        db.ChangeTracker.Clear();
+        db.ApplicationDetails.Update(saved.Details);
+        await db.SaveChangesAsync();
+        db.Entry(saved.Details).State = EntityState.Detached;
+        Check((await db.ApplicationDetails.AsNoTracking().SingleAsync(item => item.Id == saved.Details.Id)).OpenOnPublicHolidays == false,
+            "public holiday No persists");
+        using var noHolidayPdf = PdfReader.Open(new MemoryStream(new ApplicationPdfService().Generate(saved)), PdfDocumentOpenMode.Import);
+        var noHolidayPdfText = string.Concat(noHolidayPdf.Pages.Cast<PdfSharp.Pdf.PdfPage>()
+            .SelectMany(page => PdfStrings(ContentReader.ReadContent(page))));
+        Check(noHolidayPdfText.Contains("Open on public holidays") && noHolidayPdfText.Contains("No"), "PDF includes public holiday No");
+
+        saved.Details.OpenOnPublicHolidays = null;
+        using var historicalHolidayPdf = PdfReader.Open(new MemoryStream(new ApplicationPdfService().Generate(saved)), PdfDocumentOpenMode.Import);
+        var historicalHolidayPdfText = string.Concat(historicalHolidayPdf.Pages.Cast<PdfSharp.Pdf.PdfPage>()
+            .SelectMany(page => PdfStrings(ContentReader.ReadContent(page))));
+        Check(historicalHolidayPdfText.Contains("Not recorded"), "historical PDF identifies missing public holiday value");
 
         saved.LicenceType = gaming.Name;
         saved.Details.LicenceSpecificDetailsJson = "{\"activityType\":\"Arcade\",\"operatingTimes\":\"Daily 09:00 to 18:00\"}";

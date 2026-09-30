@@ -53,6 +53,7 @@ else
             @Field("Business Telephone", application.Details?.BusinessTelephone)
             @Field("Business Email", application.Details?.BusinessEmail)
             @Field("Trading Hours", ApplicationEntry.FormatTradingHours(application.Details?.TradingHours))
+            @Field("Open on public holidays", ApplicationEntry.FormatPublicHolidayTrading(application.Details?.OpenOnPublicHolidays))
             @Field("Erf Number", application.Details?.ErfNumber)
             @Field("Zoning", application.Details?.Zoning)
         </dl></div>
