@@ -44,6 +44,12 @@ public sealed class InitialAdminBootstrapper(
         var admin = await users.FindByEmailAsync(email!);
         if (admin != null)
         {
+            if (!await users.IsEmailConfirmedAsync(admin))
+            {
+                admin.EmailConfirmed = true;
+                EnsureSucceeded(await users.UpdateAsync(admin), "confirm the initial administrator email");
+            }
+
             if (!await users.IsInRoleAsync(admin, AdminRole))
             {
                 EnsureSucceeded(await users.AddToRoleAsync(admin, AdminRole), "assign the initial administrator role");
@@ -61,6 +67,7 @@ public sealed class InitialAdminBootstrapper(
         {
             UserName = email,
             Email = email,
+            EmailConfirmed = true,
             FullName = fullName!
         };
 

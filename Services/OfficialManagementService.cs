@@ -68,7 +68,7 @@ public class OfficialManagementService(IServiceScopeFactory scopes)
         user.FullName = fullName;
         if (id == null)
         {
-            user.Email = email; user.UserName = email;
+            user.Email = email; user.UserName = email; user.EmailConfirmed = true;
             Check(await users.CreateAsync(user));
             Check(await users.AddToRoleAsync(user, "MunicipalOfficial"));
         }

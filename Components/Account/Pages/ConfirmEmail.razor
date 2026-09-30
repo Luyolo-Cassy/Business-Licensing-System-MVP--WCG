@@ -11,11 +11,28 @@
 
 <PageTitle>Confirm email</PageTitle>
 
-<h1>Confirm email</h1>
-<StatusMessage Message="@statusMessage" />
+<main class="auth-page">
+    <section class="auth-panel" aria-labelledby="auth-heading">
+        <a class="auth-logo" href="/" aria-label="Western Cape Government home">
+            <img src="/images/WCG_logo.jpg" alt="Western Cape Government" />
+        </a>
+        <h1 id="auth-heading">Confirm your email</h1>
+        <p class="auth-intro">Email confirmation protects access to your account.</p>
+        <StatusMessage Message="@statusMessage" />
+        @if (confirmationSucceeded)
+        {
+            <a class="auth-submit btn btn-primary" href="/Account/Login">Sign in</a>
+        }
+        else if (statusMessage is not null)
+        {
+            <p class="auth-register-link"><a href="/Account/Login">Back to sign in</a></p>
+        }
+    </section>
+</main>
 
 @code {
     private string? statusMessage;
+    private bool confirmationSucceeded;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -44,7 +61,10 @@
         {
             var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Code));
             var result = await UserManager.ConfirmEmailAsync(user, code);
-            statusMessage = result.Succeeded ? "Thank you for confirming your email." : "Error confirming your email.";
+            confirmationSucceeded = result.Succeeded;
+            statusMessage = result.Succeeded
+                ? "Your email address has been successfully confirmed. You can now sign in."
+                : "Error confirming your email.";
         }
     }
 }
