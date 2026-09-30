@@ -15,8 +15,27 @@ var builder = WebApplication.CreateBuilder(args);
 
 GlobalFontSettings.UseWindowsFontsUnderWindows = true;
 
+var databaseProvider = builder.Configuration["Database:Provider"]?.Trim();
+if (string.IsNullOrWhiteSpace(databaseProvider))
+    throw new InvalidOperationException("Database:Provider must be configured as SQLite or PostgreSQL.");
+
+var usesSqlite = string.Equals(databaseProvider, "SQLite", StringComparison.OrdinalIgnoreCase);
+var usesPostgreSql = string.Equals(databaseProvider, "PostgreSQL", StringComparison.OrdinalIgnoreCase);
+if (!usesSqlite && !usesPostgreSql)
+    throw new InvalidOperationException($"Unsupported database provider '{databaseProvider}'. Configure Database:Provider as SQLite or PostgreSQL.");
+
+var databaseConnection = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(databaseConnection))
+    throw new InvalidOperationException($"ConnectionStrings:DefaultConnection must be configured when using {databaseProvider}.");
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite("Data Source=businesslicensing.db"));
+{
+    if (usesSqlite)
+        options.UseSqlite(databaseConnection);
+    else
+        options.UseNpgsql(databaseConnection, npgsql =>
+            npgsql.MigrationsAssembly("BusinessLicensing.PostgreSqlMigrations"));
+});
 
 builder.Services.AddCascadingAuthenticationState();
 
@@ -179,7 +198,9 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-    db.Database.Migrate();
+    // Local SQLite retains its established automatic migration behavior. PostgreSQL migrations
+    // are applied as a controlled deployment step, not by every production application instance.
+    if (usesSqlite) db.Database.Migrate();
 
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 

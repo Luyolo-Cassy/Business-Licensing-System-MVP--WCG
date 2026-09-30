@@ -14,6 +14,9 @@
     <Compile Remove="tests/**/*.cs" />
     <Content Remove="tests/**" />
     <None Remove="tests/**" />
+    <Compile Remove="BusinessLicensing.PostgreSqlMigrations/**/*.cs" />
+    <Content Remove="BusinessLicensing.PostgreSqlMigrations/**" />
+    <None Remove="BusinessLicensing.PostgreSqlMigrations/**" />
     <!-- Private legacy uploads must never enter static-asset manifests or published wwwroot. -->
     <Content Remove="wwwroot/uploads/**" />
     <None Remove="wwwroot/uploads/**" />
@@ -25,17 +28,32 @@
     <PackageReference Include="MailKit" Version="4.17.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.9" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.7">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.8" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.8">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.9">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageReference Include="PDFsharp" Version="6.2.4" />
     <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
   </ItemGroup>
+
+  <Target Name="IncludePostgreSqlMigrationsInPublish" BeforeTargets="ComputeFilesToPublish">
+    <PropertyGroup>
+      <PostgreSqlMigrationsAssemblyPath>$(OutputPath)BusinessLicensing.PostgreSqlMigrations.dll</PostgreSqlMigrationsAssemblyPath>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(PostgreSqlMigrationsAssemblyPath)')"
+           Text="Build BusinessLicensing.PostgreSqlMigrations for $(Configuration) before publishing the web application." />
+    <ItemGroup>
+      <ResolvedFileToPublish Include="$(PostgreSqlMigrationsAssemblyPath)">
+        <RelativePath>BusinessLicensing.PostgreSqlMigrations.dll</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
 
 </Project>

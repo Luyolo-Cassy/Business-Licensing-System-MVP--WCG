@@ -522,7 +522,7 @@ else
                 SetError(error.Message);
                 return;
             }
-            var now = DateTime.Now; var count = await Db.Applications.CountAsync(item => item.DateSubmitted.Year == now.Year);
+            var now = DateTime.UtcNow; var count = await Db.Applications.CountAsync(item => item.DateSubmitted.Year == now.Year);
             var application = new Application
             {
                 ApplicationNumber = $"APP-{now.Year}-{count + 1:D3}", BusinessName = BusinessName.Trim(), RegistrationNumber = RegistrationNumber.Trim(), TaxNumber = TaxNumber.Trim(), BusinessCategory = BusinessCategory.Trim(),

@@ -31,7 +31,7 @@ public class ApplicantApplicationService(IServiceScopeFactory scopes)
                 throw new ValidationException("This historical application cannot be resubmitted here. Please start a new application so its trading address can be checked.");
             await MunicipalityManagementService.RequireActiveRoutingAsync(db, municipality.RoutingName);
             application.Status = "Submitted";
-            application.DateSubmitted = DateTime.Now;
+            application.DateSubmitted = DateTime.UtcNow;
             application.DecisionDateUtc = null;
             application.DecisionReason = null;
         }
