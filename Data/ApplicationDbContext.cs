@@ -46,6 +46,7 @@ namespace BusinessLicensing_Practice.Data
             builder.Entity<MunicipalMessage>(message =>
             {
                 message.Property(m => m.Content).HasColumnType("TEXT").IsRequired();
+                message.Property(m => m.MessageType).HasDefaultValue(ApplicationWorkflow.GeneralMessage);
                 message.HasOne(m => m.Application).WithMany()
                     .HasForeignKey(m => m.ApplicationId).OnDelete(DeleteBehavior.Cascade);
                 message.HasOne(m => m.Sender).WithMany()
@@ -59,15 +60,22 @@ namespace BusinessLicensing_Practice.Data
                 .HasForeignKey<ApplicationDetails>(details => details.ApplicationId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            builder.Entity<Application>().Property(application => application.RevisionNumber).HasDefaultValue(1);
+
             builder.Entity<ApplicationDetails>()
                 .HasIndex(details => details.ApplicationId)
                 .IsUnique();
 
             builder.Entity<ApplicationDraft>(draft =>
             {
-                draft.HasIndex(item => item.UserId).IsUnique();
+                draft.HasIndex(item => item.UserId).IsUnique()
+                    .HasFilter("\"SourceApplicationId\" IS NULL");
+                draft.HasIndex(item => item.SourceApplicationId).IsUnique()
+                    .HasFilter("\"SourceApplicationId\" IS NOT NULL");
                 draft.HasOne(item => item.User).WithMany()
                     .HasForeignKey(item => item.UserId).OnDelete(DeleteBehavior.Cascade);
+                draft.HasOne(item => item.SourceApplication).WithMany()
+                    .HasForeignKey(item => item.SourceApplicationId).OnDelete(DeleteBehavior.Cascade);
                 draft.HasMany(item => item.Documents).WithOne(item => item.ApplicationDraft)
                     .HasForeignKey(item => item.ApplicationDraftId).OnDelete(DeleteBehavior.Cascade);
             });

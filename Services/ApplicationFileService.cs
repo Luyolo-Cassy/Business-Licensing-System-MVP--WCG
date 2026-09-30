@@ -32,6 +32,13 @@ namespace BusinessLicensing_Practice.Services
             return File.Exists(fullPath) ? fullPath : null;
         }
 
+        public void DeleteGeneratedPdf(string? relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath)) return;
+            var fullPath = ResolvePath(relativePath);
+            if (File.Exists(fullPath)) File.Delete(fullPath);
+        }
+
         private string ResolvePath(string relativePath)
         {
             var fullPath = Path.GetFullPath(Path.Combine(storageRoot, relativePath));

@@ -17,7 +17,7 @@ public sealed class ApplicationDraftService(IServiceScopeFactory scopes, Protect
         await using var scope = scopes.CreateAsyncScope();
         var (db, user) = await AuthorizeOwnerAsync(scope.ServiceProvider, principal);
         return await db.ApplicationDrafts.AsNoTracking().Include(draft => draft.Documents)
-            .SingleOrDefaultAsync(draft => draft.UserId == user.Id);
+            .SingleOrDefaultAsync(draft => draft.UserId == user.Id && draft.SourceApplicationId == null);
     }
 
     public async Task<ApplicationDraftSummary?> GetSummaryAsync(ClaimsPrincipal principal)
@@ -33,7 +33,7 @@ public sealed class ApplicationDraftService(IServiceScopeFactory scopes, Protect
         await using var scope = scopes.CreateAsyncScope();
         var (db, user) = await AuthorizeOwnerAsync(scope.ServiceProvider, principal);
         var now = DateTime.UtcNow;
-        var draft = await db.ApplicationDrafts.SingleOrDefaultAsync(item => item.UserId == user.Id);
+        var draft = await db.ApplicationDrafts.SingleOrDefaultAsync(item => item.UserId == user.Id && item.SourceApplicationId == null);
         if (draft == null)
         {
             draft = new ApplicationDraft { UserId = user.Id, CreatedAtUtc = now };
@@ -48,12 +48,15 @@ public sealed class ApplicationDraftService(IServiceScopeFactory scopes, Protect
     }
 
     public async Task<ApplicationDraftDocument> ReplaceDocumentAsync(ClaimsPrincipal principal, string documentType,
-        string fileName, string filePath, AiDocumentValidationStatus? validationStatus)
+        string fileName, string filePath, AiDocumentValidationStatus? validationStatus, int? sourceApplicationId = null)
     {
         await using var scope = scopes.CreateAsyncScope();
         var (db, user) = await AuthorizeOwnerAsync(scope.ServiceProvider, principal);
+        await RequireCorrectionAccessAsync(db, user.Id, sourceApplicationId);
+        await RequireAllowedDocumentTypeAsync(db, sourceApplicationId, documentType);
         var draft = await db.ApplicationDrafts.Include(item => item.Documents)
-            .SingleOrDefaultAsync(item => item.UserId == user.Id) ?? throw new InvalidOperationException("Save the application before uploading documents.");
+            .SingleOrDefaultAsync(item => item.UserId == user.Id && item.SourceApplicationId == sourceApplicationId)
+            ?? throw new InvalidOperationException("Save the application before uploading documents.");
         var existing = draft.Documents.SingleOrDefault(item => item.DocumentType == documentType);
         var oldPath = existing?.FilePath;
         if (existing == null)
@@ -76,12 +79,15 @@ public sealed class ApplicationDraftService(IServiceScopeFactory scopes, Protect
         return existing;
     }
 
-    public async Task RemoveDocumentAsync(ClaimsPrincipal principal, string documentType)
+    public async Task RemoveDocumentAsync(ClaimsPrincipal principal, string documentType, int? sourceApplicationId = null)
     {
         await using var scope = scopes.CreateAsyncScope();
         var (db, user) = await AuthorizeOwnerAsync(scope.ServiceProvider, principal);
+        await RequireCorrectionAccessAsync(db, user.Id, sourceApplicationId);
+        await RequireAllowedDocumentTypeAsync(db, sourceApplicationId, documentType);
         var document = await db.ApplicationDraftDocuments
-            .SingleOrDefaultAsync(item => item.DocumentType == documentType && item.ApplicationDraft!.UserId == user.Id);
+            .SingleOrDefaultAsync(item => item.DocumentType == documentType && item.ApplicationDraft!.UserId == user.Id
+                && item.ApplicationDraft.SourceApplicationId == sourceApplicationId);
         if (document == null) return;
         var path = document.FilePath;
         db.ApplicationDraftDocuments.Remove(document);
@@ -94,7 +100,7 @@ public sealed class ApplicationDraftService(IServiceScopeFactory scopes, Protect
         await using var scope = scopes.CreateAsyncScope();
         var (db, user) = await AuthorizeOwnerAsync(scope.ServiceProvider, principal);
         var draft = await db.ApplicationDrafts.Include(item => item.Documents)
-            .SingleOrDefaultAsync(item => item.UserId == user.Id);
+            .SingleOrDefaultAsync(item => item.UserId == user.Id && item.SourceApplicationId == null);
         if (draft == null) return;
         var paths = draft.Documents.Select(item => item.FilePath).Distinct().ToList();
         db.ApplicationDrafts.Remove(draft);
@@ -117,6 +123,25 @@ public sealed class ApplicationDraftService(IServiceScopeFactory scopes, Protect
             (stamp != null && stamp != user.SecurityStamp))
             throw new UnauthorizedAccessException();
         return (db, user);
+    }
+
+    private static async Task RequireCorrectionAccessAsync(ApplicationDbContext db, string userId, int? sourceApplicationId)
+    {
+        if (sourceApplicationId == null) return;
+        var allowed = await db.Applications.AnyAsync(a => a.Id == sourceApplicationId && a.UserId == userId &&
+            a.Status == ApplicationWorkflow.AdditionalInformationRequired) &&
+            await db.MunicipalMessages.AnyAsync(m => m.ApplicationId == sourceApplicationId &&
+                m.MessageType == ApplicationWorkflow.CorrectionRequestMessage && m.ResolvedAtUtc == null);
+        if (!allowed) throw new UnauthorizedAccessException();
+    }
+
+    private static async Task RequireAllowedDocumentTypeAsync(ApplicationDbContext db, int? sourceApplicationId, string documentType)
+    {
+        if (sourceApplicationId == null) return;
+        var licenceType = await db.Applications.Where(a => a.Id == sourceApplicationId).Select(a => a.LicenceType).SingleAsync();
+        if (LicenceApplicationCatalog.Find(licenceType)?.Documents.Any(d => d.DocumentType == documentType) != true &&
+            !ApplicationDocumentTypes.IsAdditional(documentType))
+            throw new System.ComponentModel.DataAnnotations.ValidationException("Select a valid supporting-document type.");
     }
 }
 

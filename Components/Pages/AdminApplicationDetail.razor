@@ -24,6 +24,8 @@ else
         <div class="card-body"><dl class="row mb-0">
             @Field("Application Reference", application.ApplicationNumber)
             @Field("Status", application.Status)
+            @Field("Revision", application.RevisionNumber.ToString())
+            @Field("Last Resubmitted", application.LastResubmittedAtUtc?.ToString("yyyy/MM/dd HH:mm") + (application.LastResubmittedAtUtc.HasValue ? " UTC" : ""))
             @Field("Responsible Municipality", application.Municipality, "Not assigned")
             @Field("Submitted", application.DateSubmitted.ToString("yyyy/MM/dd HH:mm"))
             @Field("Licence Type", application.LicenceType)
@@ -100,7 +102,7 @@ else
             {
                 <ul class="list-group">@foreach (var document in application.Documents)
                 {
-                    <li class="list-group-item"><strong>@document.DocumentType</strong>: @document.FileName
+                    <li class="list-group-item"><strong>@ApplicationDocumentTypes.DisplayName(document.DocumentType)</strong>: @document.FileName
                         @if (IsUpload(document.FilePath)) { <a class="ms-2" href="@document.FilePath" target="_blank" rel="noopener">Open Document</a> }
                     </li>
                 }</ul>
@@ -115,9 +117,11 @@ else
             {
                 <article class="border-bottom mb-3 pb-3">
                     <h3 class="h6">@communication.SenderName</h3>
+                    @if (communication.MessageType == ApplicationWorkflow.CorrectionRequestMessage) { <span class="badge bg-warning text-dark mb-2">Correction request</span> }
                     <p class="text-muted small">Sent @communication.CreatedAtUtc.ToString("yyyy/MM/dd HH:mm") UTC</p>
                     <p style="white-space: pre-wrap; overflow-wrap: anywhere;">@communication.Content</p>
                     <p class="text-muted small mb-0">@(communication.ReadAtUtc is DateTime read ? $"Read by applicant: {read:yyyy/MM/dd HH:mm} UTC" : "Not yet read by applicant")</p>
+                    @if (communication.ResolvedAtUtc is DateTime resolved) { <p class="text-muted small mb-0">Resolved by resubmission: @resolved.ToString("yyyy/MM/dd HH:mm") UTC</p> }
                 </article>
             }
         </div>

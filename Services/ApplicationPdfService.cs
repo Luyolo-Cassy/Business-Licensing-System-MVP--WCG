@@ -75,7 +75,7 @@ namespace BusinessLicensing_Practice.Services
 
             renderer.AddSection("Supporting Documents");
             renderer.AddRows(application.Documents.Select(documentItem =>
-                (documentItem.DocumentType, (string?)documentItem.FileName)));
+                (ApplicationDocumentTypes.DisplayName(documentItem.DocumentType), (string?)documentItem.FileName)));
 
             renderer.AddSection("Declaration");
             renderer.AddParagraph("I declare that the information supplied in this application is true and correct and that I am authorised to submit this application.");

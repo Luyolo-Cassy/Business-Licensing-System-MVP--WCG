@@ -11,6 +11,7 @@
 @using Microsoft.AspNetCore.Identity
 
 @inject MunicipalMessageService Messages
+@inject ApplicationCorrectionService Corrections
 @inject ApplicationDbContext Db
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -224,6 +225,20 @@ else
 
             <h5>Officer Review Notes</h5>
 
+            @if (communicationHistory.Count > 0)
+            {
+                <div class="mb-4">
+                    @foreach (var message in communicationHistory)
+                    {
+                        <article class="border-start ps-3 mb-3">
+                            <div class="small text-muted">@message.SenderName · @message.CreatedAtUtc.ToLocalTime().ToString("dd MMM yyyy HH:mm")</div>
+                            @if (message.MessageType == ApplicationWorkflow.CorrectionRequestMessage) { <span class="badge bg-warning text-dark">Correction request @(message.ResolvedAtUtc.HasValue ? "resolved" : "open")</span> }
+                            <div style="white-space:pre-wrap">@message.Content</div>
+                        </article>
+                    }
+                </div>
+            }
+
             <div class="mb-3">
                 <label class="form-label">
                     Message to applicant
@@ -234,6 +249,11 @@ else
             </div>
 
             <p class="form-text">This note is visible to the applicant and creates an unread notification when you save the review.</p>
+            <button class="btn btn-warning mb-4" disabled="@saving" @onclick="RequestAdditionalInformation">
+                @if (saving && activeReviewAction == "correction") { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> }
+                Request Additional Information
+            </button>
+            <p class="form-text mt-n3">Enter a message above explaining exactly what must be corrected, clarified, replaced, or uploaded.</p>
             <h5>Review Decision</h5>
 
             <div class="mb-3">
@@ -305,6 +325,7 @@ else
 
     private Application? application;
     private string ReviewComments = "";
+    private List<MunicipalMessage> communicationHistory = [];
     private bool ShowSuccess = false;
     private bool saving;
     private string? activeReviewAction;
@@ -322,6 +343,9 @@ else
             .Include(a => a.User)
             .Include(a => a.Details)
             .FirstOrDefaultAsync(a => a.Id == Id && a.Municipality == official.Municipality);
+        if (application != null)
+            communicationHistory = await Db.MunicipalMessages.AsNoTracking().Where(m => m.ApplicationId == application.Id)
+                .OrderBy(m => m.CreatedAtUtc).ThenBy(m => m.Id).ToListAsync();
 
     }
 
@@ -371,6 +395,22 @@ else
         if (saveError != null) application.Status = previousStatus;
     }
 
+    private async Task RequestAdditionalInformation()
+    {
+        if (application == null || saving) return;
+        saving = true; activeReviewAction = "correction"; saveError = null;
+        try
+        {
+            await Corrections.RequestCorrectionsAsync((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User,
+                application.Id, ReviewComments);
+            Navigation.NavigateTo("/official-dashboard");
+        }
+        catch (UnauthorizedAccessException) { saveError = "You no longer have access to review this application."; }
+        catch (System.ComponentModel.DataAnnotations.ValidationException error) { saveError = error.Message; }
+        catch (DbUpdateException) { saveError = "The correction request could not be saved. Please try again."; }
+        finally { saving = false; activeReviewAction = null; }
+    }
+
     private async Task RejectApplication()
     {
         if (saving) return;
@@ -386,6 +426,7 @@ else
         {
             "Submitted" => "bg-secondary",
             "Under Review" => "bg-primary",
+            "Additional Information Required" => "bg-warning text-dark",
             "Department Assessment" => "bg-warning text-dark",
             "Final Decision" => "bg-info text-dark",
             "Licence Issued" => "bg-success",
@@ -401,6 +442,7 @@ else
         {
             "Submitted" => 20,
             "Under Review" => 40,
+            "Additional Information Required" => 40,
             "Department Assessment" => 60,
             "Final Decision" => 80,
             "Licence Issued" => 100,

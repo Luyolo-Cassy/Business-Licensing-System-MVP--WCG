@@ -14,4 +14,19 @@ namespace BusinessLicensing_Practice.Models
 
         public Application? Application { get; set; }
     }
+
+    public static class ApplicationDocumentTypes
+    {
+        public const string AdditionalSupportingDocument = "Additional Supporting Document";
+        private const string AdditionalPrefix = AdditionalSupportingDocument + ":";
+
+        public static string CreateAdditional() => AdditionalPrefix + Guid.NewGuid().ToString("N");
+
+        public static bool IsAdditional(string? documentType) =>
+            documentType?.StartsWith(AdditionalPrefix, StringComparison.Ordinal) == true &&
+            Guid.TryParseExact(documentType[AdditionalPrefix.Length..], "N", out _);
+
+        public static string DisplayName(string documentType) =>
+            IsAdditional(documentType) ? AdditionalSupportingDocument : documentType;
+    }
 }

@@ -71,6 +71,7 @@
         {
             "Submitted" => "bg-secondary",
             "Under Review" => "bg-primary",
+            "Additional Information Required" => "bg-warning text-dark",
             "Department Assessment" => "bg-warning text-dark",
             "Final Decision" => "bg-info text-dark",
             "Licence Issued" => "bg-success",
@@ -174,6 +175,10 @@
                                 <span class="badge @GetStatusBadge(application.Status)">
                                     @application.Status
                                 </span>
+                                @if (application.Status == ApplicationWorkflow.AdditionalInformationRequired)
+                                {
+                                    <div class="small text-warning-emphasis mt-1">Your action is required.</div>
+                                }
                             </td>
                             <td>@application.DateSubmitted.ToString("yyyy/MM/dd")</td>
                             <td>

@@ -5,6 +5,8 @@ public class ApplicationDraft
     public int Id { get; set; }
     public string UserId { get; set; } = "";
     public ApplicationUser? User { get; set; }
+    public int? SourceApplicationId { get; set; }
+    public Application? SourceApplication { get; set; }
     public string PayloadJson { get; set; } = "{}";
     public int SchemaVersion { get; set; } = 1;
     public int CurrentStep { get; set; } = 1;

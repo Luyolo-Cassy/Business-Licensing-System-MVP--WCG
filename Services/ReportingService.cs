@@ -9,8 +9,8 @@ namespace BusinessLicensing_Practice.Services;
 
 public sealed class ReportingService(IServiceScopeFactory scopes)
 {
-    public static readonly string[] WorkflowStatuses = ["Submitted", "Under Review", "Department Assessment", "Final Decision", "Licence Issued", "Rejected", "Withdrawn"];
-    public static readonly string[] PendingStatuses = ["Submitted", "Under Review", "Department Assessment", "Final Decision"];
+    public static readonly string[] WorkflowStatuses = ["Submitted", "Under Review", "Additional Information Required", "Department Assessment", "Final Decision", "Licence Issued", "Rejected", "Withdrawn"];
+    public static readonly string[] PendingStatuses = ["Submitted", "Under Review", "Additional Information Required", "Department Assessment", "Final Decision"];
     public static readonly string[] Outcomes = ["Licence Issued", "Rejected", "Withdrawn"];
     public static readonly string[] DecisionOutcomes = ["Licence Issued", "Rejected"];
 

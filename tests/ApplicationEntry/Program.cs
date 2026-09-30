@@ -141,6 +141,13 @@ var application = new Application
 };
 application.Documents.Add(new ApplicationDocument { DocumentType = "Certificate of Acceptability Application", FileName = "legacy-coa.pdf", FilePath = "/uploads/legacy-coa.pdf" });
 application.Documents.Add(new ApplicationDocument { DocumentType = "Proof of Soundproofing", FileName = "legacy-soundproofing.pdf", FilePath = "/uploads/legacy-soundproofing.pdf" });
+var additionalTypeOne = ApplicationDocumentTypes.CreateAdditional();
+var additionalTypeTwo = ApplicationDocumentTypes.CreateAdditional();
+application.Documents.Add(new ApplicationDocument { DocumentType = additionalTypeOne, FileName = "municipal-request.pdf", FilePath = "/uploads/municipal-request.pdf" });
+application.Documents.Add(new ApplicationDocument { DocumentType = additionalTypeTwo, FileName = "supporting-photo.jpg", FilePath = "/uploads/supporting-photo.jpg" });
+Check(additionalTypeOne != additionalTypeTwo && ApplicationDocumentTypes.IsAdditional(additionalTypeOne) &&
+    ApplicationDocumentTypes.DisplayName(additionalTypeOne) == "Additional Supporting Document",
+    "multiple additional supporting documents receive unique internal keys and a shared display label");
 Check(ApplicationEntry.FullName(details) == "Ada Lovelace", "full applicant name");
 Check(ApplicationEntry.ApplicantAddress(details) == "1 Main Road, Gardens, Cape Town, 8001", "optional address line omitted");
 Check(ApplicationEntry.PostalAddress(application) == "2 Market Street, CBD, Cape Town, 8000", "same as business ignores stale postal fields");
@@ -181,6 +188,8 @@ try
         Check(await db.ApplicationDocuments.CountAsync(document => document.ApplicationId == saved.Id &&
             (document.DocumentType == "Certificate of Acceptability Application" || document.DocumentType == "Proof of Soundproofing")) == 2,
             "legacy supporting document labels remain stored");
+        Check(saved.Documents.Count(document => ApplicationDocumentTypes.IsAdditional(document.DocumentType)) == 2,
+            "multiple additional supporting documents persist on one application");
         Check(saved.Details?.PostalAddressSameAsBusiness == false && ApplicationEntry.PostalAddress(saved).StartsWith("PO Box 12"), "separate postal persistence");
         Check(ApplicationEntry.FormatTradingHours(saved.Details!.TradingHours).Contains("Sunday: Closed"), "trading hours persistence");
         Check(saved.Details.OpenOnPublicHolidays == true, "public holiday Yes persists");
@@ -204,6 +213,8 @@ try
         Check(pdfText.Contains("2024/123456/07") && pdfText.Contains("0123456789") && pdfText.Contains("Monday"), "PDF includes registration, tax and daily trading hours");
         Check(pdfText.Contains("Open on public holidays") && pdfText.Contains("Yes"), "PDF includes public holiday Yes");
         Check(pdfText.Contains("legacy-coa.pdf") && pdfText.Contains("legacy-soundproofing.pdf"), "PDF includes legacy supporting documents");
+        Check(pdfText.Contains("Additional Supporting Document") && pdfText.Contains("municipal-request.pdf") && pdfText.Contains("supporting-photo.jpg"),
+            "PDF includes multiple additional supporting-document filenames under the friendly label");
 
         saved.Details.OpenOnPublicHolidays = false;
         db.ChangeTracker.Clear();

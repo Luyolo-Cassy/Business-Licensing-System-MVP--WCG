@@ -10,7 +10,7 @@ public record AdminApplicationRow(int Id, string ApplicationNumber, string Appli
     string? ApplicationType, string? Municipality, DateTime DateSubmitted, string Status);
 public record AdminApplicationList(List<AdminApplicationRow> Applications, List<string> Municipalities, List<string> Statuses,
     List<string> LicenceTypes, List<string> ApplicationTypes);
-public record AdminCommunication(string SenderName, string Content, DateTime CreatedAtUtc, DateTime? ReadAtUtc);
+public record AdminCommunication(string SenderName, string Content, string MessageType, DateTime CreatedAtUtc, DateTime? ReadAtUtc, DateTime? ResolvedAtUtc);
 public record AdminApplicationDetail(Application Application, string ApplicantName, string? ApplicantEmail,
     string? ApplicantTelephone, List<AdminCommunication> Communications);
 public record ApplicationCount(string Name, int Count);
@@ -97,7 +97,7 @@ public class AdminApplicationService(IServiceScopeFactory scopes)
             .Select(u => new { u.FullName, u.Email, u.PhoneNumber }).SingleOrDefaultAsync();
         var communications = await db.MunicipalMessages.AsNoTracking().Where(m => m.ApplicationId == id)
             .OrderBy(m => m.CreatedAtUtc).ThenBy(m => m.Id)
-            .Select(m => new AdminCommunication(m.SenderName, m.Content, m.CreatedAtUtc, m.ReadAtUtc)).ToListAsync();
+            .Select(m => new AdminCommunication(m.SenderName, m.Content, m.MessageType, m.CreatedAtUtc, m.ReadAtUtc, m.ResolvedAtUtc)).ToListAsync();
         return new(application,
             string.IsNullOrWhiteSpace(ApplicationEntry.FullName(application.Details)) ? applicant?.FullName ?? "" : ApplicationEntry.FullName(application.Details),
             application.Details?.ApplicantEmail ?? applicant?.Email,

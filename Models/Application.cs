@@ -12,6 +12,10 @@ namespace BusinessLicensing_Practice.Models
 
         public string Status { get; set; } = "";
 
+        public int RevisionNumber { get; set; } = 1;
+
+        public DateTime? LastResubmittedAtUtc { get; set; }
+
         public string UploadedDocumentName { get; set; } = "";
 
         public string UploadedDocumentPath { get; set; } = "";

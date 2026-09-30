@@ -1,4 +1,5 @@
 @page "/new-application"
+@page "/applications/{CorrectionApplicationId:int}/edit"
 @rendermode InteractiveServer
 @attribute [Authorize(Roles = "BusinessOwner")]
 
@@ -26,6 +27,7 @@
 @inject AiDocumentValidationPolicy AiValidation
 @inject IApplicationNotificationService Notifications
 @inject ApplicationDraftService Drafts
+@inject ApplicationCorrectionService Corrections
 @inject ILogger<NewApplication> Logger
 @inject IJSRuntime JS
 
@@ -40,7 +42,11 @@
 }
 else
 {
-<div id="application-wizard-top"><h3 class="fw-bold mb-4">New Business Licence Application</h3></div>
+<div id="application-wizard-top"><h3 class="fw-bold mb-4">@(IsCorrectionMode ? $"Edit Application {CorrectionApplicationNumber}" : "New Business Licence Application")</h3></div>
+@if (IsCorrectionMode)
+{
+    <div class="alert alert-warning mb-4" role="status"><h4 class="h5">Additional information requested</h4><p class="mb-1" style="white-space:pre-wrap">@CorrectionRequest</p><small>Requested @CorrectionRequestedAt?.ToLocalTime().ToString("dd MMM yyyy HH:mm")</small><p class="mb-0 mt-2">Update the requested information or documents, review the declaration, and resubmit this same application.</p></div>
+}
 <nav class="wizard-progress mb-4" aria-label="Application progress">
     <p class="wizard-progress-summary">Step @CurrentStep of @TotalSteps: <strong>@StepTitle</strong></p>
     <ol class="wizard-progress-list">
@@ -69,7 +75,7 @@ else
                 var selected = LicenceType == option.Name;
                 <div class="col-12 col-md-6 col-xl-4"><label class="licence-type-card card h-100 @(selected ? "is-selected" : "")">
                     <span class="visually-hidden">@option.Name</span><div class="card-body d-flex flex-column">
-                        <div class="d-flex align-items-start justify-content-between gap-3 mb-3"><span class="licence-type-icon"><PhosphorIcon Name="@option.IconClass" /></span><input class="form-check-input licence-type-radio" type="radio" name="licenceType" value="@option.Name" checked="@selected" @onchange="@(() => SelectLicence(option))" /></div>
+                        <div class="d-flex align-items-start justify-content-between gap-3 mb-3"><span class="licence-type-icon"><PhosphorIcon Name="@option.IconClass" /></span><input class="form-check-input licence-type-radio" type="radio" name="licenceType" value="@option.Name" checked="@selected" disabled="@IsCorrectionMode" @onchange="@(() => SelectLicence(option))" /></div>
                         <h5 class="licence-type-title">@option.Name</h5><p class="licence-type-description">@option.Description</p>
                         <div class="licence-type-state mt-auto">@(selected ? "Selected" : "Select licence")</div>
                     </div>
@@ -158,6 +164,21 @@ else
                 <div class="supporting-document-item"><div class="supporting-document-details"><span class="supporting-document-icon"><PhosphorIcon Name="file-text" /></span><div><h6 class="fw-bold mb-1">@requirement.DocumentType <span class="text-danger">*</span></h6><p class="text-muted mb-0">@requirement.Description</p></div></div><div class="supporting-document-upload"><label class="form-label fw-semibold">@(selected == null ? "Upload" : "Replace") @requirement.DocumentType</label><InputFile class="form-control" accept=".pdf,.png,.jpg,.jpeg" disabled="@(ReadingDocumentType == requirement.DocumentType || (requirement.DocumentType == OwnerIdDocumentType && OwnerIdValidationInProgress))" OnChange="@(e => HandleFileSelected(e, requirement.DocumentType))" />@if (ReadingDocumentType == requirement.DocumentType) { <div class="mt-2 text-muted" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Reading document...</div> }@if (selected != null) { <div class="supporting-document-selected-file mt-3"><PhosphorIcon Name="check-circle" CssClass="me-2" /><strong>@selected.FileName</strong> — Uploaded <button type="button" class="btn btn-link btn-sm text-danger" @onclick="() => RemoveDocument(selected.DocumentType)">Remove</button></div> }@if (requirement.DocumentType == OwnerIdDocumentType && AiDocumentValidationEnabled) { @if (OwnerIdValidationInProgress) { <div class="mt-2 text-muted" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Verifying document...</div> } else if (OwnerIdValidationStatus == AiDocumentValidationStatus.Match) { <div class="alert alert-success mt-2 mb-0" role="status"><strong>Document verified.</strong> This file appears to be an Owner ID or Passport document. This is a document-type check only, not authentication.</div> } else if (OwnerIdValidationStatus == AiDocumentValidationStatus.NoMatch) { <div class="alert alert-danger mt-2 mb-0" role="alert"><strong>Incorrect document.</strong> This file does not appear to be an Owner ID or Passport. Please upload the correct document.</div> } else if (OwnerIdValidationStatus == AiDocumentValidationStatus.Unavailable) { <div class="alert alert-warning mt-2 mb-0" role="status">Automatic document verification is currently unavailable. Your document can still be submitted for municipal review.</div> } }</div></div>
             }
         </div></div></div>
+        <div class="card supporting-documents-card mb-4"><div class="card-body">
+            <div class="supporting-documents-card-heading"><span class="supporting-documents-card-icon"><PhosphorIcon Name="file-plus" /></span><div><h5 class="mb-1">Additional Supporting Documents (Optional)</h5><p class="text-muted mb-0">Upload any additional documents relevant to your application or requested by your municipality.</p></div></div>
+            <div class="supporting-document-upload mt-3"><label class="form-label fw-semibold">Add supporting document</label><InputFile class="form-control" accept=".pdf,.png,.jpg,.jpeg" disabled="@AddingAdditionalDocument" OnChange="HandleAdditionalFileSelected" />
+                @if (AddingAdditionalDocument) { <div class="mt-2 text-muted" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Uploading document...</div> }
+            </div>
+            @if (AdditionalDocuments.Count > 0)
+            {
+                <div class="supporting-document-list mt-3">
+                    @foreach (var document in AdditionalDocuments)
+                    {
+                        <div class="supporting-document-item" @key="document.DocumentType"><div class="supporting-document-details"><span class="supporting-document-icon"><PhosphorIcon Name="file-text" /></span><div><strong>@document.FileName</strong><p class="text-muted mb-0">Additional supporting document</p></div></div><button type="button" class="btn btn-link btn-sm text-danger" @onclick="() => RemoveDocument(document.DocumentType)">Remove</button></div>
+                    }
+                </div>
+            }
+        </div></div>
     </section>
 }
 
@@ -169,7 +190,7 @@ else
             <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Applicant</h5>@ReviewItem("Application Type", ApplicationType)@ReviewItem("Licence Type", LicenceType)@ReviewItem("Applicant Name", FullApplicantName)@ReviewItem("Address", FormattedApplicantAddress)@ReviewItem("Telephone", ApplicantTelephone)@ReviewItem("Email", ApplicantEmail)</div></div></div>
             <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Business</h5>@ReviewItem("Business Name", BusinessName)@ReviewItem("Nature", BusinessCategory)@ReviewItem("Place of Business / Trading Address", FormattedPlaceOfBusinessAddress)@ReviewItem("Postal Address", FormattedPostalAddress)@ReviewItem("Responsible Municipality", RoutingState.Municipality ?? ProvisionalMunicipality)@ReviewItem("Trading Hours", ApplicationEntry.FormatTradingHours(ApplicationEntry.SerializeTradingHours(TradingDays)))@ReviewItem("Open on public holidays", ApplicationEntry.FormatPublicHolidayTrading(OpenOnPublicHolidays))</div></div></div>
             <div class="col-12"><div class="card review-submit-card"><div class="card-body"><h5 class="mb-3">@LicenceType Details</h5>@foreach (var question in SelectedLicence?.Questions ?? []) { @ReviewItem(question.Label, GetAnswer(question.Key)) }</div></div></div>
-            <div class="col-12"><div class="card review-submit-card"><div class="card-body"><h5 class="mb-3">Supporting Documents</h5>@foreach (var document in SelectedDocuments) { @ReviewItem(document.DocumentType, document.FileName) }</div></div></div>
+            <div class="col-12"><div class="card review-submit-card"><div class="card-body"><h5 class="mb-3">Supporting Documents</h5>@foreach (var document in SelectedDocuments) { @ReviewItem(ApplicationDocumentTypes.DisplayName(document.DocumentType), document.FileName) }</div></div></div>
         </div>
         <div class="card review-submit-card review-consent-card mt-4"><div class="card-body"><h5 class="mb-3">Consent and Declaration</h5><div class="form-check review-consent-check mb-3"><input class="form-check-input" type="checkbox" id="declaration" @bind="DeclarationAccepted" /><label class="form-check-label" for="declaration">I declare that the information supplied is true and correct and that I am authorised to submit this application.</label></div><div class="form-check review-consent-check"><input class="form-check-input" type="checkbox" id="popiaConsent" @bind="PopiaConsentAccepted" /><label class="form-check-label" for="popiaConsent">I consent to the collection and storage of my information for processing this application.</label></div></div></div>
     </section>
@@ -177,11 +198,11 @@ else
 
 @if (CurrentStep == 7)
 {
-    <section class="review-submit-step" aria-labelledby="submit-heading"><div class="card review-submit-card review-submit-summary-card"><div class="card-body text-center py-5"><PhosphorIcon Name="file-pdf" CssClass="ph-icon-lg" /><h4 id="submit-heading" class="fw-bold mt-3">Ready to Submit</h4><p class="text-muted mx-auto" style="max-width:680px">Submitting will save the application, generate the official completed PDF, and send it to the municipality determined from your checked trading address. Supporting documents remain separate.</p><div class="alert alert-info text-start mt-4 mb-0">After submission, use your dashboard to track progress and download the generated application PDF.</div></div></div></section>
+    <section class="review-submit-step" aria-labelledby="submit-heading"><div class="card review-submit-card review-submit-summary-card"><div class="card-body text-center py-5"><PhosphorIcon Name="file-pdf" CssClass="ph-icon-lg" /><h4 id="submit-heading" class="fw-bold mt-3">@(IsCorrectionMode ? "Ready to Resubmit" : "Ready to Submit")</h4><p class="text-muted mx-auto" style="max-width:680px">@(IsCorrectionMode ? "Resubmitting will update this existing application and regenerate its official PDF for municipal review." : "Submitting will save the application, generate the official completed PDF, and send it to the municipality determined from your checked trading address. Supporting documents remain separate.")</p><div class="alert alert-info text-start mt-4 mb-0">After submission, use your dashboard to track progress and download the generated application PDF.</div></div></div></section>
 }
 
 </fieldset>
-<div class="mt-5 d-flex flex-wrap align-items-center gap-2">@if (CurrentStep > 1) { <button class="btn btn-outline-secondary" disabled="@IsBusy" @onclick="PreviousStep"><PhosphorIcon Name="arrow-left" /> Back</button> } @if (CurrentStep < TotalSteps) { <button class="btn btn-primary" disabled="@IsBusy" aria-busy="@RoutingState.IsRouting" @onclick="NextStep">@if (RoutingState.IsRouting) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> } else { <span>Next </span><PhosphorIcon Name="arrow-right" /> } @(RoutingState.IsRouting ? "Checking address..." : "")</button> } else { <button class="btn btn-success" disabled="@IsBusy" aria-busy="@IsSubmitting" @onclick="SubmitApplication">@if (IsSubmitting) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> } else { <PhosphorIcon Name="check-circle" /> } @(IsSubmitting ? "Submitting application..." : "Submit Application")</button> } @if (CurrentStep > 1) { <button class="btn btn-outline-primary ms-md-auto" disabled="@IsBusy" @onclick="() => SaveDraftAsync(true)"><PhosphorIcon Name="floppy-disk" /> Save draft</button><button class="btn btn-link text-danger" disabled="@IsBusy" @onclick="() => ShowDeleteConfirmation = true">Delete draft</button><span class="small text-muted" role="status" aria-live="polite">@SaveState</span> }</div>
+<div class="mt-5 d-flex flex-wrap align-items-center gap-2">@if (CurrentStep > 1) { <button class="btn btn-outline-secondary" disabled="@IsBusy" @onclick="PreviousStep"><PhosphorIcon Name="arrow-left" /> Back</button> } @if (CurrentStep < TotalSteps) { <button class="btn btn-primary" disabled="@IsBusy" aria-busy="@RoutingState.IsRouting" @onclick="NextStep">@if (RoutingState.IsRouting) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> } else { <span>Next </span><PhosphorIcon Name="arrow-right" /> } @(RoutingState.IsRouting ? "Checking address..." : "")</button> } else { <button class="btn btn-success" disabled="@IsBusy" aria-busy="@IsSubmitting" @onclick="SubmitApplication">@if (IsSubmitting) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> } else { <PhosphorIcon Name="check-circle" /> } @(IsSubmitting ? (IsCorrectionMode ? "Resubmitting application..." : "Submitting application...") : (IsCorrectionMode ? "Resubmit Application" : "Submit Application"))</button> } @if (CurrentStep > 1) { <button class="btn btn-outline-primary ms-md-auto" disabled="@IsBusy" @onclick="() => SaveDraftAsync(true)"><PhosphorIcon Name="floppy-disk" /> Save draft</button>@if (!IsCorrectionMode) { <button class="btn btn-link text-danger" disabled="@IsBusy" @onclick="() => ShowDeleteConfirmation = true">Delete draft</button> }<span class="small text-muted" role="status" aria-live="polite">@SaveState</span> }</div>
 }
 
 @if (ShowDeleteConfirmation)
@@ -191,18 +212,21 @@ else
 
 @code {
     [SupplyParameterFromQuery] public bool Resume { get; set; }
+    [Parameter] public int? CorrectionApplicationId { get; set; }
     private const int TotalSteps = 7;
     private const long MaxFileSize = 10 * 1024 * 1024;
     private const string OwnerIdDocumentType = "Owner ID Document";
     private int CurrentStep = 1;
     private bool IsSubmitting, MessageIsError, DeclarationAccepted, PopiaConsentAccepted, ScrollToStep;
-    private bool AiDocumentValidationEnabled, OwnerIdValidationInProgress;
+    private bool AiDocumentValidationEnabled, OwnerIdValidationInProgress, AddingAdditionalDocument;
     private bool ShowExistingDraftChoice, ShowDeleteConfirmation, DeletingDraft;
     private bool? PostalSameAsBusiness;
     private bool? OpenOnPublicHolidays;
     private string? InvalidFieldId;
     private string? ReadingDocumentType;
     private string SaveState = "";
+    private string CorrectionRequest = "", CorrectionApplicationNumber = "";
+    private DateTime? CorrectionRequestedAt;
     private string? ProvisionalMunicipality;
     private ApplicationDraft? ExistingDraft;
     private ApplicationDraftSummary? ExistingDraftSummary;
@@ -224,6 +248,8 @@ else
     ];
 
     private LicenceDefinition? SelectedLicence => LicenceApplicationCatalog.Find(LicenceType);
+    private List<SelectedDocument> AdditionalDocuments => SelectedDocuments.Where(document => ApplicationDocumentTypes.IsAdditional(document.DocumentType)).ToList();
+    private bool IsCorrectionMode => CorrectionApplicationId.HasValue;
     private bool IsBusy => IsSubmitting || RoutingState.IsRouting;
     private string FormattedPlaceOfBusinessAddress => string.Join(", ", new[] { PlaceOfBusinessAddressLine1, PlaceOfBusinessAddressLine2, PlaceOfBusinessSuburb, PlaceOfBusinessCity, PlaceOfBusinessPostalCode }.Where(value => !string.IsNullOrWhiteSpace(value)));
     private string FullApplicantName => $"{ApplicantFirstName.Trim()} {ApplicantLastName.Trim()}".Trim();
@@ -238,6 +264,21 @@ else
         var user = await UserManager.GetUserAsync(state.User);
         if (user != null) { var split = user.FullName.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries); ApplicantFirstName = split.ElementAtOrDefault(0) ?? ""; ApplicantLastName = split.ElementAtOrDefault(1) ?? ""; ApplicantEmail = user.Email ?? ""; ApplicantTelephone = user.PhoneNumber ?? ""; }
         AiDocumentValidationEnabled = await AiSettings.IsDocumentValidationEnabledAsync();
+        if (IsCorrectionMode)
+        {
+            try
+            {
+                var correction = await Corrections.LoadOrCreateDraftAsync(state.User, CorrectionApplicationId!.Value);
+                ExistingDraft = correction.Draft;
+                CorrectionRequest = correction.Request.Content;
+                CorrectionRequestedAt = correction.Request.CreatedAtUtc;
+                CorrectionApplicationNumber = await Db.Applications.Where(a => a.Id == CorrectionApplicationId.Value).Select(a => a.ApplicationNumber).SingleAsync();
+                LoadDraft(ExistingDraft);
+            }
+            catch (UnauthorizedAccessException) { SetError("You do not have access to edit this application, or it is no longer awaiting corrections."); }
+            catch (System.ComponentModel.DataAnnotations.ValidationException error) { SetError(error.Message); }
+            return;
+        }
         ExistingDraft = await Drafts.GetAsync(state.User);
         if (ExistingDraft != null)
         {
@@ -249,6 +290,7 @@ else
 
     private async Task SelectLicence(LicenceDefinition definition)
     {
+        if (IsCorrectionMode) return;
         if (LicenceType == definition.Name) return;
         if (ExistingDraft != null)
             foreach (var document in SelectedDocuments.ToList())
@@ -409,7 +451,8 @@ else
             try
             {
                 await Drafts.ReplaceDocumentAsync((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User,
-                    documentType, selected.FileName, reference, documentType == OwnerIdDocumentType ? OwnerIdValidationStatus : null);
+                    documentType, selected.FileName, reference, documentType == OwnerIdDocumentType ? OwnerIdValidationStatus : null,
+                    CorrectionApplicationId);
             }
             catch
             {
@@ -432,6 +475,21 @@ else
     {
         if (IsBusy) return;
         Message = ""; for (var step = 1; step <= 6; step++) if (!ValidateStep(step)) { CurrentStep = step; StateHasChanged(); return; }
+        if (IsCorrectionMode)
+        {
+            await SaveDraftAsync();
+            IsSubmitting = true;
+            try
+            {
+                await Corrections.ResubmitAsync((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User, CorrectionApplicationId!.Value);
+                Nav.NavigateTo($"/tracking/{CorrectionApplicationId.Value}");
+            }
+            catch (UnauthorizedAccessException) { SetError("You no longer have access to resubmit this application."); }
+            catch (System.ComponentModel.DataAnnotations.ValidationException error) { SetError(error.Message); }
+            catch (Exception error) { Logger.LogError(error, "Correction resubmission failed. ApplicationId={ApplicationId}", CorrectionApplicationId); SetError("The corrected application could not be resubmitted. Please try again."); }
+            finally { IsSubmitting = false; }
+            return;
+        }
         IsSubmitting = true;
         AutosaveDelay?.Cancel();
 
@@ -473,11 +531,11 @@ else
                 Details = new ApplicationDetails { ApplicationType = ApplicationType, ApplicantFirstName = ApplicantFirstName.Trim(), ApplicantLastName = ApplicantLastName.Trim(), ApplicantAddressLine1 = ApplicantAddressLine1.Trim(), ApplicantAddressLine2 = ApplicantAddressLine2.Trim(), ApplicantSuburb = ApplicantSuburb.Trim(), ApplicantCity = ApplicantCity.Trim(), ApplicantPostalCode = ApplicantPostalCode.Trim(), ApplicantTelephone = ApplicantTelephone.Trim(), ApplicantEmail = ApplicantEmail.Trim(), PostalAddressSameAsBusiness = PostalSameAsBusiness, PostalAddressLine1 = PostalSameAsBusiness == false ? PostalAddressLine1.Trim() : null, PostalAddressLine2 = PostalSameAsBusiness == false ? PostalAddressLine2.Trim() : null, PostalSuburb = PostalSameAsBusiness == false ? PostalSuburb.Trim() : null, PostalCity = PostalSameAsBusiness == false ? PostalCity.Trim() : null, PostalPostalCode = PostalSameAsBusiness == false ? PostalPostalCode.Trim() : null, ContactPerson = ContactPerson.Trim(), BusinessTelephone = BusinessTelephone.Trim(), BusinessEmail = BusinessEmail.Trim(), TradingHours = ApplicationEntry.SerializeTradingHours(TradingDays), OpenOnPublicHolidays = OpenOnPublicHolidays, LicenceSpecificDetailsJson = JsonSerializer.Serialize(LicenceAnswers), DeclarationAccepted = true, DeclarationAcceptedAt = now }
             };
             var draft = await Db.ApplicationDrafts.Include(item => item.Documents)
-                .SingleOrDefaultAsync(item => item.UserId == user.Id);
+                .SingleOrDefaultAsync(item => item.UserId == user.Id && item.SourceApplicationId == null);
             if (draft == null) throw new InvalidOperationException("The saved draft is unavailable.");
             foreach (var selected in draft.Documents) application.Documents.Add(new ApplicationDocument { DocumentType = selected.DocumentType, FileName = selected.FileName, FilePath = selected.FilePath });
             Db.Applications.Add(application); await Db.SaveChangesAsync();
-            application.ApplicationFormFileName = $"{application.ApplicationNumber}-Official-Application.pdf";
+            application.ApplicationFormFileName = $"{application.ApplicationNumber}-Official-Application-r1.pdf";
             application.ApplicationFormFilePath = await FileService.SaveGeneratedPdfAsync(application.Id, application.ApplicationFormFileName, PdfService.Generate(application));
             Db.ApplicationDrafts.Remove(draft);
             await Db.SaveChangesAsync(); await transaction.CommitAsync();
@@ -522,6 +580,14 @@ else
         });
     }
 
+    private async Task HandleAdditionalFileSelected(InputFileChangeEventArgs args)
+    {
+        if (AddingAdditionalDocument || IsSubmitting) return;
+        AddingAdditionalDocument = true;
+        try { await HandleFileSelected(args, ApplicationDocumentTypes.CreateAdditional()); }
+        finally { AddingAdditionalDocument = false; }
+    }
+
     private async Task SaveDraftAsync(bool announce = false)
     {
         AutosaveDelay?.Cancel();
@@ -537,8 +603,10 @@ else
             SaveState = "Saving...";
             StateHasChanged();
             var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
-            ExistingDraft = await Drafts.SaveAsync(principal, CreatePayload(), CurrentStep);
-            ExistingDraftSummary = await Drafts.GetSummaryAsync(principal);
+            ExistingDraft = IsCorrectionMode
+                ? await Corrections.SaveDraftAsync(principal, CorrectionApplicationId!.Value, CreatePayload(), CurrentStep)
+                : await Drafts.SaveAsync(principal, CreatePayload(), CurrentStep);
+            if (!IsCorrectionMode) ExistingDraftSummary = await Drafts.GetSummaryAsync(principal);
             SaveState = "Saved";
             if (announce) Message = "Your draft has been saved.";
         }
@@ -619,7 +687,7 @@ else
 
     private async Task RemoveDocument(string documentType)
     {
-        await Drafts.RemoveDocumentAsync((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User, documentType);
+        await Drafts.RemoveDocumentAsync((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User, documentType, CorrectionApplicationId);
         SelectedDocuments.RemoveAll(item => item.DocumentType == documentType);
         if (documentType == OwnerIdDocumentType) OwnerIdValidationStatus = null;
         SaveState = "Saved";

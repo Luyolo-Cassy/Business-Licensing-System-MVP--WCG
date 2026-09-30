@@ -7,9 +7,11 @@ public class MunicipalMessage
     public int ApplicationId { get; set; }
     public Application Application { get; set; } = null!;
     public string Content { get; set; } = "";
+    public string MessageType { get; set; } = "General";
     public string? SenderId { get; set; }
     public ApplicationUser? Sender { get; set; }
     public string SenderName { get; set; } = "";
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? ReadAtUtc { get; set; }
+    public DateTime? ResolvedAtUtc { get; set; }
 }

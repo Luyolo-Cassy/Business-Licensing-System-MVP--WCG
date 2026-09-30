@@ -152,6 +152,12 @@ await using (var provider = CreateProvider())
         email.Messages[0].Subject == "Application Submitted Successfully – TEST-1", "Submission notification uses valid account-email fallback and expected subject");
     Check(email.Messages[0].PlainTextBody.Contains("Status: Submitted") && email.Messages[0].PlainTextBody.Contains("Sale of Meals Licence"),
         "Submission notification contains application details");
+    Check(email.Messages[0].PlainTextBody.Contains("Current stage: Application Submitted") &&
+        email.Messages[0].PlainTextBody.Contains("Next: The municipality will begin reviewing the application."),
+        "Applicant email includes centralized current-stage context and next step");
+    var correctionContext = ApplicationStatusContext.For(ApplicationWorkflow.AdditionalInformationRequired);
+    Check(correctionContext.Title == "Applicant Action Required" && correctionContext.Next!.Contains("resubmit"),
+        "Additional-information status supplies applicant action context");
 
     var owner = await db.Users.SingleAsync(u => u.Id == ownerId);
     owner.Email = null;
@@ -182,6 +188,7 @@ sealed class RecordingNotificationService : IApplicationNotificationService
         Reviews.Add((applicationId, previousStatus, newStatus, municipalMessage));
         return Throw ? Task.FromException(new InvalidOperationException("Simulated notification failure")) : Task.CompletedTask;
     }
+    public Task NotifyResubmissionAsync(int applicationId, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }
 
 sealed class RecordingEmailService : IEmailService

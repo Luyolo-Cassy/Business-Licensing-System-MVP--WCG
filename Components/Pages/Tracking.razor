@@ -50,6 +50,16 @@ else
             Review your application progress below. You can monitor each stage until the licence is issued.
 
         </div>
+        @if (openCorrectionRequest != null)
+        {
+            <section class="alert alert-warning mb-4" aria-labelledby="correction-request-heading">
+                <h4 id="correction-request-heading" class="h5">Additional information required</h4>
+                <p>The municipality needs you to update this application before processing can continue.</p>
+                <div class="border-start border-warning border-3 ps-3 mb-3" style="white-space:pre-wrap">@openCorrectionRequest.Content</div>
+                <p class="small mb-3">Requested @openCorrectionRequest.CreatedAtUtc.ToLocalTime().ToString("dd MMM yyyy HH:mm")</p>
+                <a class="btn btn-warning" href="/applications/@application.Id/edit">Edit and Resubmit</a>
+            </section>
+        }
 
         <div class="d-flex justify-content-between mb-4">
             <div>
@@ -358,7 +368,7 @@ else
 
                                 <PhosphorIcon Name="download-simple" CssClass="me-2" />
 
-                                View @doc.DocumentType
+                                View @(ApplicationDocumentTypes.IsAdditional(doc.DocumentType) ? doc.FileName : doc.DocumentType)
 
                             </a>
                         }
@@ -482,6 +492,7 @@ else
 
     private Application? application;
     private List<MunicipalMessage> municipalMessages = [];
+    private MunicipalMessage? openCorrectionRequest;
     private bool markMessagesRead;
     private bool showSuccess;
     private string currentUserId = "";
@@ -519,6 +530,7 @@ else
             .Include(a => a.Details)
             .FirstOrDefaultAsync(a => a.Id == Id && a.UserId == currentUserId);
         municipalMessages = application == null ? [] : await Messages.GetMessagesAsync(authState.User, Id);
+        openCorrectionRequest = municipalMessages.LastOrDefault(m => m.MessageType == ApplicationWorkflow.CorrectionRequestMessage && m.ResolvedAtUtc == null);
         markMessagesRead = municipalMessages.Any(m => m.ReadAtUtc == null);
         loadedApplicationId = Id;
         }
@@ -545,6 +557,7 @@ else
         {
             "Submitted" => "bg-secondary",
             "Under Review" => "bg-primary",
+            "Additional Information Required" => "bg-warning text-dark",
             "Department Assessment" => "bg-warning text-dark",
             "Final Decision" => "bg-info text-dark",
             "Licence Issued" => "bg-success",
@@ -557,7 +570,12 @@ else
     {
         if (application?.Status == null) return false;
 
-        var statusToCheck = application.Status == "Rejected" ? "Final Decision" : application.Status;
+        var statusToCheck = application.Status switch
+        {
+            "Rejected" => "Final Decision",
+            "Additional Information Required" => "Under Review",
+            _ => application.Status
+        };
 
         return StatusOrder.IndexOf(statusToCheck) >= StatusOrder.IndexOf(step);
     }
@@ -597,6 +615,7 @@ else
         {
             "Submitted" => 20,
             "Under Review" => 40,
+            "Additional Information Required" => 40,
             "Department Assessment" => 60,
             "Final Decision" => 80,
             "Licence Issued" => 100,

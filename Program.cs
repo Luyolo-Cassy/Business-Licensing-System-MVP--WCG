@@ -51,6 +51,7 @@ builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailO
 builder.Services.AddTransient<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IApplicationNotificationService, ApplicationNotificationService>();
 builder.Services.AddScoped<ApplicationDraftService>();
+builder.Services.AddScoped<ApplicationCorrectionService>();
 builder.Services.AddSingleton<ApplicationFileService>();
 builder.Services.AddSingleton<ProtectedUploadService>();
 builder.Services.AddSingleton<ApplicationPdfService>();
