@@ -14,6 +14,8 @@ namespace BusinessLicensing_Practice.Data
         public DbSet<Application> Applications { get; set; }
         public DbSet<ApplicationDocument> ApplicationDocuments { get; set; }
         public DbSet<ApplicationDetails> ApplicationDetails { get; set; }
+        public DbSet<ApplicationDraft> ApplicationDrafts { get; set; }
+        public DbSet<ApplicationDraftDocument> ApplicationDraftDocuments { get; set; }
         public DbSet<MunicipalMessage> MunicipalMessages { get; set; }
         public DbSet<Municipality> Municipalities { get; set; }
         public DbSet<AiSettings> AiSettings { get; set; }
@@ -59,6 +61,19 @@ namespace BusinessLicensing_Practice.Data
 
             builder.Entity<ApplicationDetails>()
                 .HasIndex(details => details.ApplicationId)
+                .IsUnique();
+
+            builder.Entity<ApplicationDraft>(draft =>
+            {
+                draft.HasIndex(item => item.UserId).IsUnique();
+                draft.HasOne(item => item.User).WithMany()
+                    .HasForeignKey(item => item.UserId).OnDelete(DeleteBehavior.Cascade);
+                draft.HasMany(item => item.Documents).WithOne(item => item.ApplicationDraft)
+                    .HasForeignKey(item => item.ApplicationDraftId).OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<ApplicationDraftDocument>()
+                .HasIndex(item => new { item.ApplicationDraftId, item.DocumentType })
                 .IsUnique();
         }
     }

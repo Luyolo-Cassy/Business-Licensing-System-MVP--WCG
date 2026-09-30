@@ -1,5 +1,9 @@
 @page "/"
+@rendermode InteractiveServer
 @using Microsoft.AspNetCore.Components.Authorization
+@using BusinessLicensing_Practice.Services
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ApplicationDraftService Drafts
 
 <PageTitle>Provincial Business Licensing System</PageTitle>
 
@@ -13,6 +17,14 @@
                     <h1>Business Licensing</h1>
                     <p>Everything you need to know before applying for a business licence.</p>
                 </header>
+
+                @if (draft != null)
+                {
+                    <section class="applicant-ready" aria-labelledby="draft-heading">
+                        <div><span class="applicant-home-eyebrow">Application in progress</span><h2 id="draft-heading">Continue your application</h2><p>@DraftDescription(draft) Step @draft.CurrentStep of 7. Last saved @draft.LastSavedAtUtc.ToLocalTime().ToString("g").</p></div>
+                        <div class="applicant-ready-actions"><a class="btn btn-primary btn-lg" href="/new-application?resume=true">Continue application</a><button class="btn btn-outline-danger" @onclick="() => showDeleteDraft = true">Delete draft</button></div>
+                    </section>
+                }
 
                 <section class="applicant-guidance" aria-labelledby="before-start-heading">
                     <div class="applicant-section-heading">
@@ -138,3 +150,33 @@
         </div>
     </NotAuthorized>
 </AuthorizeView>
+
+@if (showDeleteDraft)
+{
+    <div class="modal d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="home-delete-draft-title"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="home-delete-draft-title">Delete draft application?</h5><button class="btn-close" aria-label="Close" @onclick="() => showDeleteDraft = false"></button></div><div class="modal-body">This will permanently delete your saved application and any documents you have uploaded. This cannot be undone.</div><div class="modal-footer"><button class="btn btn-outline-secondary" @onclick="() => showDeleteDraft = false">Cancel</button><button class="btn btn-danger" @onclick="DeleteDraft">Delete draft</button></div></div></div></div>
+}
+
+@code {
+    private ApplicationDraftSummary? draft;
+    private bool showDeleteDraft;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+        if (principal.IsInRole("BusinessOwner")) draft = await Drafts.GetSummaryAsync(principal);
+    }
+
+    private async Task DeleteDraft()
+    {
+        await Drafts.DeleteAsync((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User);
+        draft = null;
+        showDeleteDraft = false;
+    }
+
+    private static string DraftDescription(ApplicationDraftSummary item)
+    {
+        var values = new[] { item.LicenceType, item.BusinessName }.Where(value => !string.IsNullOrWhiteSpace(value));
+        var description = string.Join(" — ", values);
+        return string.IsNullOrWhiteSpace(description) ? "" : description + ".";
+    }
+}

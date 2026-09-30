@@ -2,6 +2,7 @@ using BusinessLicensing_Practice.Data;
 using BusinessLicensing_Practice.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace BusinessLicensing_Practice.Services;
 
@@ -19,6 +20,14 @@ public class ProtectedUploadService(IWebHostEnvironment environment)
         await File.WriteAllBytesAsync(Path.Combine(root, name), bytes);
         // This is an authorized compatibility URL, not a public static path.
         return "/uploads/" + name;
+    }
+
+    public async Task DeleteIfUnreferencedAsync(ApplicationDbContext db, string reference)
+    {
+        if (!TryResolveReference(reference, out var fullPath)) return;
+        var referenced = await db.ApplicationDocuments.AsNoTracking().AnyAsync(item => item.FilePath == reference) ||
+            await db.ApplicationDraftDocuments.AsNoTracking().AnyAsync(item => item.FilePath == reference);
+        if (!referenced && File.Exists(fullPath)) File.Delete(fullPath);
     }
 
     public int MoveLegacyUploads()
@@ -64,7 +73,6 @@ public class ProtectedUploadService(IWebHostEnvironment environment)
         var reference = "/uploads/" + name;
         var candidates = await db.Applications.AsNoTracking().Where(a => a.Documents.Any(d => d.FilePath == reference) ||
             a.ApplicationFormFilePath == reference || a.UploadedDocumentPath == reference).ToListAsync();
-        if (candidates.Count == 0) return Results.NotFound();
         foreach (var application in candidates)
         {
             if (!await ApplicationReadAccess.CanReadAsync(db, users, context.User, application)) continue;
@@ -73,6 +81,28 @@ public class ProtectedUploadService(IWebHostEnvironment environment)
             // Download rather than execute arbitrary historical file formats in the application origin.
             return Results.File(fullPath, "application/octet-stream", name);
         }
-        return Results.Forbid();
+        var user = await users.GetUserAsync(context.User);
+        var stamp = context.User.FindFirstValue("AspNet.Identity.SecurityStamp");
+        var ownsDraftDocument = user != null && await users.IsInRoleAsync(user, "BusinessOwner") && !await users.IsLockedOutAsync(user) &&
+            (stamp == null || stamp == user.SecurityStamp) &&
+            await db.ApplicationDraftDocuments.AsNoTracking()
+                .AnyAsync(item => item.FilePath == reference && item.ApplicationDraft!.UserId == user.Id);
+        if (ownsDraftDocument)
+        {
+            if (!TryResolveReference(reference, out var fullPath) || !File.Exists(fullPath)) return Results.NotFound();
+            return Results.File(fullPath, "application/octet-stream", name);
+        }
+        return candidates.Count == 0 ? Results.NotFound() : Results.Forbid();
+    }
+
+    private bool TryResolveReference(string reference, out string fullPath)
+    {
+        fullPath = "";
+        if (!reference.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase)) return false;
+        var name = reference["/uploads/".Length..];
+        if (string.IsNullOrWhiteSpace(name) || name.IndexOfAny(['/', '\\', ':', '\0', '%']) >= 0 ||
+            name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) return false;
+        fullPath = Path.GetFullPath(Path.Combine(root, name));
+        return fullPath.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
 }

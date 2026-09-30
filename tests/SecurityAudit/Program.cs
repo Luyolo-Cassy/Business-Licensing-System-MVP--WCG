@@ -105,6 +105,7 @@ try
     builder.Services.AddIdentityCore<ApplicationUser>().AddRoles<IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
     builder.Services.AddScoped<OfficialManagementService>(); builder.Services.AddScoped<MunicipalMessageService>();
     builder.Services.AddScoped<ApplicantApplicationService>(); builder.Services.AddScoped<MunicipalityManagementService>();
+    builder.Services.AddSingleton<ProtectedUploadService>(); builder.Services.AddScoped<ApplicationDraftService>();
     await using var provider = builder.Services.BuildServiceProvider();
     await using var scope = provider.CreateAsyncScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -112,6 +113,7 @@ try
     var management = scope.ServiceProvider.GetRequiredService<OfficialManagementService>();
     var messages = scope.ServiceProvider.GetRequiredService<MunicipalMessageService>();
     var applicantActions = scope.ServiceProvider.GetRequiredService<ApplicantApplicationService>();
+    var draftService = scope.ServiceProvider.GetRequiredService<ApplicationDraftService>();
     var admin = Principal((await users.FindByEmailAsync("dedat.admin@example.test"))!);
     var uploads = new ProtectedUploadService(builder.Environment);
     Check(Directory.GetFiles(legacyDir).Length == 0 && (await File.ReadAllBytesAsync(Path.Combine(root, "App_Data", "protected-uploads", "owner.pdf"))).SequenceEqual(documentBytes), "Startup moves legacy uploads outside wwwroot without changing bytes");
@@ -137,6 +139,29 @@ try
         return (await users.FindByIdAsync(invite.UserId))!;
     }
     var official = await Official("audit.one@example.test", 1); var otherOfficial = await Official("audit.two@example.test", 4);
+    var incompleteDraft = new ApplicationDraftPayload
+    {
+        LicenceType = "Sale of Meals Licence", BusinessName = "Half-entered business",
+        PlaceOfBusinessAddressLine1 = "12 Incomplete", TradingDays = []
+    };
+    var firstDraft = await draftService.SaveAsync(Principal(owner), incompleteDraft, 3);
+    incompleteDraft.BusinessName = "Restored business";
+    var updatedDraft = await draftService.SaveAsync(Principal(owner), incompleteDraft, 4);
+    Check(firstDraft.Id == updatedDraft.Id && await db.ApplicationDrafts.CountAsync(item => item.UserId == owner.Id) == 1,
+        "One active draft per BusinessOwner is reused");
+    var restoredDraft = await draftService.GetAsync(Principal(owner));
+    var restoredPayload = ApplicationDraftService.Deserialize(restoredDraft!.PayloadJson);
+    Check(restoredDraft.CurrentStep == 4 && restoredPayload.BusinessName == "Restored business" &&
+        restoredPayload.PlaceOfBusinessCity == "", "Incomplete draft state and CurrentStep save and restore");
+    Check(await draftService.GetAsync(Principal(other)) == null, "Another BusinessOwner cannot read an owner's draft");
+    await Reject<UnauthorizedAccessException>(() => draftService.GetAsync(Principal(official)));
+    await Reject<UnauthorizedAccessException>(() => draftService.GetAsync(admin));
+    await Reject<UnauthorizedAccessException>(() => draftService.GetAsync(new ClaimsPrincipal()));
+    Check(true, "Municipal Officials, DEDAT Admins and anonymous users cannot access drafts");
+    var draftReference = await uploads.SaveAsync("draft-owner.pdf", documentBytes);
+    await draftService.ReplaceDocumentAsync(Principal(owner), "Owner ID Document", "draft-owner.pdf", draftReference, AiDocumentValidationStatus.Match);
+    Check((await draftService.GetAsync(Principal(owner)))!.Documents.Single().FilePath == draftReference,
+        "Draft document is associated with the owner's draft");
     var ownApplication = new Application { UserId = owner.Id, Municipality = "Bergrivier Municipality", Status = "Submitted", BusinessName = "OWNER-PRIVATE-BUSINESS", ApplicationNumber = "SEC-OWN",
         ApplicationFormFilePath = "1/test.pdf", ApplicationFormFileName = "test.pdf", DateSubmitted = DateTime.Now,
         Documents = [new ApplicationDocument { FilePath = "/uploads/owner.pdf", FileName = "owner.pdf" }, new ApplicationDocument { FilePath = newReference, FileName = "New document.pdf" }] };
@@ -163,6 +188,43 @@ try
             $"Document/PDF {(allowed ? "allowed" : "denied")}: {url}");
         if (allowed) Check(response.Headers.CacheControl?.NoStore == true, "Private download prevents caching");
     }
+    await Download(ownerClient, draftReference, true);
+    await Download(otherClient, draftReference, false);
+    await Download(officialClient, draftReference, false);
+    await Download(adminClient, draftReference, false);
+    await Download(anonymous, draftReference, false);
+    Check(true, "Draft documents are owner-only");
+    Check((await ownerClient.GetStringAsync("/")).Contains("Continue your application") &&
+        (await ownerClient.GetStringAsync("/dashboard")).Contains("Draft Application"),
+        "Applicant Home and Dashboard expose the active draft separately");
+    Check((await ownerClient.GetStringAsync("/new-application")).Contains("You have an application in progress") &&
+        (await ownerClient.GetStringAsync("/new-application?resume=true")).Contains("Step 4 of 7"),
+        "New Application explains the existing draft choice and the resume route restores saved state");
+
+    var promotedPath = draftReference;
+    var promotionDraft = await db.ApplicationDrafts.Include(item => item.Documents).SingleAsync(item => item.UserId == owner.Id);
+    var promotedApplication = new Application
+    {
+        UserId = owner.Id, Status = "Submitted", ApplicationNumber = "SEC-PROMOTED", DateSubmitted = DateTime.Now,
+        Documents = promotionDraft.Documents.Select(item => new ApplicationDocument
+            { DocumentType = item.DocumentType, FileName = item.FileName, FilePath = item.FilePath }).ToList()
+    };
+    db.Applications.Add(promotedApplication);
+    db.ApplicationDrafts.Remove(promotionDraft);
+    await db.SaveChangesAsync();
+    Check(await db.ApplicationDrafts.AllAsync(item => item.UserId != owner.Id) &&
+        await db.ApplicationDocuments.AnyAsync(item => item.ApplicationId == promotedApplication.Id && item.FilePath == promotedPath) &&
+        File.Exists(Path.Combine(root, "App_Data", "protected-uploads", promotedPath.Split('/').Last())),
+        "Draft submission reuses one protected file and removes only draft records");
+
+    var deletableReference = await uploads.SaveAsync("delete-with-draft.pdf", documentBytes);
+    await draftService.SaveAsync(Principal(owner), new ApplicationDraftPayload { LicenceType = "Hawker Licence" }, 2);
+    await draftService.ReplaceDocumentAsync(Principal(owner), "Proof of Address", "delete-with-draft.pdf", deletableReference, null);
+    await draftService.DeleteAsync(Principal(owner));
+    Check(!await db.ApplicationDrafts.AnyAsync(item => item.UserId == owner.Id) &&
+        !File.Exists(Path.Combine(root, "App_Data", "protected-uploads", deletableReference.Split('/').Last())) &&
+        File.Exists(Path.Combine(root, "App_Data", "protected-uploads", promotedPath.Split('/').Last())),
+        "Deleting a draft removes its records and draft-only file without deleting a submitted file");
     foreach (var url in new[] { "/uploads/owner.pdf", newReference, "/uploads/legacy-form.pdf", "/uploads/legacy-document.pdf", $"/applications/{ownApplication.Id}/official-pdf" })
     {
         await Download(ownerClient, url, true); await Download(officialClient, url, true); await Download(adminClient, url, true);
@@ -231,7 +293,7 @@ try
     Check(registration.StatusCode == HttpStatusCode.Redirect && registered != null &&
         (await users.GetRolesAsync(registered)).SequenceEqual(new[] { "BusinessOwner" }),
         "Normal self-registration assigns only BusinessOwner");
-    Check(await db.Applications.CountAsync() == 3 && await db.ApplicationDocuments.CountAsync() == 3 && await db.MunicipalMessages.CountAsync() == 4,
+    Check(await db.Applications.CountAsync() == 4 && await db.ApplicationDocuments.CountAsync() == 4 && await db.MunicipalMessages.CountAsync() == 4,
         "Security checks preserve historical application/document/message records");
     Check(!db.Database.HasPendingModelChanges() && !(await db.Database.GetPendingMigrationsAsync()).Any(), "No schema change or pending migration");
     Console.WriteLine("All focused security checks passed. Temporary data: " + root);

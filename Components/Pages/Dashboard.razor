@@ -12,6 +12,7 @@
 @inject ApplicationDbContext Db
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ApplicationDraftService Drafts
 
 
 @page "/dashboard"
@@ -25,6 +26,8 @@
     private ApplicationUser? currentUser;
     private Dictionary<int, int> unreadCounts = [];
     private bool refreshingNotifications;
+    private ApplicationDraftSummary? draft;
+    private bool showDeleteDraft;
 
     private async Task RefreshNotifications()
     {
@@ -40,6 +43,7 @@
 
         currentUser = await UserManager.GetUserAsync(authState.User);
         unreadCounts = await Messages.GetUnreadCountsAsync(authState.User);
+        draft = await Drafts.GetSummaryAsync(authState.User);
 
         if (currentUser != null)
         {
@@ -75,6 +79,13 @@
             _ => "bg-secondary"
         };
     }
+
+    private async Task DeleteDraft()
+    {
+        await Drafts.DeleteAsync((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User);
+        draft = null;
+        showDeleteDraft = false;
+    }
 }
 <AuthorizeView>
     <Authorized>
@@ -89,6 +100,14 @@
     <button class="btn btn-sm btn-outline-primary ms-2" disabled="@refreshingNotifications" aria-busy="@refreshingNotifications" @onclick="RefreshNotifications">@if (refreshingNotifications) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> }@(refreshingNotifications ? "Refreshing notifications..." : "Refresh notifications")</button>
     @if (refreshingNotifications) { <span class="visually-hidden" role="status">Refreshing notifications...</span> }
 </div>
+@if (draft != null)
+{
+    <section class="card border-primary mb-4" aria-labelledby="dashboard-draft-heading"><div class="card-body">
+        <h2 class="h5" id="dashboard-draft-heading">Draft Application</h2>
+        <p class="mb-2"><strong>@(string.IsNullOrWhiteSpace(draft.BusinessName) ? "Application in progress" : draft.BusinessName)</strong><br />@(string.IsNullOrWhiteSpace(draft.LicenceType) ? "Licence type not yet selected" : draft.LicenceType)<br />Step @draft.CurrentStep of 7 · Last saved @draft.LastSavedAtUtc.ToLocalTime().ToString("g")</p>
+        <div class="d-flex flex-wrap gap-2"><a class="btn btn-primary" href="/new-application?resume=true">Continue application</a><button class="btn btn-outline-danger" @onclick="() => showDeleteDraft = true">Delete draft</button></div>
+    </div></section>
+}
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="card p-3 shadow-sm">
@@ -172,3 +191,8 @@
             <PhosphorIcon Name="file-plus" /> New Application
         </a>
     </div>
+
+@if (showDeleteDraft)
+{
+    <div class="modal d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="dashboard-delete-draft-title"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="dashboard-delete-draft-title">Delete draft application?</h5><button class="btn-close" aria-label="Close" @onclick="() => showDeleteDraft = false"></button></div><div class="modal-body">This will permanently delete your saved application and any documents you have uploaded. This cannot be undone.</div><div class="modal-footer"><button class="btn btn-outline-secondary" @onclick="() => showDeleteDraft = false">Cancel</button><button class="btn btn-danger" @onclick="DeleteDraft">Delete draft</button></div></div></div></div>
+}

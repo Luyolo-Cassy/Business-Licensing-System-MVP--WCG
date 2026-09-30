@@ -25,9 +25,21 @@
 @inject AiSettingsService AiSettings
 @inject AiDocumentValidationPolicy AiValidation
 @inject IApplicationNotificationService Notifications
+@inject ApplicationDraftService Drafts
 @inject ILogger<NewApplication> Logger
 @inject IJSRuntime JS
 
+@if (ShowExistingDraftChoice)
+{
+    <section class="card border-primary mb-4" aria-labelledby="existing-draft-heading"><div class="card-body">
+        <h3 id="existing-draft-heading" class="fw-bold">You have an application in progress</h3>
+        <p>Continue your saved application, or permanently discard it before starting a new one.</p>
+        <dl class="row mb-3"><dt class="col-sm-3">Licence type</dt><dd class="col-sm-9">@DisplayDraftValue(ExistingDraftSummary?.LicenceType)</dd><dt class="col-sm-3">Business name</dt><dd class="col-sm-9">@DisplayDraftValue(ExistingDraftSummary?.BusinessName)</dd><dt class="col-sm-3">Progress</dt><dd class="col-sm-9">Step @ExistingDraftSummary?.CurrentStep of @TotalSteps</dd></dl>
+        <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" @onclick="ContinueExistingDraft"><PhosphorIcon Name="arrow-right" /> Continue application</button><button class="btn btn-outline-danger" @onclick="() => ShowDeleteConfirmation = true">Discard draft and start new application</button></div>
+    </div></section>
+}
+else
+{
 <div id="application-wizard-top"><h3 class="fw-bold mb-4">New Business Licence Application</h3></div>
 <nav class="wizard-progress mb-4" aria-label="Application progress">
     <p class="wizard-progress-summary">Step @CurrentStep of @TotalSteps: <strong>@StepTitle</strong></p>
@@ -46,7 +58,7 @@
 </nav>
 
 @if (!string.IsNullOrWhiteSpace(Message)) { <div class="alert @(MessageIsError ? "alert-danger" : "alert-info") mb-3" role="@(MessageIsError ? "alert" : "status")" aria-live="polite">@Message</div> }
-<fieldset class="application-fields wizard-step-enter" @key="CurrentStep" disabled="@IsBusy" aria-busy="@IsBusy">
+<fieldset class="application-fields wizard-step-enter" @key="CurrentStep" disabled="@IsBusy" aria-busy="@IsBusy" @oninput="DraftChanged" @onchange="DraftChanged">
 @if (CurrentStep == 1)
 {
     <section class="licence-type-step" aria-labelledby="licence-type-heading">
@@ -75,15 +87,15 @@
             <div class="business-info-card-heading"><span class="business-info-card-icon"><PhosphorIcon Name="user" /></span><h5 class="mb-0">Application Information</h5></div>
             <div class="row g-3">
                 <div class="col-12 col-md-6">@FieldLabel("applicationType", "Application Type")<select id="applicationType" class="form-select" @bind="ApplicationType"><option value="">Select application type</option>@foreach (var applicationType in ApplicationEntry.ApplicationTypes) { <option value="@applicationType">@applicationType</option> }</select></div>
-                <div class="col-12 col-md-6">@FieldLabel("applicantFirstName", "First Name")<input id="applicantFirstName" class="form-control" maxlength="100" autocomplete="given-name" @bind="ApplicantFirstName" /></div>
-                <div class="col-12 col-md-6">@FieldLabel("applicantLastName", "Last Name")<input id="applicantLastName" class="form-control" maxlength="100" autocomplete="family-name" @bind="ApplicantLastName" /></div>
-                <div class="col-12">@FieldLabel("applicantAddressLine1", "Address Line 1")<input id="applicantAddressLine1" class="form-control" maxlength="150" autocomplete="address-line1" @bind="ApplicantAddressLine1" /></div>
-                <div class="col-12"><label class="form-label fw-semibold" for="applicantAddressLine2">Address Line 2</label><input id="applicantAddressLine2" class="form-control" maxlength="150" autocomplete="address-line2" @bind="ApplicantAddressLine2" /></div>
-                <div class="col-12 col-md-6">@FieldLabel("applicantSuburb", "Suburb")<input id="applicantSuburb" class="form-control" maxlength="100" @bind="ApplicantSuburb" /></div>
-                <div class="col-12 col-md-6">@FieldLabel("applicantCity", "City / Town")<input id="applicantCity" class="form-control" maxlength="100" autocomplete="address-level2" @bind="ApplicantCity" /></div>
-                <div class="col-12 col-md-4">@FieldLabel("applicantPostalCode", "Postal Code")<input id="applicantPostalCode" class="form-control" maxlength="4" inputmode="numeric" autocomplete="postal-code" @bind="ApplicantPostalCode" /></div>
-                <div class="col-12 col-md-6">@FieldLabel("applicantTelephone", "Telephone Number")<input id="applicantTelephone" class="form-control" type="tel" maxlength="@ApplicationEntry.MaxTelephoneLength" @bind="ApplicantTelephone" /></div>
-                <div class="col-12 col-md-6">@FieldLabel("applicantEmail", "Email Address")<input id="applicantEmail" class="form-control" type="email" maxlength="@ApplicationEntry.MaxEmailLength" @bind="ApplicantEmail" /></div>
+                <div class="col-12 col-md-6">@FieldLabel("applicantFirstName", "First Name")<input id="applicantFirstName" class="form-control" maxlength="100" autocomplete="given-name" @bind="ApplicantFirstName" @bind:event="oninput" /></div>
+                <div class="col-12 col-md-6">@FieldLabel("applicantLastName", "Last Name")<input id="applicantLastName" class="form-control" maxlength="100" autocomplete="family-name" @bind="ApplicantLastName" @bind:event="oninput" /></div>
+                <div class="col-12">@FieldLabel("applicantAddressLine1", "Address Line 1")<input id="applicantAddressLine1" class="form-control" maxlength="150" autocomplete="address-line1" @bind="ApplicantAddressLine1" @bind:event="oninput" /></div>
+                <div class="col-12"><label class="form-label fw-semibold" for="applicantAddressLine2">Address Line 2</label><input id="applicantAddressLine2" class="form-control" maxlength="150" autocomplete="address-line2" @bind="ApplicantAddressLine2" @bind:event="oninput" /></div>
+                <div class="col-12 col-md-6">@FieldLabel("applicantSuburb", "Suburb")<input id="applicantSuburb" class="form-control" maxlength="100" @bind="ApplicantSuburb" @bind:event="oninput" /></div>
+                <div class="col-12 col-md-6">@FieldLabel("applicantCity", "City / Town")<input id="applicantCity" class="form-control" maxlength="100" autocomplete="address-level2" @bind="ApplicantCity" @bind:event="oninput" /></div>
+                <div class="col-12 col-md-4">@FieldLabel("applicantPostalCode", "Postal Code")<input id="applicantPostalCode" class="form-control" maxlength="4" inputmode="numeric" autocomplete="postal-code" @bind="ApplicantPostalCode" @bind:event="oninput" /></div>
+                <div class="col-12 col-md-6">@FieldLabel("applicantTelephone", "Telephone Number")<input id="applicantTelephone" class="form-control" type="tel" maxlength="@ApplicationEntry.MaxTelephoneLength" @bind="ApplicantTelephone" @bind:event="oninput" /></div>
+                <div class="col-12 col-md-6">@FieldLabel("applicantEmail", "Email Address")<input id="applicantEmail" class="form-control" type="email" maxlength="@ApplicationEntry.MaxEmailLength" @bind="ApplicantEmail" @bind:event="oninput" /></div>
             </div>
         </div></div>
     </section>
@@ -96,13 +108,13 @@
         <div class="card business-info-card mb-4"><div class="card-body">
             <div class="business-info-card-heading"><span class="business-info-card-icon"><PhosphorIcon Name="buildings" /></span><h5 class="mb-0">Business Information</h5></div>
             <div class="row g-3">
-                <div class="col-12 col-md-6">@FieldLabel("businessName", "Business Name")<input id="businessName" class="form-control" @bind="BusinessName" /></div>
-                <div class="col-12 col-md-6">@FieldLabel("registrationNumber", "Company Registration Number")<input id="registrationNumber" class="form-control" maxlength="14" aria-describedby="registrationHelp" @bind="RegistrationNumber" /><div id="registrationHelp" class="form-text">Format: YYYY/NNNNNN/XX</div></div>
-                <div class="col-12 col-md-6">@FieldLabel("taxNumber", "Tax Number")<input id="taxNumber" class="form-control" type="text" inputmode="numeric" maxlength="10" aria-describedby="taxHelp" @bind="TaxNumber" /><div id="taxHelp" class="form-text">Enter the 10-digit tax reference number.</div></div>
-                <div class="col-12">@FieldLabel("businessCategory", "Nature of Business")<textarea id="businessCategory" class="form-control" rows="2" @bind="BusinessCategory"></textarea></div>
-                <div class="col-12 col-md-6">@FieldLabel("contactPerson", "Contact Person")<input id="contactPerson" class="form-control" @bind="ContactPerson" /></div>
-                <div class="col-12 col-md-6">@FieldLabel("businessTelephone", "Business Telephone")<input id="businessTelephone" class="form-control" type="tel" maxlength="@ApplicationEntry.MaxTelephoneLength" @bind="BusinessTelephone" /></div>
-                <div class="col-12 col-md-6">@FieldLabel("businessEmail", "Business Email")<input id="businessEmail" class="form-control" type="email" maxlength="@ApplicationEntry.MaxEmailLength" @bind="BusinessEmail" /></div>
+                <div class="col-12 col-md-6">@FieldLabel("businessName", "Business Name")<input id="businessName" class="form-control" @bind="BusinessName" @bind:event="oninput" /></div>
+                <div class="col-12 col-md-6">@FieldLabel("registrationNumber", "Company Registration Number")<input id="registrationNumber" class="form-control" maxlength="14" aria-describedby="registrationHelp" @bind="RegistrationNumber" @bind:event="oninput" /><div id="registrationHelp" class="form-text">Format: YYYY/NNNNNN/XX</div></div>
+                <div class="col-12 col-md-6">@FieldLabel("taxNumber", "Tax Number")<input id="taxNumber" class="form-control" type="text" inputmode="numeric" maxlength="10" aria-describedby="taxHelp" @bind="TaxNumber" @bind:event="oninput" /><div id="taxHelp" class="form-text">Enter the 10-digit tax reference number.</div></div>
+                <div class="col-12">@FieldLabel("businessCategory", "Nature of Business")<textarea id="businessCategory" class="form-control" rows="2" @bind="BusinessCategory" @bind:event="oninput"></textarea></div>
+                <div class="col-12 col-md-6">@FieldLabel("contactPerson", "Contact Person")<input id="contactPerson" class="form-control" @bind="ContactPerson" @bind:event="oninput" /></div>
+                <div class="col-12 col-md-6">@FieldLabel("businessTelephone", "Business Telephone")<input id="businessTelephone" class="form-control" type="tel" maxlength="@ApplicationEntry.MaxTelephoneLength" @bind="BusinessTelephone" @bind:event="oninput" /></div>
+                <div class="col-12 col-md-6">@FieldLabel("businessEmail", "Business Email")<input id="businessEmail" class="form-control" type="email" maxlength="@ApplicationEntry.MaxEmailLength" @bind="BusinessEmail" @bind:event="oninput" /></div>
                 <div class="col-12"><div class="form-label fw-semibold">Trading Hours</div><p class="form-text mt-0">For Open days, enter 24-hour times as HH:mm (for example 08:00 and 17:00).</p><div class="trading-hours-list" id="tradingHours">@foreach (var day in TradingDays) { <div class="trading-hours-row" @key="day.Day"><strong>@day.Day</strong><select class="form-select" aria-label="@day.Day trading status" value="@(day.IsOpen == true ? "open" : day.IsOpen == false ? "closed" : "")" @onchange="e => SetDayStatus(day, e.Value?.ToString())"><option value="">Select status</option><option value="open">Open</option><option value="closed">Closed</option></select>@if (day.IsOpen == true) { <label>Opening Time <input class="form-control" type="text" placeholder="HH:mm" maxlength="5" autocomplete="off" @bind="day.OpeningTime" @bind:event="oninput" /></label><label>Closing Time <input class="form-control" type="text" placeholder="HH:mm" maxlength="5" autocomplete="off" @bind="day.ClosingTime" @bind:event="oninput" /></label> } else if (day.IsOpen == false) { <span class="text-muted">Closed</span> }</div> }</div></div>
                 <div class="col-12"><fieldset id="publicHolidayTrading" tabindex="-1"><legend class="form-label fw-semibold fs-6">Open on public holidays? <span class="text-danger">*</span></legend><div class="d-flex gap-4"><label><input type="radio" name="publicHolidayTrading" checked="@(OpenOnPublicHolidays == true)" @onchange="() => OpenOnPublicHolidays = true" /> Yes</label><label><input type="radio" name="publicHolidayTrading" checked="@(OpenOnPublicHolidays == false)" @onchange="() => OpenOnPublicHolidays = false" /> No</label></div></fieldset></div>
             </div>
@@ -111,14 +123,14 @@
             <div class="business-info-card-heading"><span class="business-info-card-icon"><PhosphorIcon Name="map-pin" /></span><h5 class="mb-0">Place of Business / Trading Address</h5></div>
             <p class="text-muted">Enter the physical address where the business operates or trades.</p>
             <div class="row g-3">
-                <div class="col-12">@FieldLabel("addressLine1", "Address Line 1")<input id="addressLine1" class="form-control" @bind="PlaceOfBusinessAddressLine1" /></div>
-                <div class="col-12"><label class="form-label fw-semibold" for="addressLine2">Address Line 2</label><input id="addressLine2" class="form-control" @bind="PlaceOfBusinessAddressLine2" /></div>
-                <div class="col-12 col-md-6">@FieldLabel("suburb", "Suburb")<input id="suburb" class="form-control" @bind="PlaceOfBusinessSuburb" /></div>
-                <div class="col-12 col-md-6">@FieldLabel("city", "Town / City")<input id="city" class="form-control" @bind="PlaceOfBusinessCity" /></div>
-                <div class="col-12 col-md-4">@FieldLabel("postalCode", "Postal Code")<input id="postalCode" class="form-control" maxlength="4" inputmode="numeric" autocomplete="postal-code" @bind="PlaceOfBusinessPostalCode" /></div>
+                <div class="col-12">@FieldLabel("addressLine1", "Address Line 1")<input id="addressLine1" class="form-control" @bind="PlaceOfBusinessAddressLine1" @bind:event="oninput" /></div>
+                <div class="col-12"><label class="form-label fw-semibold" for="addressLine2">Address Line 2</label><input id="addressLine2" class="form-control" @bind="PlaceOfBusinessAddressLine2" @bind:event="oninput" /></div>
+                <div class="col-12 col-md-6">@FieldLabel("suburb", "Suburb")<input id="suburb" class="form-control" @bind="PlaceOfBusinessSuburb" @bind:event="oninput" /></div>
+                <div class="col-12 col-md-6">@FieldLabel("city", "Town / City")<input id="city" class="form-control" @bind="PlaceOfBusinessCity" @bind:event="oninput" /></div>
+                <div class="col-12 col-md-4">@FieldLabel("postalCode", "Postal Code")<input id="postalCode" class="form-control" maxlength="4" inputmode="numeric" autocomplete="postal-code" @bind="PlaceOfBusinessPostalCode" @bind:event="oninput" /></div>
                 <div class="col-12 col-md-8"><p class="text-muted">We will check your trading address and determine the responsible municipality before you continue.</p></div>
                 <div class="col-12"><fieldset><legend class="form-label fw-semibold fs-6">Is your postal address the same as your Place of Business / Trading Address? <span class="text-danger">*</span></legend><div id="postalSameAsBusiness" class="d-flex gap-4"><label><input type="radio" name="postalSame" checked="@(PostalSameAsBusiness == true)" @onchange="() => SetPostalSelection(true)" /> Yes</label><label><input type="radio" name="postalSame" checked="@(PostalSameAsBusiness == false)" @onchange="() => SetPostalSelection(false)" /> No</label></div></fieldset></div>
-                @if (PostalSameAsBusiness == false) { <div class="col-12">@FieldLabel("postalAddressLine1", "Postal Address Line 1")<input id="postalAddressLine1" class="form-control" maxlength="150" @bind="PostalAddressLine1" /></div><div class="col-12"><label class="form-label fw-semibold" for="postalAddressLine2">Postal Address Line 2</label><input id="postalAddressLine2" class="form-control" maxlength="150" @bind="PostalAddressLine2" /></div><div class="col-12 col-md-6">@FieldLabel("postalSuburb", "Suburb")<input id="postalSuburb" class="form-control" maxlength="100" @bind="PostalSuburb" /></div><div class="col-12 col-md-6">@FieldLabel("postalCity", "City / Town")<input id="postalCity" class="form-control" maxlength="100" @bind="PostalCity" /></div><div class="col-12 col-md-4">@FieldLabel("postalPostalCode", "Postal Code")<input id="postalPostalCode" class="form-control" maxlength="4" inputmode="numeric" autocomplete="postal-code" @bind="PostalPostalCode" /></div> }
+                @if (PostalSameAsBusiness == false) { <div class="col-12">@FieldLabel("postalAddressLine1", "Postal Address Line 1")<input id="postalAddressLine1" class="form-control" maxlength="150" @bind="PostalAddressLine1" @bind:event="oninput" /></div><div class="col-12"><label class="form-label fw-semibold" for="postalAddressLine2">Postal Address Line 2</label><input id="postalAddressLine2" class="form-control" maxlength="150" @bind="PostalAddressLine2" @bind:event="oninput" /></div><div class="col-12 col-md-6">@FieldLabel("postalSuburb", "Suburb")<input id="postalSuburb" class="form-control" maxlength="100" @bind="PostalSuburb" @bind:event="oninput" /></div><div class="col-12 col-md-6">@FieldLabel("postalCity", "City / Town")<input id="postalCity" class="form-control" maxlength="100" @bind="PostalCity" @bind:event="oninput" /></div><div class="col-12 col-md-4">@FieldLabel("postalPostalCode", "Postal Code")<input id="postalPostalCode" class="form-control" maxlength="4" inputmode="numeric" autocomplete="postal-code" @bind="PostalPostalCode" @bind:event="oninput" /></div> }
             </div>
         </div></div>
     </section>
@@ -143,7 +155,7 @@
             @foreach (var requirement in SelectedLicence?.Documents ?? [])
             {
                 var selected = SelectedDocuments.FirstOrDefault(document => document.DocumentType == requirement.DocumentType);
-                <div class="supporting-document-item"><div class="supporting-document-details"><span class="supporting-document-icon"><PhosphorIcon Name="file-text" /></span><div><h6 class="fw-bold mb-1">@requirement.DocumentType <span class="text-danger">*</span></h6><p class="text-muted mb-0">@requirement.Description</p></div></div><div class="supporting-document-upload"><label class="form-label fw-semibold">Upload @requirement.DocumentType</label><InputFile class="form-control" accept=".pdf,.png,.jpg,.jpeg" disabled="@(ReadingDocumentType == requirement.DocumentType || (requirement.DocumentType == OwnerIdDocumentType && OwnerIdValidationInProgress))" OnChange="@(e => HandleFileSelected(e, requirement.DocumentType))" />@if (ReadingDocumentType == requirement.DocumentType) { <div class="mt-2 text-muted" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Reading document...</div> }@if (selected != null) { <div class="supporting-document-selected-file mt-3"><PhosphorIcon Name="check-circle" CssClass="me-2" /><strong>Selected:</strong> @selected.FileName</div> }@if (requirement.DocumentType == OwnerIdDocumentType && AiDocumentValidationEnabled) { @if (OwnerIdValidationInProgress) { <div class="mt-2 text-muted" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Verifying document...</div> } else if (OwnerIdValidationStatus == AiDocumentValidationStatus.Match) { <div class="alert alert-success mt-2 mb-0" role="status"><strong>Document verified.</strong> This file appears to be an Owner ID or Passport document. This is a document-type check only, not authentication.</div> } else if (OwnerIdValidationStatus == AiDocumentValidationStatus.NoMatch) { <div class="alert alert-danger mt-2 mb-0" role="alert"><strong>Incorrect document.</strong> This file does not appear to be an Owner ID or Passport. Please upload the correct document.</div> } else if (OwnerIdValidationStatus == AiDocumentValidationStatus.Unavailable) { <div class="alert alert-warning mt-2 mb-0" role="status">Automatic document verification is currently unavailable. Your document can still be submitted for municipal review.</div> } }</div></div>
+                <div class="supporting-document-item"><div class="supporting-document-details"><span class="supporting-document-icon"><PhosphorIcon Name="file-text" /></span><div><h6 class="fw-bold mb-1">@requirement.DocumentType <span class="text-danger">*</span></h6><p class="text-muted mb-0">@requirement.Description</p></div></div><div class="supporting-document-upload"><label class="form-label fw-semibold">@(selected == null ? "Upload" : "Replace") @requirement.DocumentType</label><InputFile class="form-control" accept=".pdf,.png,.jpg,.jpeg" disabled="@(ReadingDocumentType == requirement.DocumentType || (requirement.DocumentType == OwnerIdDocumentType && OwnerIdValidationInProgress))" OnChange="@(e => HandleFileSelected(e, requirement.DocumentType))" />@if (ReadingDocumentType == requirement.DocumentType) { <div class="mt-2 text-muted" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Reading document...</div> }@if (selected != null) { <div class="supporting-document-selected-file mt-3"><PhosphorIcon Name="check-circle" CssClass="me-2" /><strong>@selected.FileName</strong> — Uploaded <button type="button" class="btn btn-link btn-sm text-danger" @onclick="() => RemoveDocument(selected.DocumentType)">Remove</button></div> }@if (requirement.DocumentType == OwnerIdDocumentType && AiDocumentValidationEnabled) { @if (OwnerIdValidationInProgress) { <div class="mt-2 text-muted" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Verifying document...</div> } else if (OwnerIdValidationStatus == AiDocumentValidationStatus.Match) { <div class="alert alert-success mt-2 mb-0" role="status"><strong>Document verified.</strong> This file appears to be an Owner ID or Passport document. This is a document-type check only, not authentication.</div> } else if (OwnerIdValidationStatus == AiDocumentValidationStatus.NoMatch) { <div class="alert alert-danger mt-2 mb-0" role="alert"><strong>Incorrect document.</strong> This file does not appear to be an Owner ID or Passport. Please upload the correct document.</div> } else if (OwnerIdValidationStatus == AiDocumentValidationStatus.Unavailable) { <div class="alert alert-warning mt-2 mb-0" role="status">Automatic document verification is currently unavailable. Your document can still be submitted for municipal review.</div> } }</div></div>
             }
         </div></div></div>
     </section>
@@ -155,7 +167,7 @@
         <div class="review-submit-header"><h4 id="review-heading" class="fw-bold mb-2">Review & Declaration</h4><p class="text-muted mb-0">Verify all information before making the declaration.</p></div>
         <div class="row g-4">
             <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Applicant</h5>@ReviewItem("Application Type", ApplicationType)@ReviewItem("Licence Type", LicenceType)@ReviewItem("Applicant Name", FullApplicantName)@ReviewItem("Address", FormattedApplicantAddress)@ReviewItem("Telephone", ApplicantTelephone)@ReviewItem("Email", ApplicantEmail)</div></div></div>
-            <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Business</h5>@ReviewItem("Business Name", BusinessName)@ReviewItem("Nature", BusinessCategory)@ReviewItem("Place of Business / Trading Address", FormattedPlaceOfBusinessAddress)@ReviewItem("Postal Address", FormattedPostalAddress)@ReviewItem("Responsible Municipality", RoutingState.Municipality)@ReviewItem("Trading Hours", ApplicationEntry.FormatTradingHours(ApplicationEntry.SerializeTradingHours(TradingDays)))@ReviewItem("Open on public holidays", ApplicationEntry.FormatPublicHolidayTrading(OpenOnPublicHolidays))</div></div></div>
+            <div class="col-12 col-lg-6"><div class="card review-submit-card h-100"><div class="card-body"><h5 class="mb-3">Business</h5>@ReviewItem("Business Name", BusinessName)@ReviewItem("Nature", BusinessCategory)@ReviewItem("Place of Business / Trading Address", FormattedPlaceOfBusinessAddress)@ReviewItem("Postal Address", FormattedPostalAddress)@ReviewItem("Responsible Municipality", RoutingState.Municipality ?? ProvisionalMunicipality)@ReviewItem("Trading Hours", ApplicationEntry.FormatTradingHours(ApplicationEntry.SerializeTradingHours(TradingDays)))@ReviewItem("Open on public holidays", ApplicationEntry.FormatPublicHolidayTrading(OpenOnPublicHolidays))</div></div></div>
             <div class="col-12"><div class="card review-submit-card"><div class="card-body"><h5 class="mb-3">@LicenceType Details</h5>@foreach (var question in SelectedLicence?.Questions ?? []) { @ReviewItem(question.Label, GetAnswer(question.Key)) }</div></div></div>
             <div class="col-12"><div class="card review-submit-card"><div class="card-body"><h5 class="mb-3">Supporting Documents</h5>@foreach (var document in SelectedDocuments) { @ReviewItem(document.DocumentType, document.FileName) }</div></div></div>
         </div>
@@ -169,19 +181,33 @@
 }
 
 </fieldset>
-<div class="mt-5 d-flex flex-wrap gap-2">@if (CurrentStep > 1) { <button class="btn btn-outline-secondary" disabled="@IsBusy" @onclick="PreviousStep"><PhosphorIcon Name="arrow-left" /> Back</button> } @if (CurrentStep < TotalSteps) { <button class="btn btn-primary" disabled="@IsBusy" aria-busy="@RoutingState.IsRouting" @onclick="NextStep">@if (RoutingState.IsRouting) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> } else { <span>Next </span><PhosphorIcon Name="arrow-right" /> } @(RoutingState.IsRouting ? "Checking address..." : "")</button> } else { <button class="btn btn-success" disabled="@IsBusy" aria-busy="@IsSubmitting" @onclick="SubmitApplication">@if (IsSubmitting) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> } else { <PhosphorIcon Name="check-circle" /> } @(IsSubmitting ? "Submitting application..." : "Submit Application")</button> }</div>
+<div class="mt-5 d-flex flex-wrap align-items-center gap-2">@if (CurrentStep > 1) { <button class="btn btn-outline-secondary" disabled="@IsBusy" @onclick="PreviousStep"><PhosphorIcon Name="arrow-left" /> Back</button> } @if (CurrentStep < TotalSteps) { <button class="btn btn-primary" disabled="@IsBusy" aria-busy="@RoutingState.IsRouting" @onclick="NextStep">@if (RoutingState.IsRouting) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> } else { <span>Next </span><PhosphorIcon Name="arrow-right" /> } @(RoutingState.IsRouting ? "Checking address..." : "")</button> } else { <button class="btn btn-success" disabled="@IsBusy" aria-busy="@IsSubmitting" @onclick="SubmitApplication">@if (IsSubmitting) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> } else { <PhosphorIcon Name="check-circle" /> } @(IsSubmitting ? "Submitting application..." : "Submit Application")</button> } @if (CurrentStep > 1) { <button class="btn btn-outline-primary ms-md-auto" disabled="@IsBusy" @onclick="() => SaveDraftAsync(true)"><PhosphorIcon Name="floppy-disk" /> Save draft</button><button class="btn btn-link text-danger" disabled="@IsBusy" @onclick="() => ShowDeleteConfirmation = true">Delete draft</button><span class="small text-muted" role="status" aria-live="polite">@SaveState</span> }</div>
+}
+
+@if (ShowDeleteConfirmation)
+{
+    <div class="modal d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="delete-draft-title"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="delete-draft-title">Delete draft application?</h5><button class="btn-close" disabled="@DeletingDraft" aria-label="Close" @onclick="() => ShowDeleteConfirmation = false"></button></div><div class="modal-body"><p>This will permanently delete your saved application and any documents you have uploaded. This cannot be undone.</p></div><div class="modal-footer"><button class="btn btn-outline-secondary" disabled="@DeletingDraft" @onclick="() => ShowDeleteConfirmation = false">Cancel</button><button class="btn btn-danger" disabled="@DeletingDraft" @onclick="DeleteDraft">@(DeletingDraft ? "Deleting..." : "Delete draft")</button></div></div></div></div>
+}
 
 @code {
+    [SupplyParameterFromQuery] public bool Resume { get; set; }
     private const int TotalSteps = 7;
     private const long MaxFileSize = 10 * 1024 * 1024;
     private const string OwnerIdDocumentType = "Owner ID Document";
     private int CurrentStep = 1;
     private bool IsSubmitting, MessageIsError, DeclarationAccepted, PopiaConsentAccepted, ScrollToStep;
     private bool AiDocumentValidationEnabled, OwnerIdValidationInProgress;
+    private bool ShowExistingDraftChoice, ShowDeleteConfirmation, DeletingDraft;
     private bool? PostalSameAsBusiness;
     private bool? OpenOnPublicHolidays;
     private string? InvalidFieldId;
     private string? ReadingDocumentType;
+    private string SaveState = "";
+    private string? ProvisionalMunicipality;
+    private ApplicationDraft? ExistingDraft;
+    private ApplicationDraftSummary? ExistingDraftSummary;
+    private CancellationTokenSource? AutosaveDelay;
+    private readonly SemaphoreSlim SaveGate = new(1, 1);
     private AiDocumentValidationStatus? OwnerIdValidationStatus;
     private string Message = "", LicenceType = "", ApplicationType = "", ApplicantFirstName = "", ApplicantLastName = "", ApplicantAddressLine1 = "", ApplicantAddressLine2 = "", ApplicantSuburb = "", ApplicantCity = "", ApplicantPostalCode = "", ApplicantTelephone = "", ApplicantEmail = "";
     private string BusinessName = "", RegistrationNumber = "", TaxNumber = "", BusinessCategory = "", ContactPerson = "", BusinessTelephone = "", BusinessEmail = "";
@@ -212,13 +238,24 @@
         var user = await UserManager.GetUserAsync(state.User);
         if (user != null) { var split = user.FullName.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries); ApplicantFirstName = split.ElementAtOrDefault(0) ?? ""; ApplicantLastName = split.ElementAtOrDefault(1) ?? ""; ApplicantEmail = user.Email ?? ""; ApplicantTelephone = user.PhoneNumber ?? ""; }
         AiDocumentValidationEnabled = await AiSettings.IsDocumentValidationEnabledAsync();
+        ExistingDraft = await Drafts.GetAsync(state.User);
+        if (ExistingDraft != null)
+        {
+            ExistingDraftSummary = await Drafts.GetSummaryAsync(state.User);
+            if (Resume) LoadDraft(ExistingDraft);
+            else ShowExistingDraftChoice = true;
+        }
     }
 
-    private void SelectLicence(LicenceDefinition definition)
+    private async Task SelectLicence(LicenceDefinition definition)
     {
         if (LicenceType == definition.Name) return;
+        if (ExistingDraft != null)
+            foreach (var document in SelectedDocuments.ToList())
+                await Drafts.RemoveDocumentAsync((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User, document.DocumentType);
         LicenceType = definition.Name; LicenceAnswers.Clear(); SelectedDocuments.Clear(); OwnerIdValidationStatus = null; OwnerIdValidationInProgress = false;
         foreach (var question in definition.Questions) LicenceAnswers[question.Key] = "";
+        DraftChanged(default!);
     }
 
     private string GetAnswer(string key) => LicenceAnswers.GetValueOrDefault(key, "");
@@ -233,6 +270,7 @@
         {
             CurrentStep++;
             ScrollToStep = true;
+            await SaveDraftAsync();
             return;
         }
 
@@ -252,7 +290,9 @@
             }
             CurrentStep++;
             Message = "";
+            ProvisionalMunicipality = RoutingState.Municipality;
             ScrollToStep = true;
+            await SaveDraftAsync();
         }
         catch (System.ComponentModel.DataAnnotations.ValidationException)
         {
@@ -266,7 +306,7 @@
         }
     }
 
-    private void PreviousStep() { if (IsBusy) return; Message = ""; InvalidFieldId = null; CurrentStep--; ScrollToStep = true; }
+    private async Task PreviousStep() { if (IsBusy) return; Message = ""; InvalidFieldId = null; CurrentStep--; ScrollToStep = true; await SaveDraftAsync(); }
     private void SetPostalSelection(bool same) { PostalSameAsBusiness = same; if (same) { PostalAddressLine1 = PostalAddressLine2 = PostalSuburb = PostalCity = PostalPostalCode = ""; } }
     private static void SetDayStatus(TradingDay day, string? status)
     {
@@ -341,21 +381,50 @@
         if (extension is not (".pdf" or ".png" or ".jpg" or ".jpeg")) { SetError("Supporting documents must be PDF, PNG or JPEG files."); return; }
         ReadingDocumentType = documentType;
         SelectedDocument? selected = null;
-        try { using var stream = new MemoryStream(); await file.OpenReadStream(MaxFileSize).CopyToAsync(stream); selected = new(documentType, Path.GetFileName(file.Name), stream.ToArray()); SelectedDocuments.RemoveAll(item => item.DocumentType == documentType); SelectedDocuments.Add(selected); if (documentType == OwnerIdDocumentType) OwnerIdValidationStatus = null; }
+        try { using var stream = new MemoryStream(); await file.OpenReadStream(MaxFileSize).CopyToAsync(stream); selected = new(documentType, Path.GetFileName(file.Name), null, stream.ToArray()); if (documentType == OwnerIdDocumentType) OwnerIdValidationStatus = null; }
         catch (IOException) { SetError("The selected document exceeds the 10 MB file limit."); }
         finally { ReadingDocumentType = null; }
-        if (selected == null || documentType != OwnerIdDocumentType) return;
-        AiDocumentValidationEnabled = await AiSettings.IsDocumentValidationEnabledAsync();
-        if (!AiDocumentValidationEnabled) return;
-        OwnerIdValidationInProgress = true;
-        StateHasChanged();
+        if (selected == null) return;
+        if (documentType == OwnerIdDocumentType)
+        {
+            AiDocumentValidationEnabled = await AiSettings.IsDocumentValidationEnabledAsync();
+            if (AiDocumentValidationEnabled)
+            {
+                OwnerIdValidationInProgress = true;
+                StateHasChanged();
+                try
+                {
+                    OwnerIdValidationStatus = (await AiValidation.EvaluateAsync(true, documentType, selected.FileName, selected.FileBytes!)).Status;
+                }
+                finally
+                {
+                    OwnerIdValidationInProgress = false;
+                }
+            }
+        }
         try
         {
-            OwnerIdValidationStatus = (await AiValidation.EvaluateAsync(true, documentType, selected.FileName, selected.FileBytes)).Status;
+            await SaveDraftAsync();
+            var reference = await Uploads.SaveAsync(selected.FileName, selected.FileBytes!);
+            try
+            {
+                await Drafts.ReplaceDocumentAsync((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User,
+                    documentType, selected.FileName, reference, documentType == OwnerIdDocumentType ? OwnerIdValidationStatus : null);
+            }
+            catch
+            {
+                await Uploads.DeleteIfUnreferencedAsync(Db, reference);
+                throw;
+            }
+            selected = selected with { FilePath = reference, FileBytes = null };
+            SelectedDocuments.RemoveAll(item => item.DocumentType == documentType);
+            SelectedDocuments.Add(selected);
+            SaveState = "Saved";
         }
-        finally
+        catch
         {
-            OwnerIdValidationInProgress = false;
+            SetError("The document could not be saved. Please try again.");
+            SaveState = "Unable to save";
         }
     }
 
@@ -364,9 +433,12 @@
         if (IsBusy) return;
         Message = ""; for (var step = 1; step <= 6; step++) if (!ValidateStep(step)) { CurrentStep = step; StateHasChanged(); return; }
         IsSubmitting = true;
+        AutosaveDelay?.Cancel();
 
         try
         {
+            await SaveGate.WaitAsync();
+            SaveGate.Release();
             var state = await AuthenticationStateProvider.GetAuthenticationStateAsync(); var user = await UserManager.GetUserAsync(state.User);
             if (user == null) { SetError("You must be logged in to submit an application."); return; }
             var address = CurrentTradingAddress();
@@ -400,10 +472,14 @@
                 PopiaConsentAccepted = true, Status = "Submitted", DateSubmitted = now, UserId = user.Id,
                 Details = new ApplicationDetails { ApplicationType = ApplicationType, ApplicantFirstName = ApplicantFirstName.Trim(), ApplicantLastName = ApplicantLastName.Trim(), ApplicantAddressLine1 = ApplicantAddressLine1.Trim(), ApplicantAddressLine2 = ApplicantAddressLine2.Trim(), ApplicantSuburb = ApplicantSuburb.Trim(), ApplicantCity = ApplicantCity.Trim(), ApplicantPostalCode = ApplicantPostalCode.Trim(), ApplicantTelephone = ApplicantTelephone.Trim(), ApplicantEmail = ApplicantEmail.Trim(), PostalAddressSameAsBusiness = PostalSameAsBusiness, PostalAddressLine1 = PostalSameAsBusiness == false ? PostalAddressLine1.Trim() : null, PostalAddressLine2 = PostalSameAsBusiness == false ? PostalAddressLine2.Trim() : null, PostalSuburb = PostalSameAsBusiness == false ? PostalSuburb.Trim() : null, PostalCity = PostalSameAsBusiness == false ? PostalCity.Trim() : null, PostalPostalCode = PostalSameAsBusiness == false ? PostalPostalCode.Trim() : null, ContactPerson = ContactPerson.Trim(), BusinessTelephone = BusinessTelephone.Trim(), BusinessEmail = BusinessEmail.Trim(), TradingHours = ApplicationEntry.SerializeTradingHours(TradingDays), OpenOnPublicHolidays = OpenOnPublicHolidays, LicenceSpecificDetailsJson = JsonSerializer.Serialize(LicenceAnswers), DeclarationAccepted = true, DeclarationAcceptedAt = now }
             };
-            foreach (var selected in SelectedDocuments) { var reference = await Uploads.SaveAsync(selected.FileName, selected.FileBytes); application.Documents.Add(new ApplicationDocument { DocumentType = selected.DocumentType, FileName = selected.FileName, FilePath = reference }); }
+            var draft = await Db.ApplicationDrafts.Include(item => item.Documents)
+                .SingleOrDefaultAsync(item => item.UserId == user.Id);
+            if (draft == null) throw new InvalidOperationException("The saved draft is unavailable.");
+            foreach (var selected in draft.Documents) application.Documents.Add(new ApplicationDocument { DocumentType = selected.DocumentType, FileName = selected.FileName, FilePath = selected.FilePath });
             Db.Applications.Add(application); await Db.SaveChangesAsync();
             application.ApplicationFormFileName = $"{application.ApplicationNumber}-Official-Application.pdf";
             application.ApplicationFormFilePath = await FileService.SaveGeneratedPdfAsync(application.Id, application.ApplicationFormFileName, PdfService.Generate(application));
+            Db.ApplicationDrafts.Remove(draft);
             await Db.SaveChangesAsync(); await transaction.CommitAsync();
             try { await Notifications.NotifySubmissionAsync(application.Id); }
             catch (Exception error)
@@ -427,5 +503,140 @@
         <span class="review-label">@label:</span>
         <span class="review-value">@(string.IsNullOrWhiteSpace(value) ? "Not provided" : value)</span>
     </div>;
-    private sealed record SelectedDocument(string DocumentType, string FileName, byte[] FileBytes);
+
+    private void DraftChanged(ChangeEventArgs args)
+    {
+        if (CurrentStep <= 1 || ShowExistingDraftChoice) return;
+        AutosaveDelay?.Cancel();
+        AutosaveDelay?.Dispose();
+        AutosaveDelay = new CancellationTokenSource();
+        var token = AutosaveDelay.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(1000, token);
+                await InvokeAsync(() => PersistDraftAsync(false));
+            }
+            catch (OperationCanceledException) { }
+        });
+    }
+
+    private async Task SaveDraftAsync(bool announce = false)
+    {
+        AutosaveDelay?.Cancel();
+        await PersistDraftAsync(announce);
+    }
+
+    private async Task PersistDraftAsync(bool announce)
+    {
+        if (CurrentStep <= 1 || IsSubmitting) return;
+        await SaveGate.WaitAsync();
+        try
+        {
+            SaveState = "Saving...";
+            StateHasChanged();
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            ExistingDraft = await Drafts.SaveAsync(principal, CreatePayload(), CurrentStep);
+            ExistingDraftSummary = await Drafts.GetSummaryAsync(principal);
+            SaveState = "Saved";
+            if (announce) Message = "Your draft has been saved.";
+        }
+        catch
+        {
+            SaveState = "Unable to save";
+            if (announce) SetError("Your draft could not be saved. Please try again.");
+        }
+        finally
+        {
+            SaveGate.Release();
+            StateHasChanged();
+        }
+    }
+
+    private ApplicationDraftPayload CreatePayload() => new()
+    {
+        LicenceType = LicenceType, ApplicationType = ApplicationType,
+        ApplicantFirstName = ApplicantFirstName, ApplicantLastName = ApplicantLastName,
+        ApplicantAddressLine1 = ApplicantAddressLine1, ApplicantAddressLine2 = ApplicantAddressLine2,
+        ApplicantSuburb = ApplicantSuburb, ApplicantCity = ApplicantCity, ApplicantPostalCode = ApplicantPostalCode,
+        ApplicantTelephone = ApplicantTelephone, ApplicantEmail = ApplicantEmail,
+        BusinessName = BusinessName, RegistrationNumber = RegistrationNumber, TaxNumber = TaxNumber,
+        BusinessCategory = BusinessCategory, ContactPerson = ContactPerson,
+        BusinessTelephone = BusinessTelephone, BusinessEmail = BusinessEmail,
+        PlaceOfBusinessAddressLine1 = PlaceOfBusinessAddressLine1, PlaceOfBusinessAddressLine2 = PlaceOfBusinessAddressLine2,
+        PlaceOfBusinessSuburb = PlaceOfBusinessSuburb, PlaceOfBusinessCity = PlaceOfBusinessCity,
+        PlaceOfBusinessPostalCode = PlaceOfBusinessPostalCode, PostalSameAsBusiness = PostalSameAsBusiness,
+        PostalAddressLine1 = PostalAddressLine1, PostalAddressLine2 = PostalAddressLine2,
+        PostalSuburb = PostalSuburb, PostalCity = PostalCity, PostalPostalCode = PostalPostalCode,
+        TradingDays = TradingDays.Select(day => new TradingDay { Day = day.Day, IsOpen = day.IsOpen, OpeningTime = day.OpeningTime, ClosingTime = day.ClosingTime }).ToList(),
+        OpenOnPublicHolidays = OpenOnPublicHolidays, LicenceAnswers = new(LicenceAnswers),
+        DeclarationAccepted = DeclarationAccepted, PopiaConsentAccepted = PopiaConsentAccepted,
+        ProvisionalMunicipality = RoutingState.Municipality ?? ProvisionalMunicipality
+    };
+
+    private void LoadDraft(ApplicationDraft draft)
+    {
+        var payload = ApplicationDraftService.Deserialize(draft.PayloadJson);
+        LicenceType = payload.LicenceType; ApplicationType = payload.ApplicationType;
+        ApplicantFirstName = payload.ApplicantFirstName; ApplicantLastName = payload.ApplicantLastName;
+        ApplicantAddressLine1 = payload.ApplicantAddressLine1; ApplicantAddressLine2 = payload.ApplicantAddressLine2;
+        ApplicantSuburb = payload.ApplicantSuburb; ApplicantCity = payload.ApplicantCity;
+        ApplicantPostalCode = payload.ApplicantPostalCode; ApplicantTelephone = payload.ApplicantTelephone; ApplicantEmail = payload.ApplicantEmail;
+        BusinessName = payload.BusinessName; RegistrationNumber = payload.RegistrationNumber; TaxNumber = payload.TaxNumber;
+        BusinessCategory = payload.BusinessCategory; ContactPerson = payload.ContactPerson;
+        BusinessTelephone = payload.BusinessTelephone; BusinessEmail = payload.BusinessEmail;
+        PlaceOfBusinessAddressLine1 = payload.PlaceOfBusinessAddressLine1; PlaceOfBusinessAddressLine2 = payload.PlaceOfBusinessAddressLine2;
+        PlaceOfBusinessSuburb = payload.PlaceOfBusinessSuburb; PlaceOfBusinessCity = payload.PlaceOfBusinessCity;
+        PlaceOfBusinessPostalCode = payload.PlaceOfBusinessPostalCode; PostalSameAsBusiness = payload.PostalSameAsBusiness;
+        PostalAddressLine1 = payload.PostalAddressLine1; PostalAddressLine2 = payload.PostalAddressLine2;
+        PostalSuburb = payload.PostalSuburb; PostalCity = payload.PostalCity; PostalPostalCode = payload.PostalPostalCode;
+        TradingDays.Clear();
+        var restoredDays = payload.TradingDays.Count == ApplicationEntry.Days.Length &&
+            payload.TradingDays.Select(day => day.Day).SequenceEqual(ApplicationEntry.Days) ? payload.TradingDays :
+            ApplicationEntry.Days.Select(day => new TradingDay { Day = day });
+        TradingDays.AddRange(restoredDays);
+        OpenOnPublicHolidays = payload.OpenOnPublicHolidays;
+        LicenceAnswers.Clear();
+        foreach (var question in SelectedLicence?.Questions ?? []) LicenceAnswers[question.Key] = "";
+        foreach (var answer in payload.LicenceAnswers) LicenceAnswers[answer.Key] = answer.Value;
+        DeclarationAccepted = payload.DeclarationAccepted; PopiaConsentAccepted = payload.PopiaConsentAccepted;
+        ProvisionalMunicipality = payload.ProvisionalMunicipality;
+        SelectedDocuments.Clear();
+        foreach (var document in draft.Documents)
+            SelectedDocuments.Add(new(document.DocumentType, document.FileName, document.FilePath, null));
+        var ownerDocument = draft.Documents.SingleOrDefault(item => item.DocumentType == OwnerIdDocumentType);
+        OwnerIdValidationStatus = Enum.TryParse<AiDocumentValidationStatus>(ownerDocument?.AiValidationStatus, out var status) ? status : null;
+        CurrentStep = Math.Clamp(draft.CurrentStep, 1, TotalSteps);
+        ShowExistingDraftChoice = false;
+        SaveState = $"Saved {draft.LastSavedAtUtc.ToLocalTime():g}";
+    }
+
+    private void ContinueExistingDraft()
+    {
+        if (ExistingDraft != null) LoadDraft(ExistingDraft);
+    }
+
+    private async Task RemoveDocument(string documentType)
+    {
+        await Drafts.RemoveDocumentAsync((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User, documentType);
+        SelectedDocuments.RemoveAll(item => item.DocumentType == documentType);
+        if (documentType == OwnerIdDocumentType) OwnerIdValidationStatus = null;
+        SaveState = "Saved";
+    }
+
+    private async Task DeleteDraft()
+    {
+        if (DeletingDraft) return;
+        DeletingDraft = true;
+        try
+        {
+            await Drafts.DeleteAsync((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User);
+            Nav.NavigateTo("/new-application", forceLoad: true);
+        }
+        finally { DeletingDraft = false; }
+    }
+
+    private static string DisplayDraftValue(string? value) => string.IsNullOrWhiteSpace(value) ? "Not yet provided" : value;
+    private sealed record SelectedDocument(string DocumentType, string FileName, string? FilePath, byte[]? FileBytes);
 }
