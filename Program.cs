@@ -64,6 +64,7 @@ builder.Services.AddSingleton<ReportExportService>();
 builder.Services.AddScoped<ApplicantApplicationService>();
 builder.Services.AddScoped<AiSettingsService>();
 builder.Services.AddScoped<AiDocumentValidationPolicy>();
+builder.Services.AddScoped<InitialAdminBootstrapper>();
 builder.Services.AddHttpClient<IAiDocumentValidationService, GeminiDocumentValidationService>(client =>
     client.Timeout = TimeSpan.FromSeconds(45))
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
@@ -181,7 +182,6 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
     string[] roles =
     {
@@ -194,11 +194,16 @@ using (var scope = app.Services.CreateScope())
     {
         if (!await roleManager.RoleExistsAsync(role))
         {
-            await roleManager.CreateAsync(new IdentityRole(role));
+            var result = await roleManager.CreateAsync(new IdentityRole(role));
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(error => error.Code));
+                throw new InvalidOperationException($"Could not create Identity role '{role}': {errors}");
+            }
         }
     }
 
-    await DevelopmentAdminSeeder.SeedAsync(app.Environment, userManager);
+    await scope.ServiceProvider.GetRequiredService<InitialAdminBootstrapper>().BootstrapAsync();
 
 }
 
