@@ -12,6 +12,8 @@ using System.Security.Claims;
 using PdfSharp.Fonts;
 using BusinessLicensing_Practice.Fonts;
 using BusinessLicensing_Practice.Services.Storage;
+using Amazon.Runtime;
+using Amazon.S3;
 
 GlobalFontSettings.FontResolver = new LiberationSansFontResolver();
 
@@ -21,10 +23,30 @@ if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddSingleton<IPrivateFileStore, LocalPrivateFileStore>();
 }
+else if (builder.Environment.IsProduction())
+{
+    builder.Services.AddOptions<CloudflareR2Options>()
+        .Bind(builder.Configuration.GetSection(CloudflareR2Options.SectionName))
+        .ValidateDataAnnotations()
+        .ValidateOnStart();
+    builder.Services.AddSingleton<IAmazonS3>(services =>
+    {
+        var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<CloudflareR2Options>>().Value;
+        return new AmazonS3Client(
+            new BasicAWSCredentials(options.AccessKeyId, options.SecretAccessKey),
+            new AmazonS3Config
+            {
+                ServiceURL = options.Endpoint.TrimEnd('/'),
+                AuthenticationRegion = "auto",
+                ForcePathStyle = true
+            });
+    });
+    builder.Services.AddSingleton<IPrivateFileStore, CloudflareR2PrivateFileStore>();
+}
 else
 {
     throw new InvalidOperationException(
-        "No production IPrivateFileStore implementation is configured. Local App_Data storage is available only in Development.");
+        $"No IPrivateFileStore implementation is configured for environment '{builder.Environment.EnvironmentName}'.");
 }
 
 var databaseProvider = builder.Configuration["Database:Provider"]?.Trim();

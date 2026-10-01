@@ -17,6 +17,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Data.Sqlite;
 using System.Text.Json;
+using System.Text;
+using Amazon.Runtime;
+using Amazon.S3;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 // Run from the repository root. All test users, history and PDFs live in a temporary content root.
 var root = Path.Combine(Path.GetTempPath(), "security-audit-" + Guid.NewGuid().ToString("N"));
@@ -64,6 +69,155 @@ if (args.Contains("--local-private-file-store"))
     {
         try { Directory.Delete(root, true); } catch { }
     }
+    return;
+}
+if (args.Contains("--r2-configuration"))
+{
+    try
+    {
+        static List<ValidationResult> Validate(CloudflareR2Options options)
+        {
+            var results = new List<ValidationResult>();
+            Validator.TryValidateObject(options, new ValidationContext(options), results, validateAllProperties: true);
+            return results;
+        }
+
+        Check(Validate(new CloudflareR2Options()).Count >= 4,
+            "R2 configuration requires endpoint, bucket name, access key ID, and secret access key");
+        Check(Validate(new CloudflareR2Options
+        {
+            Endpoint = "https://example.r2.cloudflarestorage.com",
+            BucketName = "private-files",
+            AccessKeyId = "test-access-key",
+            SecretAccessKey = "test-secret-key"
+        }).Count == 0, "R2 configuration accepts a complete HTTPS S3 configuration");
+        Check(Validate(new CloudflareR2Options
+        {
+            Endpoint = "http://example.r2.cloudflarestorage.com?unsafe=true",
+            BucketName = "folder/private-files",
+            AccessKeyId = "test-access-key",
+            SecretAccessKey = "test-secret-key"
+        }).Count == 2, "R2 configuration rejects an unsafe endpoint and bucket path");
+    }
+    finally
+    {
+        try { Directory.Delete(root, true); } catch { }
+    }
+    return;
+}
+if (args.Contains("--r2-integration"))
+{
+    var connectionSucceeded = false;
+    var uploadSucceeded = false;
+    var existsSucceeded = false;
+    var bufferedReadSucceeded = false;
+    var streamedReadSucceeded = false;
+    var overwriteSucceeded = false;
+    var deleteSucceeded = false;
+    var missingHandlingSucceeded = false;
+    var cleanupSucceeded = false;
+    string? errorType = null;
+    string? errorStage = null;
+    var stage = "configuration";
+
+    var configuration = new ConfigurationBuilder()
+        .AddUserSecrets(typeof(CloudflareR2Options).Assembly, optional: false)
+        .Build();
+    var r2Options = configuration.GetSection(CloudflareR2Options.SectionName).Get<CloudflareR2Options>()
+        ?? throw new InvalidOperationException("R2 configuration is missing.");
+    var validationResults = new List<ValidationResult>();
+    if (!Validator.TryValidateObject(r2Options, new ValidationContext(r2Options), validationResults,
+            validateAllProperties: true))
+        throw new InvalidOperationException("R2 configuration is incomplete or invalid.");
+
+    using var s3Client = new AmazonS3Client(
+        new BasicAWSCredentials(r2Options.AccessKeyId, r2Options.SecretAccessKey),
+        new AmazonS3Config
+        {
+            ServiceURL = r2Options.Endpoint.TrimEnd('/'),
+            AuthenticationRegion = "auto",
+            ForcePathStyle = true
+        });
+    var store = new CloudflareR2PrivateFileStore(s3Client, Options.Create(r2Options));
+    var objectKey = $"integration-tests/r2-storage-test-{Guid.NewGuid():N}.txt";
+    var original = Encoding.UTF8.GetBytes("Cloudflare R2 private storage integration test.");
+    var replacement = Encoding.UTF8.GetBytes("Cloudflare R2 private storage overwrite test.");
+
+    try
+    {
+        stage = "upload";
+        await store.SaveAsync(objectKey, original, "text/plain");
+        connectionSucceeded = uploadSucceeded = true;
+
+        stage = "existence check";
+        existsSucceeded = await store.ExistsAsync(objectKey);
+        if (!existsSucceeded) throw new InvalidOperationException("The uploaded temporary object was not found.");
+
+        stage = "buffered read";
+        bufferedReadSucceeded = (await store.ReadAsync(objectKey))?.SequenceEqual(original) == true;
+        if (!bufferedReadSucceeded) throw new InvalidOperationException("Buffered content did not match.");
+
+        stage = "streamed read";
+        var opened = await store.OpenReadAsync(objectKey);
+        if (opened != null)
+        {
+            await using var stream = opened.Content;
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer);
+            streamedReadSucceeded = buffer.ToArray().SequenceEqual(original);
+        }
+        if (!streamedReadSucceeded) throw new InvalidOperationException("Streamed content did not match.");
+
+        stage = "overwrite";
+        await store.SaveAsync(objectKey, replacement, "text/plain");
+        overwriteSucceeded = (await store.ReadAsync(objectKey))?.SequenceEqual(replacement) == true;
+        if (!overwriteSucceeded) throw new InvalidOperationException("Overwritten content did not match.");
+
+        stage = "delete";
+        await store.DeleteAsync(objectKey);
+        deleteSucceeded = !await store.ExistsAsync(objectKey);
+        if (!deleteSucceeded) throw new InvalidOperationException("The temporary object still exists after deletion.");
+
+        stage = "missing-object read";
+        missingHandlingSucceeded = await store.ReadAsync(objectKey) == null &&
+                                   await store.OpenReadAsync(objectKey) == null;
+        if (!missingHandlingSucceeded)
+            throw new InvalidOperationException("A missing temporary object did not return the expected result.");
+    }
+    catch (Exception exception)
+    {
+        errorType = exception.GetType().Name;
+        errorStage = stage;
+    }
+    finally
+    {
+        try
+        {
+            await store.DeleteAsync(objectKey);
+            cleanupSucceeded = !await store.ExistsAsync(objectKey);
+        }
+        catch (Exception exception)
+        {
+            cleanupSucceeded = false;
+            errorType ??= exception.GetType().Name;
+            errorStage ??= "cleanup";
+        }
+    }
+
+    Console.WriteLine($"Connection/authentication succeeded: {connectionSucceeded}");
+    Console.WriteLine($"Upload succeeded: {uploadSucceeded}");
+    Console.WriteLine($"Existence/HEAD succeeded: {existsSucceeded}");
+    Console.WriteLine($"Buffered read succeeded: {bufferedReadSucceeded}");
+    Console.WriteLine($"Streamed read succeeded: {streamedReadSucceeded}");
+    Console.WriteLine($"Overwrite succeeded: {overwriteSucceeded}");
+    Console.WriteLine($"Delete succeeded: {deleteSucceeded}");
+    Console.WriteLine($"Missing-object handling succeeded: {missingHandlingSucceeded}");
+    Console.WriteLine($"Cleanup succeeded: {cleanupSucceeded}");
+    if (errorType != null)
+        Console.WriteLine($"Error: {errorType} during {errorStage}; provider message withheld to protect configuration values.");
+
+    try { Directory.Delete(root, true); } catch { }
+    Environment.ExitCode = errorType == null && cleanupSucceeded ? 0 : 1;
     return;
 }
 async Task Start()
