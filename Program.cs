@@ -10,10 +10,11 @@ using BusinessLicensing_Practice.Services;
 using BusinessLicensing_Practice.Services.Email;
 using System.Security.Claims;
 using PdfSharp.Fonts;
+using BusinessLicensing_Practice.Fonts;
+
+GlobalFontSettings.FontResolver = new LiberationSansFontResolver();
 
 var builder = WebApplication.CreateBuilder(args);
-
-GlobalFontSettings.UseWindowsFontsUnderWindows = true;
 
 var databaseProvider = builder.Configuration["Database:Provider"]?.Trim();
 if (string.IsNullOrWhiteSpace(databaseProvider))

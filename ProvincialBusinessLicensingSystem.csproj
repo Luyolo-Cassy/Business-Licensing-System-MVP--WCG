@@ -42,6 +42,13 @@
     <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Fonts/*.ttf;Fonts/LICENSE.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+
   <Target Name="IncludePostgreSqlMigrationsInPublish" BeforeTargets="ComputeFilesToPublish">
     <PropertyGroup>
       <PostgreSqlMigrationsAssemblyPath>$(OutputPath)BusinessLicensing.PostgreSqlMigrations.dll</PostgreSqlMigrationsAssemblyPath>

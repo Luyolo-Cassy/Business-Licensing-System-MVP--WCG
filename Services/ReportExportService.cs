@@ -1,6 +1,7 @@
 using System.Text;
 using System.IO.Compression;
 using System.Security;
+using BusinessLicensing_Practice.Fonts;
 using PdfSharp.Drawing;
 using PdfSharp.Drawing.Layout;
 using PdfSharp.Pdf;
@@ -27,7 +28,7 @@ public sealed class ReportExportService
     public byte[] Pdf(ReportResult report, ReportFilter filter, DateTime generatedUtc)
     {
         using var document = new PdfDocument();
-        var title = new XFont("Arial", 16, XFontStyleEx.Bold); var heading = new XFont("Arial", 9, XFontStyleEx.Bold); var normal = new XFont("Arial", 8);
+        var title = new XFont(LiberationSansFontResolver.FamilyName, 16, XFontStyleEx.Bold); var heading = new XFont(LiberationSansFontResolver.FamilyName, 9, XFontStyleEx.Bold); var normal = new XFont(LiberationSansFontResolver.FamilyName, 8);
         const double margin = 36; PdfPage page = null!; XGraphics gfx = null!; double y = 0, pageWidth = 0, pageHeight = 0;
         void NewPage() { gfx?.Dispose(); page = document.AddPage(); page.Size = PdfSharp.PageSize.A4; page.Orientation = PdfSharp.PageOrientation.Landscape; pageWidth = page.Width.Point; pageHeight = page.Height.Point; gfx = XGraphics.FromPdfPage(page); y = margin; }
         void Line(string text, XFont font, double gap) { if (y + gap > pageHeight - margin) NewPage(); gfx.DrawString(text, font, XBrushes.Black, new XRect(margin, y, pageWidth - margin * 2, gap), XStringFormats.TopLeft); y += gap; }

@@ -1,0 +1,32 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
+
+WORKDIR /src
+
+COPY ProvincialBusinessLicensingSystem.csproj ./
+COPY BusinessLicensing.PostgreSqlMigrations/BusinessLicensing.PostgreSqlMigrations.csproj BusinessLicensing.PostgreSqlMigrations/
+
+RUN dotnet restore BusinessLicensing.PostgreSqlMigrations/BusinessLicensing.PostgreSqlMigrations.csproj
+
+COPY . .
+
+RUN dotnet build BusinessLicensing.PostgreSqlMigrations/BusinessLicensing.PostgreSqlMigrations.csproj \
+    --configuration Release \
+    --no-restore
+
+RUN dotnet publish ProvincialBusinessLicensingSystem.csproj \
+    --configuration Release \
+    --output /app/publish \
+    --no-build
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS runtime
+
+WORKDIR /app
+
+COPY --from=build /app/publish ./
+
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+
+USER $APP_UID
+
+CMD ["sh", "-c", "exec dotnet ProvincialBusinessLicensingSystem.dll --urls \"http://0.0.0.0:${PORT}\""]

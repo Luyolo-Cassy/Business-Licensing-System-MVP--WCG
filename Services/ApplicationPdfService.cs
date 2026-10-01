@@ -1,5 +1,6 @@
 using System.Text.Json;
 using BusinessLicensing_Practice.Models;
+using BusinessLicensing_Practice.Fonts;
 using PdfSharp.Drawing;
 using PdfSharp.Pdf;
 
@@ -140,10 +141,10 @@ namespace BusinessLicensing_Practice.Services
             private const double BottomMargin = 48;
             private readonly PdfDocument document;
             private readonly string reference;
-            private readonly XFont regular = new("Arial", 9);
-            private readonly XFont bold = new("Arial", 9, XFontStyleEx.Bold);
-            private readonly XFont sectionFont = new("Arial", 12, XFontStyleEx.Bold);
-            private readonly XFont titleFont = new("Arial", 13, XFontStyleEx.Bold);
+            private readonly XFont regular = new(LiberationSansFontResolver.FamilyName, 9);
+            private readonly XFont bold = new(LiberationSansFontResolver.FamilyName, 9, XFontStyleEx.Bold);
+            private readonly XFont sectionFont = new(LiberationSansFontResolver.FamilyName, 12, XFontStyleEx.Bold);
+            private readonly XFont titleFont = new(LiberationSansFontResolver.FamilyName, 13, XFontStyleEx.Bold);
             private PdfPage page = null!;
             private XGraphics graphics = null!;
             private double y;
