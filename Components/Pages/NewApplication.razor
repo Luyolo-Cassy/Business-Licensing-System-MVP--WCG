@@ -492,6 +492,7 @@ else
         }
         IsSubmitting = true;
         AutosaveDelay?.Cancel();
+        string? uncommittedPdfPath = null;
 
         try
         {
@@ -537,8 +538,10 @@ else
             Db.Applications.Add(application); await Db.SaveChangesAsync();
             application.ApplicationFormFileName = $"{application.ApplicationNumber}-Official-Application-r1.pdf";
             application.ApplicationFormFilePath = await FileService.SaveGeneratedPdfAsync(application.Id, application.ApplicationFormFileName, PdfService.Generate(application));
+            uncommittedPdfPath = application.ApplicationFormFilePath;
             Db.ApplicationDrafts.Remove(draft);
             await Db.SaveChangesAsync(); await transaction.CommitAsync();
+            uncommittedPdfPath = null;
             try { await Notifications.NotifySubmissionAsync(application.Id); }
             catch (Exception error)
             {
@@ -548,7 +551,15 @@ else
             }
             MessageIsError = false; Message = "Application submitted successfully. Your official PDF has been generated."; Nav.NavigateTo($"/tracking/{application.Id}");
         }
-        catch (Exception) { SetError("The application could not be submitted. No database changes were saved. Please try again."); }
+        catch (Exception)
+        {
+            if (uncommittedPdfPath != null)
+            {
+                try { await FileService.DeleteGeneratedPdfAsync(uncommittedPdfPath); }
+                catch (Exception cleanupError) { Logger.LogWarning(cleanupError, "Unable to clean up an uncommitted generated PDF after initial submission failed. PdfPath={PdfPath}", uncommittedPdfPath); }
+            }
+            SetError("The application could not be submitted. No database changes were saved. Please try again.");
+        }
         finally { IsSubmitting = false; }
     }
 

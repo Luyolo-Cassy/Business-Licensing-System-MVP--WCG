@@ -196,7 +196,7 @@ public sealed class ApplicationCorrectionService(
         }
         catch
         {
-            if (newPdfPath != null) try { files.DeleteGeneratedPdf(newPdfPath); } catch (Exception cleanupError) { logger.LogWarning(cleanupError, "Unable to clean up an uncommitted generated PDF. ApplicationId={ApplicationId}", application.Id); }
+            if (newPdfPath != null) try { await files.DeleteGeneratedPdfAsync(newPdfPath); } catch (Exception cleanupError) { logger.LogWarning(cleanupError, "Unable to clean up an uncommitted generated PDF. ApplicationId={ApplicationId}", application.Id); }
             throw;
         }
 
@@ -204,7 +204,7 @@ public sealed class ApplicationCorrectionService(
             try { await uploads.DeleteIfUnreferencedAsync(db, path); }
             catch (Exception cleanupError) { logger.LogWarning(cleanupError, "Unable to clean up a superseded application document. ApplicationId={ApplicationId}", application.Id); }
         if (!string.Equals(oldPdfPath, application.ApplicationFormFilePath, StringComparison.Ordinal))
-            try { files.DeleteGeneratedPdf(oldPdfPath); }
+            try { await files.DeleteGeneratedPdfAsync(oldPdfPath); }
             catch (Exception cleanupError) { logger.LogWarning(cleanupError, "Unable to clean up a superseded generated PDF. ApplicationId={ApplicationId}", application.Id); }
         try { await notifications.NotifyResubmissionAsync(application.Id); }
         catch (Exception error) { logger.LogError(error, "Post-commit resubmission notification failed. ApplicationId={ApplicationId}", application.Id); }

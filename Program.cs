@@ -11,10 +11,21 @@ using BusinessLicensing_Practice.Services.Email;
 using System.Security.Claims;
 using PdfSharp.Fonts;
 using BusinessLicensing_Practice.Fonts;
+using BusinessLicensing_Practice.Services.Storage;
 
 GlobalFontSettings.FontResolver = new LiberationSansFontResolver();
 
 var builder = WebApplication.CreateBuilder(args);
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddSingleton<IPrivateFileStore, LocalPrivateFileStore>();
+}
+else
+{
+    throw new InvalidOperationException(
+        "No production IPrivateFileStore implementation is configured. Local App_Data storage is available only in Development.");
+}
 
 var databaseProvider = builder.Configuration["Database:Provider"]?.Trim();
 if (string.IsNullOrWhiteSpace(databaseProvider))
@@ -99,8 +110,9 @@ builder.Services.AddRazorComponents()
 
 var app = builder.Build();
 
-// Preserve historical files and DB references; only the physical storage location changes.
-app.Services.GetRequiredService<ProtectedUploadService>().MoveLegacyUploads();
+// Preserve historical local files and DB references; this migration is never run for a remote store.
+if (app.Environment.IsDevelopment())
+    app.Services.GetRequiredService<ProtectedUploadService>().MoveLegacyUploads();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -168,13 +180,13 @@ app.MapGet("/applications/{id:int}/official-pdf", async (
         return Results.Forbid();
     }
 
-    var fullPath = fileService.GetGeneratedPdfPath(application.ApplicationFormFilePath);
-    if (fullPath == null)
+    var file = await fileService.OpenGeneratedPdfAsync(application.ApplicationFormFilePath, context.RequestAborted);
+    if (file == null)
     {
         return Results.NotFound();
     }
 
-    return Results.File(fullPath, "application/pdf", application.ApplicationFormFileName);
+    return Results.Stream(file.Content, "application/pdf", application.ApplicationFormFileName);
 }).RequireAuthorization();
 
 app.MapGet("/reports/export", async (HttpContext context, ClaimsPrincipal principal, ReportingService reports, ReportExportService exports) =>

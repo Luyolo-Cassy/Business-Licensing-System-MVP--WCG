@@ -1,57 +1,33 @@
-namespace BusinessLicensing_Practice.Services
+using BusinessLicensing_Practice.Services.Storage;
+
+namespace BusinessLicensing_Practice.Services;
+
+public sealed class ApplicationFileService(IPrivateFileStore store)
 {
-    public class ApplicationFileService
+    public async Task<string> SaveGeneratedPdfAsync(int applicationId, string fileName, byte[] contents,
+        CancellationToken cancellationToken = default)
     {
-        private readonly string storageRoot;
-
-        public ApplicationFileService(IWebHostEnvironment environment)
-        {
-            storageRoot = Path.GetFullPath(Path.Combine(environment.ContentRootPath, "App_Data", "generated-applications"));
-        }
-
-        public async Task<string> SaveGeneratedPdfAsync(int applicationId, string fileName, byte[] contents)
-        {
-            var safeFileName = Path.GetFileName(fileName);
-            var relativePath = Path.Combine(applicationId.ToString(), safeFileName);
-            var fullPath = ResolvePath(relativePath);
-
-            Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-            await File.WriteAllBytesAsync(fullPath, contents);
-
-            return relativePath.Replace('\\', '/');
-        }
-
-        public string? GetGeneratedPdfPath(string? relativePath)
-        {
-            if (string.IsNullOrWhiteSpace(relativePath) || relativePath.StartsWith('/'))
-            {
-                return null;
-            }
-
-            var fullPath = ResolvePath(relativePath);
-            return File.Exists(fullPath) ? fullPath : null;
-        }
-
-        public void DeleteGeneratedPdf(string? relativePath)
-        {
-            if (string.IsNullOrWhiteSpace(relativePath)) return;
-            var fullPath = ResolvePath(relativePath);
-            if (File.Exists(fullPath)) File.Delete(fullPath);
-        }
-
-        private string ResolvePath(string relativePath)
-        {
-            var fullPath = Path.GetFullPath(Path.Combine(storageRoot, relativePath));
-            var rootPrefix = storageRoot.EndsWith(Path.DirectorySeparatorChar)
-                ? storageRoot
-                : storageRoot + Path.DirectorySeparatorChar;
-
-            if (!fullPath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException("The generated file path is outside the application storage directory.");
-            }
-
-            return fullPath;
-        }
+        var safeFileName = Path.GetFileName(fileName);
+        var relativeKey = PrivateFileKeys.Normalize($"{applicationId}/{safeFileName}");
+        await store.SaveAsync(PrivateFileKeys.GeneratedApplication(relativeKey), contents, "application/pdf",
+            cancellationToken);
+        return relativeKey;
     }
+
+    public Task<PrivateFile?> OpenGeneratedPdfAsync(string? relativeKey,
+        CancellationToken cancellationToken = default) =>
+        string.IsNullOrWhiteSpace(relativeKey) || relativeKey.StartsWith('/')
+            ? Task.FromResult<PrivateFile?>(null)
+            : store.OpenReadAsync(PrivateFileKeys.GeneratedApplication(relativeKey), cancellationToken);
+
+    public Task<bool> GeneratedPdfExistsAsync(string? relativeKey,
+        CancellationToken cancellationToken = default) =>
+        string.IsNullOrWhiteSpace(relativeKey) || relativeKey.StartsWith('/')
+            ? Task.FromResult(false)
+            : store.ExistsAsync(PrivateFileKeys.GeneratedApplication(relativeKey), cancellationToken);
+
+    public Task DeleteGeneratedPdfAsync(string? relativeKey, CancellationToken cancellationToken = default) =>
+        string.IsNullOrWhiteSpace(relativeKey) || relativeKey.StartsWith('/')
+            ? Task.CompletedTask
+            : store.DeleteAsync(PrivateFileKeys.GeneratedApplication(relativeKey), cancellationToken);
 }

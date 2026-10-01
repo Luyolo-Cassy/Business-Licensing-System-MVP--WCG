@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using BusinessLicensing_Practice.Data;
 using BusinessLicensing_Practice.Models;
 using BusinessLicensing_Practice.Services;
+using BusinessLicensing_Practice.Services.Storage;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -30,6 +31,40 @@ void Check(bool condition, string text)
 {
     if (!condition) throw new Exception(text);
     Console.WriteLine("PASS: " + text);
+}
+if (args.Contains("--local-private-file-store"))
+{
+    try
+    {
+        var storageBuilder = WebApplication.CreateBuilder(new WebApplicationOptions { ContentRootPath = root });
+        var store = new LocalPrivateFileStore(storageBuilder.Environment);
+        var key = PrivateFileKeys.ProtectedUpload("fixture.pdf");
+        var bytes = "%PDF-1.4 local private file store fixture"u8.ToArray();
+        await store.SaveAsync(key, bytes, "application/pdf");
+        Check(await store.ExistsAsync(key), "Local store finds a saved object");
+        Check((await store.ReadAsync(key))!.SequenceEqual(bytes), "Local store reads unchanged object bytes");
+        var opened = await store.OpenReadAsync(key);
+        Check(opened?.Content.CanRead == true, "Local store opens a readable object stream");
+        if (opened != null) await opened.Content.DisposeAsync();
+        Check(File.Exists(Path.Combine(root, "App_Data", "protected-uploads", "fixture.pdf")),
+            "Protected-upload keys retain the existing App_Data location");
+        await store.DeleteAsync(key);
+        Check(!await store.ExistsAsync(key), "Local store deletes an object");
+        try
+        {
+            await store.SaveAsync("../outside.pdf", bytes, "application/pdf");
+            throw new Exception("Local store accepted a traversal key");
+        }
+        catch (InvalidOperationException)
+        {
+            Console.WriteLine("PASS: Local store rejects path traversal");
+        }
+    }
+    finally
+    {
+        try { Directory.Delete(root, true); } catch { }
+    }
+    return;
 }
 async Task Start()
 {
@@ -84,7 +119,7 @@ if (args.Contains("--migrate-existing-uploads"))
     var files = Directory.Exists(legacy) ? Directory.GetFiles(legacy, "*", SearchOption.AllDirectories) : [];
     var hashes = files.ToDictionary(f => Path.GetRelativePath(legacy, f), f => System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(f)));
     var migrationBuilder = WebApplication.CreateBuilder(new WebApplicationOptions { ContentRootPath = workspace, WebRootPath = Path.Combine(workspace, "wwwroot") });
-    var uploads = new ProtectedUploadService(migrationBuilder.Environment);
+    var uploads = new ProtectedUploadService(new LocalPrivateFileStore(migrationBuilder.Environment), migrationBuilder.Environment);
     var moved = uploads.MoveLegacyUploads();
     Check(hashes.All(f => File.Exists(Path.Combine(destination, f.Key)) && System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(Path.Combine(destination, f.Key))).SequenceEqual(f.Value)), "All moved files retain identical SHA-256 hashes");
     Check(!Directory.Exists(legacy) || Directory.GetFiles(legacy, "*", SearchOption.AllDirectories).Length == 0, "No private document files remain under wwwroot/uploads");
@@ -105,6 +140,7 @@ try
     builder.Services.AddIdentityCore<ApplicationUser>().AddRoles<IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
     builder.Services.AddScoped<OfficialManagementService>(); builder.Services.AddScoped<MunicipalMessageService>();
     builder.Services.AddScoped<ApplicantApplicationService>(); builder.Services.AddScoped<MunicipalityManagementService>();
+    builder.Services.AddSingleton<IPrivateFileStore, LocalPrivateFileStore>();
     builder.Services.AddSingleton<ProtectedUploadService>(); builder.Services.AddScoped<ApplicationDraftService>();
     await using var provider = builder.Services.BuildServiceProvider();
     await using var scope = provider.CreateAsyncScope();
@@ -115,7 +151,7 @@ try
     var applicantActions = scope.ServiceProvider.GetRequiredService<ApplicantApplicationService>();
     var draftService = scope.ServiceProvider.GetRequiredService<ApplicationDraftService>();
     var admin = Principal((await users.FindByEmailAsync("dedat.admin@example.test"))!);
-    var uploads = new ProtectedUploadService(builder.Environment);
+    var uploads = new ProtectedUploadService(new LocalPrivateFileStore(builder.Environment), builder.Environment);
     Check(Directory.GetFiles(legacyDir).Length == 0 && (await File.ReadAllBytesAsync(Path.Combine(root, "App_Data", "protected-uploads", "owner.pdf"))).SequenceEqual(documentBytes), "Startup moves legacy uploads outside wwwroot without changing bytes");
     Check(uploads.MoveLegacyUploads() == 0, "Legacy file move is idempotent");
     await File.WriteAllBytesAsync(Path.Combine(legacyDir, "owner.pdf"), "collision"u8.ToArray());

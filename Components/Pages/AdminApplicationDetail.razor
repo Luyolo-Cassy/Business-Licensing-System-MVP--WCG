@@ -139,7 +139,7 @@ else
         hasGeneratedPdf = false;
         if (detail != null)
         {
-            try { hasGeneratedPdf = Files.GetGeneratedPdfPath(detail.Application.ApplicationFormFilePath) != null; }
+            try { hasGeneratedPdf = await Files.GeneratedPdfExistsAsync(detail.Application.ApplicationFormFilePath); }
             catch (InvalidOperationException) { /* An invalid legacy file reference is not a generated PDF. */ }
         }
     }
