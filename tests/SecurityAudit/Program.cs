@@ -22,6 +22,9 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 
 // Run from the repository root. All test users, history and PDFs live in a temporary content root.
 var root = Path.Combine(Path.GetTempPath(), "security-audit-" + Guid.NewGuid().ToString("N"));
@@ -220,6 +223,73 @@ if (args.Contains("--r2-integration"))
     Environment.ExitCode = errorType == null && cleanupSucceeded ? 0 : 1;
     return;
 }
+if (args.Contains("--data-protection-persistence"))
+{
+    try
+    {
+        static ServiceCollection ServicesFor(string environmentName)
+        {
+            var services = new ServiceCollection();
+            services.AddLogging();
+            services.AddProductionDataProtection(
+                new TestHostEnvironment { EnvironmentName = environmentName },
+                "Host=localhost;Database=unused;Username=unused;Password=unused");
+            return services;
+        }
+
+        var developmentServices = ServicesFor(Environments.Development);
+        Check(!developmentServices.Any(descriptor =>
+                descriptor.ServiceType == typeof(DbContextOptions<DataProtectionKeyContext>)),
+            "Development does not register the PostgreSQL Data Protection context");
+
+        var productionServices = ServicesFor(Environments.Production);
+        Check(productionServices.Any(descriptor =>
+                descriptor.ServiceType == typeof(DbContextOptions<DataProtectionKeyContext>)),
+            "Production registers the dedicated Data Protection context");
+        using (var provider = productionServices.BuildServiceProvider())
+        {
+            var keyOptions = provider.GetRequiredService<IOptions<KeyManagementOptions>>().Value;
+            Check(keyOptions.XmlRepository?.GetType().Name.Contains("EntityFrameworkCoreXmlRepository",
+                      StringComparison.Ordinal) == true,
+                "Production registers the EF Core persistent key repository");
+        }
+
+        var dataProtectionOptions = new DbContextOptionsBuilder<DataProtectionKeyContext>()
+            .UseNpgsql("Host=localhost;Database=unused;Username=unused;Password=unused")
+            .Options;
+        await using var dataProtectionContext = new DataProtectionKeyContext(dataProtectionOptions);
+        var entity = dataProtectionContext.Model.FindEntityType(
+            "Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey");
+        Check(entity?.GetTableName() == "DataProtectionKeys" &&
+              entity.FindProperty("Id") != null && entity.FindProperty("FriendlyName") != null &&
+              entity.FindProperty("Xml") != null,
+            "Data Protection model contains only the standard key entity shape");
+        Check(dataProtectionContext.Model.GetEntityTypes().Count() == 1,
+            "Data Protection context is isolated from the application-domain model");
+        var migrationFiles = Directory.GetFiles(
+            Path.GetFullPath("BusinessLicensing.PostgreSqlMigrations/Migrations/DataProtection"),
+            "*_AddDataProtectionKeys.cs", SearchOption.TopDirectoryOnly);
+        var migrationText = File.ReadAllText(migrationFiles.Single());
+        Check(Regex.Matches(migrationText, "CreateTable\\(").Count == 1 &&
+              migrationText.Contains("name: \"DataProtectionKeys\"", StringComparison.Ordinal) &&
+              !migrationText.Contains("AlterTable", StringComparison.Ordinal) &&
+              !migrationText.Contains("AddColumn", StringComparison.Ordinal),
+            "Dedicated PostgreSQL migration contains only the intended key table creation");
+
+        var sqliteOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite("Data Source=:memory:")
+            .Options;
+        await using var applicationContext = new ApplicationDbContext(sqliteOptions);
+        Check(applicationContext.Model.FindEntityType(
+                  "Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey") == null,
+            "SQLite application model contains no Data Protection key table");
+    }
+    finally
+    {
+        try { Directory.Delete(root, true); } catch { }
+    }
+    return;
+}
 async Task Start()
 {
     var start = new ProcessStartInfo("dotnet") { WorkingDirectory = root, UseShellExecute = false, CreateNoWindow = true,
@@ -261,6 +331,7 @@ async Task Reject<T>(Func<Task> action) where T : Exception
     try { await action(); } catch (T) { return; }
     throw new Exception("Expected rejection: " + typeof(T).Name);
 }
+
 ClaimsPrincipal Principal(ApplicationUser user) => new(new ClaimsIdentity([
     new Claim(ClaimTypes.NameIdentifier, user.Id), new Claim("AspNet.Identity.SecurityStamp", user.SecurityStamp!)], "test"));
 
@@ -492,4 +563,12 @@ finally
 {
     Stop();
     foreach (var category in logs.Where(l => l.StartsWith("warn:") || l.StartsWith("fail:")).Distinct()) Console.WriteLine("Host diagnostic: " + category);
+}
+
+sealed class TestHostEnvironment : IHostEnvironment
+{
+    public string EnvironmentName { get; set; } = Environments.Development;
+    public string ApplicationName { get; set; } = "SecurityAudit";
+    public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+    public IFileProvider ContentRootFileProvider { get; set; } = null!;
 }

@@ -71,6 +71,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
             npgsql.MigrationsAssembly("BusinessLicensing.PostgreSqlMigrations"));
 });
 
+builder.Services.AddProductionDataProtection(builder.Environment, databaseConnection);
+
 builder.Services.AddCascadingAuthenticationState();
 
 builder.Services.AddScoped<IdentityRedirectManager>();
