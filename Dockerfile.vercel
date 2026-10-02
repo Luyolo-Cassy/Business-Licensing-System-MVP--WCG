@@ -24,6 +24,23 @@ WORKDIR /app
 
 COPY --from=build /app/publish ./
 
+# TEMPORARY DIAGNOSTIC — remove after verifying the Vercel build.
+RUN set -eu; \
+    status=0; \
+    for file in \
+        /app/wwwroot/_framework/blazor.web.js \
+        /app/ProvincialBusinessLicensingSystem.staticwebassets.endpoints.json; \
+    do \
+        if test -f "$file"; then \
+            echo "FOUND: $file"; \
+            ls -ln "$file"; \
+        else \
+            echo "MISSING: $file"; \
+            status=1; \
+        fi; \
+    done; \
+    exit "$status"
+
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
 
