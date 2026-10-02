@@ -7,6 +7,7 @@
     <RootNamespace>BusinessLicensing_Practice</RootNamespace>
     <AssemblyName>$(AssemblyName.Replace(' ', '_'))</AssemblyName>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
     <UserSecretsId>dd0fb361-8650-4881-b7d2-0db0f9bca861</UserSecretsId>
   </PropertyGroup>
 
