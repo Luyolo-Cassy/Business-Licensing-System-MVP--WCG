@@ -114,6 +114,7 @@ builder.Services.AddScoped<MunicipalMessageService>();
 builder.Services.AddScoped<MunicipalityManagementService>();
 builder.Services.AddScoped<OfficialManagementService>();
 builder.Services.AddScoped<AdminApplicationService>();
+builder.Services.AddScoped<ApplicationAuditService>();
 builder.Services.AddScoped<ReportingService>();
 builder.Services.AddSingleton<ReportExportService>();
 builder.Services.AddScoped<ApplicantApplicationService>();

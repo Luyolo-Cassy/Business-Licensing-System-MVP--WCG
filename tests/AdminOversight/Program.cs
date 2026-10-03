@@ -36,6 +36,8 @@ async Task Start()
     var start = new ProcessStartInfo("dotnet") { WorkingDirectory = root, UseShellExecute = false, CreateNoWindow = true,
         RedirectStandardOutput = true, RedirectStandardError = true };
     foreach (var arg in new[] { appDll, "--contentRoot", root, "--urls", baseUrl, "--environment", "Development",
+        "--Database:Provider", "SQLite", "--ConnectionStrings:DefaultConnection", $"Data Source={Path.Combine(root, "businesslicensing.db")}",
+        "--AdminBootstrap:Email", "dedat.admin@example.test", "--AdminBootstrap:Password", "DevOnly!DEDAT2026#", "--AdminBootstrap:FullName", "DEDAT Admin",
         "--Email:Enabled", "false",
         "--Logging:LogLevel:Default", "Warning", "--Logging:LogLevel:Microsoft.AspNetCore", "Warning",
         "--Logging:EventLog:LogLevel:Default", "None" }) start.ArgumentList.Add(arg);
@@ -99,7 +101,7 @@ try
     Check(empty.Total == 0 && empty.Municipalities.Count == 5 && empty.Municipalities.All(m => m.Count == 0), "Empty reports show five municipalities with zero counts");
     async Task<ApplicationUser> Owner(string name)
     {
-        var user = new ApplicationUser { UserName = name + "@example.test", Email = name + "@example.test", FullName = name + " Identity", PhoneNumber = "0210000000" };
+        var user = new ApplicationUser { UserName = name + "@example.test", Email = name + "@example.test", EmailConfirmed = true, FullName = name + " Identity", PhoneNumber = "0210000000" };
         Check((await users.CreateAsync(user, "OwnerOnly!2026#")).Succeeded, "Create isolated applicant");
         Check((await users.AddToRoleAsync(user, "BusinessOwner")).Succeeded, "Applicant role assigned");
         return user;

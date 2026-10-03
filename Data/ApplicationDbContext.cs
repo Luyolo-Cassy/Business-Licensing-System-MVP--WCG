@@ -19,6 +19,7 @@ namespace BusinessLicensing_Practice.Data
         public DbSet<MunicipalMessage> MunicipalMessages { get; set; }
         public DbSet<Municipality> Municipalities { get; set; }
         public DbSet<AiSettings> AiSettings { get; set; }
+        public DbSet<ApplicationAuditLog> ApplicationAuditLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -83,6 +84,25 @@ namespace BusinessLicensing_Practice.Data
             builder.Entity<ApplicationDraftDocument>()
                 .HasIndex(item => new { item.ApplicationDraftId, item.DocumentType })
                 .IsUnique();
+
+            builder.Entity<ApplicationAuditLog>(audit =>
+            {
+                audit.Property(item => item.ApplicationNumber).HasMaxLength(100).IsRequired();
+                audit.Property(item => item.ActorUserId).HasMaxLength(450).IsRequired();
+                audit.Property(item => item.ActorDisplayName).HasMaxLength(200).IsRequired();
+                audit.Property(item => item.ActorRole).HasMaxLength(100).IsRequired();
+                audit.Property(item => item.Municipality).HasMaxLength(200).IsRequired();
+                audit.Property(item => item.EventType).HasMaxLength(100).IsRequired();
+                audit.Property(item => item.PreviousStatus).HasMaxLength(100);
+                audit.Property(item => item.NewStatus).HasMaxLength(100);
+                audit.Property(item => item.Summary).HasMaxLength(500).IsRequired();
+                audit.Property(item => item.MetadataJson).HasColumnType("TEXT");
+                audit.HasIndex(item => item.OccurredAtUtc);
+                audit.HasIndex(item => item.ApplicationNumber);
+                audit.HasIndex(item => item.ActorDisplayName);
+                audit.HasIndex(item => item.Municipality);
+                audit.HasIndex(item => item.EventType);
+            });
         }
     }
 }
