@@ -44,6 +44,32 @@ public class MunicipalMessageService(ApplicationDbContext db, UserManager<Applic
                 CreatedAtUtc = DateTime.UtcNow
             });
         }
+        var statusChanged = !string.Equals(previousStatus, application.Status, StringComparison.Ordinal);
+        if (statusChanged && application.Status == ApplicationWorkflow.LicenceIssued)
+        {
+            ApplicationAuditService.Add(reviewDb, application, official, "MunicipalOfficial",
+                ApplicationAuditEventTypes.ApplicationApproved, "Application approved and licence issued.",
+                previousStatus, application.Status, newMessage == null ? null :
+                new Dictionary<string, object?> { ["message"] = newMessage });
+        }
+        else if (statusChanged && application.Status == ApplicationWorkflow.Rejected)
+        {
+            ApplicationAuditService.Add(reviewDb, application, official, "MunicipalOfficial",
+                ApplicationAuditEventTypes.ApplicationRejected, "Application rejected.",
+                previousStatus, application.Status, newMessage == null ? null :
+                new Dictionary<string, object?> { ["decisionReason"] = application.DecisionReason, ["message"] = newMessage });
+        }
+        else
+        {
+            if (statusChanged)
+                ApplicationAuditService.Add(reviewDb, application, official, "MunicipalOfficial",
+                    ApplicationAuditEventTypes.StatusChanged, $"Status changed from {previousStatus} to {application.Status}.",
+                    previousStatus, application.Status);
+            if (newMessage != null)
+                ApplicationAuditService.Add(reviewDb, application, official, "MunicipalOfficial",
+                    ApplicationAuditEventTypes.ReviewMessageSent, "Review message sent to applicant.",
+                    metadata: new Dictionary<string, object?> { ["message"] = newMessage });
+        }
         // Status and the message/notification commit atomically.
         try
         {
@@ -57,7 +83,6 @@ public class MunicipalMessageService(ApplicationDbContext db, UserManager<Applic
                 entry.State = EntityState.Detached;
             throw;
         }
-        var statusChanged = !string.Equals(previousStatus, application.Status, StringComparison.Ordinal);
         if (notifications != null && (statusChanged || newMessage != null))
         {
             try { await notifications.NotifyReviewAsync(application.Id, previousStatus, application.Status, newMessage); }

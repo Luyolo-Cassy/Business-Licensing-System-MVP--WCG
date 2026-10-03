@@ -1,6 +1,7 @@
 @page "/review-application/{Id:int}"
 @rendermode InteractiveServer
 @attribute [Authorize(Roles = "MunicipalOfficial")]
+@implements IDisposable
 
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Authorization
@@ -16,6 +17,7 @@
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserManager<ApplicationUser> UserManager
+@inject ApplicationSummaryService Summaries
 
 <PageTitle>Review Application</PageTitle>
 
@@ -42,6 +44,29 @@ else
             <strong>@application?.DateSubmitted.ToString("dd MMM yyyy")</strong>
         </div>
     </div>
+
+    @if (summaryState.Status != AiApplicationSummaryStatus.Disabled)
+    {
+        <div class="card shadow-sm mb-4">
+            <div class="card-header fw-bold">AI Application Summary</div>
+            <div class="card-body">
+                @if (!string.IsNullOrWhiteSpace(summaryState.Summary))
+                {
+                    <p style="white-space:pre-wrap">@displayedSummary</p>
+                    <p class="text-muted mb-0"><strong>AI-generated summary.</strong> Please verify the information against the full application before making a decision.</p>
+                }
+                else
+                {
+                    <p>Generate a concise AI-assisted overview of the structured application information. Supporting-document contents are not sent.</p>
+                    <button type="button" class="btn btn-primary" disabled="@summaryLoading" @onclick="GenerateSummary">
+                        @if (summaryLoading) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> }
+                        @(summaryLoading ? "Generating summary..." : "Get AI Summary")
+                    </button>
+                    @if (summaryUnavailable) { <div class="alert alert-warning mt-3 mb-0">AI summary is currently unavailable. Please review the application information below.</div> }
+                }
+            </div>
+        </div>
+    }
 
     <div class="card shadow-sm mb-4">
         <div class="card-header fw-bold">
@@ -331,6 +356,11 @@ else
     private string? activeReviewAction;
     private string ReviewStatus => activeReviewAction switch { "approve" => "Approving application...", "reject" => "Rejecting application...", _ => "Saving review..." };
     private string? saveError;
+    private AiApplicationSummaryResult summaryState = new(AiApplicationSummaryStatus.Disabled);
+    private string? displayedSummary;
+    private bool summaryLoading;
+    private bool summaryUnavailable;
+    private CancellationTokenSource? summaryAnimationCancellation;
 
     protected override async Task OnInitializedAsync()
     {
@@ -344,9 +374,67 @@ else
             .Include(a => a.Details)
             .FirstOrDefaultAsync(a => a.Id == Id && a.Municipality == official.Municipality);
         if (application != null)
+        {
             communicationHistory = await Db.MunicipalMessages.AsNoTracking().Where(m => m.ApplicationId == application.Id)
                 .OrderBy(m => m.CreatedAtUtc).ThenBy(m => m.Id).ToListAsync();
+            summaryState = await Summaries.GetCurrentAsync(authState.User, application.Id);
+            displayedSummary = summaryState.Summary;
+        }
 
+    }
+
+    private async Task GenerateSummary()
+    {
+        if (application == null || summaryLoading || summaryState.Summary != null) return;
+        summaryLoading = true; summaryUnavailable = false;
+        try
+        {
+            summaryState = await Summaries.GenerateAsync((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User, application.Id);
+            summaryUnavailable = summaryState.Status == AiApplicationSummaryStatus.Unavailable;
+            if (summaryState.Status == AiApplicationSummaryStatus.Generated && summaryState.Summary is { } generatedSummary)
+                await AnimateSummaryAsync(generatedSummary);
+            else
+                displayedSummary = summaryState.Summary;
+        }
+        catch (UnauthorizedAccessException) { summaryUnavailable = true; }
+        finally { summaryLoading = false; }
+    }
+
+    private async Task AnimateSummaryAsync(string summary)
+    {
+        summaryAnimationCancellation?.Cancel();
+        summaryAnimationCancellation?.Dispose();
+        var cancellation = summaryAnimationCancellation = new CancellationTokenSource();
+        try
+        {
+            var words = System.Text.RegularExpressions.Regex.Matches(summary, @"\S+\s*");
+            if (words.Count == 0) { displayedSummary = summary; return; }
+            var wordsPerFrame = Math.Max(1, (int)Math.Ceiling(words.Count / 100d));
+            var frameCount = (int)Math.Ceiling(words.Count / (double)wordsPerFrame);
+            var delayMilliseconds = Math.Clamp(2800 / frameCount, 25, 120);
+            for (var word = wordsPerFrame; word < words.Count + wordsPerFrame; word += wordsPerFrame)
+            {
+                cancellation.Token.ThrowIfCancellationRequested();
+                var lastWord = words[Math.Min(word, words.Count) - 1];
+                displayedSummary = summary[..(lastWord.Index + lastWord.Length)];
+                await InvokeAsync(StateHasChanged);
+                if (word < words.Count)
+                    await Task.Delay(delayMilliseconds, cancellation.Token);
+            }
+            displayedSummary = summary;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+        catch { displayedSummary = summary; }
+        finally
+        {
+            if (ReferenceEquals(summaryAnimationCancellation, cancellation)) summaryAnimationCancellation = null;
+            cancellation.Dispose();
+        }
+    }
+
+    public void Dispose()
+    {
+        summaryAnimationCancellation?.Cancel();
     }
 
     private async Task SaveReview(string action)

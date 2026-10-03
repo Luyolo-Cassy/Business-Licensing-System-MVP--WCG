@@ -6,4 +6,5 @@ public class AiSettings
 
     public int Id { get; set; } = SingletonId;
     public bool DocumentValidationEnabled { get; set; }
+    public bool ApplicationSummariesEnabled { get; set; }
 }

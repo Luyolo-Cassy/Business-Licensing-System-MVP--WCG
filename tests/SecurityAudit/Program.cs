@@ -295,6 +295,8 @@ async Task Start()
     var start = new ProcessStartInfo("dotnet") { WorkingDirectory = root, UseShellExecute = false, CreateNoWindow = true,
         RedirectStandardOutput = true, RedirectStandardError = true };
     foreach (var arg in new[] { appDll, "--contentRoot", root, "--urls", baseUrl, "--environment", "Development",
+        "--Database:Provider", "SQLite", "--ConnectionStrings:DefaultConnection", $"Data Source={Path.Combine(root, "businesslicensing.db")}",
+        "--AdminBootstrap:Email", "dedat.admin@example.test", "--AdminBootstrap:Password", "DevOnly!DEDAT2026#", "--AdminBootstrap:FullName", "DEDAT Admin",
         "--Email:Enabled", "false",
         "--Logging:LogLevel:Default", "Warning", "--Logging:LogLevel:Microsoft.AspNetCore", "Warning",
         "--Logging:EventLog:LogLevel:Default", "None" }) start.ArgumentList.Add(arg);
@@ -363,7 +365,7 @@ try
     builder.Logging.ClearProviders(); builder.Services.AddDataProtection();
     builder.Services.AddDbContext<ApplicationDbContext>(o => o.UseSqlite($"Data Source={Path.Combine(root, "businesslicensing.db")}"));
     builder.Services.AddIdentityCore<ApplicationUser>().AddRoles<IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
-    builder.Services.AddScoped<OfficialManagementService>(); builder.Services.AddScoped<MunicipalMessageService>();
+    builder.Services.AddScoped<OfficialManagementService>(); builder.Services.AddScoped<MunicipalMessageService>(); builder.Services.AddScoped<ApplicationAuditService>();
     builder.Services.AddScoped<ApplicantApplicationService>(); builder.Services.AddScoped<MunicipalityManagementService>();
     builder.Services.AddSingleton<IPrivateFileStore, LocalPrivateFileStore>();
     builder.Services.AddSingleton<ProtectedUploadService>(); builder.Services.AddScoped<ApplicationDraftService>();
@@ -388,7 +390,7 @@ try
     Check(File.Exists(Path.Combine(root, "App_Data", "protected-uploads", newReference.Split('/').Last())) && Directory.GetFiles(legacyDir).Length == 0, "New uploads are private from creation");
     async Task<ApplicationUser> Owner(string name)
     {
-        var user = new ApplicationUser { UserName = name + "@example.test", Email = name + "@example.test", FullName = name };
+        var user = new ApplicationUser { UserName = name + "@example.test", Email = name + "@example.test", EmailConfirmed = true, FullName = name };
         Check((await users.CreateAsync(user, "OwnerOnly!2026#")).Succeeded, "Create isolated owner");
         Check((await users.AddToRoleAsync(user, "BusinessOwner")).Succeeded, "Assign BusinessOwner"); return user;
     }
@@ -495,9 +497,9 @@ try
     foreach (var url in new[] { "/uploads/orphan.pdf", "/uploads/owner.fingerprint.pdf", "/uploads/%2e%2e%2fappsettings.json", "/uploads/owner.pdf%3aanything", "/App_Data/protected-uploads/owner.pdf" })
         await Download(adminClient, url, false);
     foreach (var client in new[] { ownerClient, otherClient, officialClient, otherOfficialClient, anonymous })
-        foreach (var url in new[] { "/admin-dashboard", "/admin/applications", $"/admin/applications/{ownApplication.Id}", "/admin/reports", "/admin/municipalities", "/admin/officials" })
+        foreach (var url in new[] { "/admin-dashboard", "/admin/applications", $"/admin/applications/{ownApplication.Id}", "/admin/audit-logs", "/admin/reports", "/admin/municipalities", "/admin/officials" })
             Check((await client.GetAsync(url)).StatusCode != HttpStatusCode.OK, "Non-admin denied " + url);
-    foreach (var url in new[] { "/admin-dashboard", "/admin/applications", $"/admin/applications/{ownApplication.Id}", "/admin/reports", "/admin/municipalities", "/admin/officials" })
+    foreach (var url in new[] { "/admin-dashboard", "/admin/applications", $"/admin/applications/{ownApplication.Id}", "/admin/audit-logs", "/admin/reports", "/admin/municipalities", "/admin/officials" })
         Check((await adminClient.GetAsync(url)).StatusCode == HttpStatusCode.OK, "Admin allowed " + url);
     foreach (var client in new[] { ownerClient, adminClient, anonymous })
         foreach (var url in new[] { "/official-dashboard", "/generate-report", $"/review-application/{ownApplication.Id}" })

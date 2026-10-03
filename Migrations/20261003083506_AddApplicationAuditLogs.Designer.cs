@@ -3,6 +3,7 @@ using System;
 using BusinessLicensing_Practice.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BusinessLicensing_Practice.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261003083506_AddApplicationAuditLogs")]
+    partial class AddApplicationAuditLogs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
@@ -21,9 +24,6 @@ namespace BusinessLicensing_Practice.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("ApplicationSummariesEnabled")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("DocumentValidationEnabled")
@@ -37,7 +37,6 @@ namespace BusinessLicensing_Practice.Migrations
                         new
                         {
                             Id = 1,
-                            ApplicationSummariesEnabled = false,
                             DocumentValidationEnabled = false
                         });
                 });
@@ -160,52 +159,6 @@ namespace BusinessLicensing_Practice.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Applications");
-                });
-
-            modelBuilder.Entity("BusinessLicensing_Practice.Models.ApplicationAiSummary", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("ApplicationId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("FormatVersion")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("GeneratedAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("GeneratedByName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("GeneratedByUserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Model")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("RevisionNumber")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("SummaryText")
-                        .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ApplicationId", "RevisionNumber")
-                        .IsUnique();
-
-                    b.ToTable("ApplicationAiSummaries");
                 });
 
             modelBuilder.Entity("BusinessLicensing_Practice.Models.ApplicationAuditLog", b =>
@@ -805,17 +758,6 @@ namespace BusinessLicensing_Practice.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("BusinessLicensing_Practice.Models.ApplicationAiSummary", b =>
-                {
-                    b.HasOne("BusinessLicensing_Practice.Models.Application", "Application")
-                        .WithMany()
-                        .HasForeignKey("ApplicationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Application");
                 });
 
             modelBuilder.Entity("BusinessLicensing_Practice.Models.ApplicationDetails", b =>

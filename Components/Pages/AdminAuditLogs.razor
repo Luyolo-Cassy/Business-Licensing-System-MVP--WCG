@@ -1,0 +1,151 @@
+@page "/admin/audit-logs"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "DEDATAdmin")]
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.WebUtilities
+@using BusinessLicensing_Practice.Models
+@using BusinessLicensing_Practice.Services
+@inject ApplicationAuditService AuditLogs
+@inject AuthenticationStateProvider Authentication
+
+<PageTitle>Admin Audit Logs</PageTitle>
+<h1 class="fw-bold">Audit Logs</h1>
+<p class="text-muted">Read-only application-processing activity across all municipalities. Times are shown in UTC.</p>
+
+<form method="get" action="admin/audit-logs" class="card card-body shadow-sm mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-3"><label for="application" class="form-label">Application reference</label><input id="application" name="application" class="form-control" value="@Application" /></div>
+        <div class="col-md-3"><label for="actor" class="form-label">Official / actor</label><select id="actor" name="actor" class="form-select"><option value="">All actors</option>@foreach (var value in result?.Options.Actors ?? []) { <option value="@value" selected="@(value == Actor)">@value</option> }</select></div>
+        <div class="col-md-3"><label for="municipality" class="form-label">Municipality</label><select id="municipality" name="municipality" class="form-select"><option value="">All municipalities</option>@foreach (var value in result?.Options.Municipalities ?? []) { <option value="@value" selected="@(value == Municipality)">@value</option> }</select></div>
+        <div class="col-md-3"><label for="eventType" class="form-label">Activity</label><select id="eventType" name="eventType" class="form-select"><option value="">All activities</option>@foreach (var value in result?.Options.EventTypes ?? []) { <option value="@value" selected="@(value == EventType)">@EventLabel(value)</option> }</select></div>
+        <div class="col-md-3"><label for="from" class="form-label">From date</label><input id="from" name="from" type="date" class="form-control" value="@From?.ToString("yyyy-MM-dd")" /></div>
+        <div class="col-md-3"><label for="to" class="form-label">To date</label><input id="to" name="to" type="date" class="form-control" value="@To?.ToString("yyyy-MM-dd")" /></div>
+        <div class="col-md-6"><button type="submit" class="btn btn-primary">Filter</button><a href="admin/audit-logs" class="btn btn-link">Clear filters</a></div>
+    </div>
+</form>
+
+@if (error != null)
+{
+    <div class="alert alert-danger" role="alert">@error</div>
+}
+else if (result != null)
+{
+    <p role="status">@result.TotalCount audit record(s) found.</p>
+    @if (result.Records.Count == 0)
+    {
+        <div class="alert alert-info">No audit records match these filters.</div>
+    }
+    else
+    {
+        <div class="card shadow-sm table-responsive"><table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Date &amp; time</th><th>Actor</th><th>Application</th><th>Activity</th><th>Summary</th><th>Details</th></tr></thead>
+            <tbody>@foreach (var item in result.Records)
+            {
+                <tr @key="item.Id">
+                    <td class="text-nowrap"><strong class="d-block">@item.OccurredAtUtc.ToString("dd MMM yyyy")</strong><small class="text-muted">@item.OccurredAtUtc.ToString("HH:mm 'UTC'")</small></td>
+                    <td><strong class="d-block">@item.ActorDisplayName</strong><small class="text-muted">@RoleLabel(item.ActorRole) · @MunicipalityLabel(item.Municipality)</small></td>
+                    <td><a href="admin/applications/@item.ApplicationId">@item.ApplicationNumber</a></td>
+                    <td>@EventLabel(item.EventType)</td><td>@item.Summary</td>
+                    <td class="text-nowrap"><button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => ToggleDetails(item.Id)">@(expandedIds.Contains(item.Id) ? "Hide Details" : "View Details")</button></td>
+                </tr>
+                @if (expandedIds.Contains(item.Id))
+                {
+                    <tr class="table-light" @key="DetailKey(item.Id)">
+                        <td colspan="6" class="p-4">
+                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                                <div><h2 class="h6 fw-bold mb-1">@EventLabel(item.EventType)</h2><p class="text-muted mb-0">@item.ApplicationNumber · @item.OccurredAtUtc.ToString("dd MMM yyyy, HH:mm 'UTC'")</p></div>
+                                <button type="button" class="btn btn-link btn-sm p-0" @onclick="() => ToggleDetails(item.Id)">Hide Details</button>
+                            </div>
+                            <div class="row g-4">
+                                <div class="col-md-4">
+                                    <h3 class="h6 text-muted">Actor context</h3>
+                                    <dl class="mb-0"><dt>Name</dt><dd>@item.ActorDisplayName</dd><dt>Role</dt><dd>@RoleLabel(item.ActorRole)</dd><dt>Municipality</dt><dd>@MunicipalityLabel(item.Municipality)</dd></dl>
+                                </div>
+                                @if (item.PreviousStatus != null || item.NewStatus != null)
+                                {
+                                    <div class="col-md-4">
+                                        <h3 class="h6 text-muted">Status</h3>
+                                        <dl class="mb-0">@if (item.PreviousStatus != null) { <dt>Previous status</dt><dd>@item.PreviousStatus</dd> }@if (item.NewStatus != null) { <dt>New status</dt><dd>@item.NewStatus</dd> }</dl>
+                                    </div>
+                                }
+                                @if (Details(item).Count > 0)
+                                {
+                                    <div class="col-md">
+                                        <h3 class="h6 text-muted">Activity details</h3>
+                                        <dl class="mb-0">@foreach (var detail in Details(item)) { <dt>@detail.Label</dt><dd style="white-space:pre-wrap">@detail.Value</dd> }</dl>
+                                    </div>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }</tbody>
+        </table></div>
+        @if (result.TotalPages > 1)
+        {
+            <nav class="mt-3" aria-label="Audit log pages"><span class="me-3">Page @result.Page of @result.TotalPages</span>
+                @if (result.Page > 1) { <a class="btn btn-outline-secondary btn-sm me-2" href="@PageUrl(result.Page - 1)">Previous</a> }
+                @if (result.Page < result.TotalPages) { <a class="btn btn-outline-secondary btn-sm" href="@PageUrl(result.Page + 1)">Next</a> }
+            </nav>
+        }
+    }
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "application")] public string? Application { get; set; }
+    [SupplyParameterFromQuery] public string? Actor { get; set; }
+    [SupplyParameterFromQuery] public string? Municipality { get; set; }
+    [SupplyParameterFromQuery] public string? EventType { get; set; }
+    [SupplyParameterFromQuery] public DateTime? From { get; set; }
+    [SupplyParameterFromQuery] public DateTime? To { get; set; }
+    [SupplyParameterFromQuery] public int Page { get; set; } = 1;
+    private AuditLogResult? result;
+    private string? error;
+    private readonly HashSet<long> expandedIds = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        error = null;
+        try
+        {
+            result = await AuditLogs.ListAsync((await Authentication.GetAuthenticationStateAsync()).User,
+                new(Application, Actor, Municipality, EventType, From, To, Page));
+        }
+        catch (UnauthorizedAccessException) { result = null; error = "You do not have permission to view audit logs."; }
+    }
+
+    private static string EventLabel(string value) => ApplicationAuditEventTypes.Labels.GetValueOrDefault(value, value);
+    private static string RoleLabel(string value) => value == "MunicipalOfficial" ? "Municipal Official" : value == "BusinessOwner" ? "Applicant" : value;
+    private static string MunicipalityLabel(string value) => string.IsNullOrWhiteSpace(value) ? "Not assigned" : value;
+    private static string DetailKey(long id) => $"detail-{id}";
+    private void ToggleDetails(long id)
+    {
+        if (!expandedIds.Add(id)) expandedIds.Remove(id);
+    }
+    private static IReadOnlyList<(string Label, string Value)> Details(ApplicationAuditLog item)
+    {
+        if (string.IsNullOrWhiteSpace(item.MetadataJson)) return [];
+        try
+        {
+            using var document = JsonDocument.Parse(item.MetadataJson);
+            return document.RootElement.EnumerateObject().Select(property => (
+                property.Name switch { "message" => "Message", "request" => "Correction request", "decisionReason" => "Decision reason", "revisionNumber" => "Revision number", "formatVersion" => "Summary format version", "model" => "AI model", _ => property.Name },
+                property.Value.ValueKind == JsonValueKind.String ? property.Value.GetString() ?? "" : property.Value.ToString())).ToList();
+        }
+        catch (JsonException) { return [("Additional detail", "Stored detail could not be displayed.")]; }
+    }
+
+    private string PageUrl(int page)
+    {
+        var values = new Dictionary<string, string?>
+        {
+            ["application"] = Application, ["actor"] = Actor, ["municipality"] = Municipality,
+            ["eventType"] = EventType, ["from"] = From?.ToString("yyyy-MM-dd"), ["to"] = To?.ToString("yyyy-MM-dd"),
+            ["page"] = page.ToString()
+        };
+        return QueryHelpers.AddQueryString("/admin/audit-logs", values.Where(pair => !string.IsNullOrWhiteSpace(pair.Value))
+            .ToDictionary(pair => pair.Key, pair => pair.Value));
+    }
+}

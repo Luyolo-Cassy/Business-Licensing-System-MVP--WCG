@@ -44,6 +44,10 @@ public sealed class ApplicationCorrectionService(
             SenderName = official.FullName,
             CreatedAtUtc = DateTime.UtcNow
         });
+        ApplicationAuditService.Add(db, application, official, "MunicipalOfficial",
+            ApplicationAuditEventTypes.CorrectionRequested, "Additional information requested from applicant.",
+            previousStatus, application.Status,
+            new Dictionary<string, object?> { ["request"] = request });
         await db.SaveChangesAsync();
         await transaction.CommitAsync();
         try { await notifications.NotifyReviewAsync(application.Id, previousStatus, application.Status, request); }
@@ -182,6 +186,11 @@ public sealed class ApplicationCorrectionService(
         application.DecisionDateUtc = null;
         application.DecisionReason = null;
         foreach (var request in requests) request.ResolvedAtUtc = now;
+        ApplicationAuditService.Add(db, application, user, "BusinessOwner",
+            ApplicationAuditEventTypes.ApplicationResubmitted,
+            $"Applicant resubmitted application as revision {application.RevisionNumber}.",
+            ApplicationWorkflow.AdditionalInformationRequired, application.Status,
+            new Dictionary<string, object?> { ["revisionNumber"] = application.RevisionNumber });
 
         string? newPdfPath = null;
         try
