@@ -25,6 +25,7 @@ public static class ApplicationAuditEventTypes
     public const string ApplicationApproved = "ApplicationApproved";
     public const string ApplicationRejected = "ApplicationRejected";
     public const string ApplicationResubmitted = "ApplicationResubmitted";
+    public const string AiSummaryGenerated = "AiSummaryGenerated";
 
     public static readonly IReadOnlyDictionary<string, string> Labels = new Dictionary<string, string>
     {
@@ -33,6 +34,7 @@ public static class ApplicationAuditEventTypes
         [CorrectionRequested] = "Additional information requested",
         [ApplicationApproved] = "Application approved",
         [ApplicationRejected] = "Application rejected",
-        [ApplicationResubmitted] = "Application resubmitted"
+        [ApplicationResubmitted] = "Application resubmitted",
+        [AiSummaryGenerated] = "AI summary generated"
     };
 }

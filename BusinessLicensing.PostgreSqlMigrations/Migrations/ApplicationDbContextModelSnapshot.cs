@@ -30,6 +30,9 @@ namespace BusinessLicensing.PostgreSqlMigrations.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("ApplicationSummariesEnabled")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("DocumentValidationEnabled")
                         .HasColumnType("boolean");
 
@@ -41,6 +44,7 @@ namespace BusinessLicensing.PostgreSqlMigrations.Migrations
                         new
                         {
                             Id = 1,
+                            ApplicationSummariesEnabled = false,
                             DocumentValidationEnabled = false
                         });
                 });
@@ -165,6 +169,54 @@ namespace BusinessLicensing.PostgreSqlMigrations.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Applications");
+                });
+
+            modelBuilder.Entity("BusinessLicensing_Practice.Models.ApplicationAiSummary", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("ApplicationId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FormatVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("GeneratedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("GeneratedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("GeneratedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("RevisionNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SummaryText")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationId", "RevisionNumber")
+                        .IsUnique();
+
+                    b.ToTable("ApplicationAiSummaries");
                 });
 
             modelBuilder.Entity("BusinessLicensing_Practice.Models.ApplicationAuditLog", b =>
@@ -782,6 +834,17 @@ namespace BusinessLicensing.PostgreSqlMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BusinessLicensing_Practice.Models.ApplicationAiSummary", b =>
+                {
+                    b.HasOne("BusinessLicensing_Practice.Models.Application", "Application")
+                        .WithMany()
+                        .HasForeignKey("ApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Application");
                 });
 
             modelBuilder.Entity("BusinessLicensing_Practice.Models.ApplicationDetails", b =>

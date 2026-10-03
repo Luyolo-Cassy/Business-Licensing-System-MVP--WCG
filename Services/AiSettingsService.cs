@@ -28,6 +28,31 @@ public class AiSettingsService(IServiceScopeFactory scopes)
             .SingleAsync();
     }
 
+    public async Task<bool> IsApplicationSummariesEnabledAsync()
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().AiSettings.AsNoTracking()
+            .Where(settings => settings.Id == AiSettings.SingletonId)
+            .Select(settings => settings.ApplicationSummariesEnabled).SingleAsync();
+    }
+
+    public async Task<bool> GetApplicationSummariesEnabledAsync(ClaimsPrincipal principal)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var db = await AuthorizeAsync(scope.ServiceProvider, principal);
+        return await db.AiSettings.AsNoTracking().Where(settings => settings.Id == AiSettings.SingletonId)
+            .Select(settings => settings.ApplicationSummariesEnabled).SingleAsync();
+    }
+
+    public async Task SetApplicationSummariesEnabledAsync(ClaimsPrincipal principal, bool enabled)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var db = await AuthorizeAsync(scope.ServiceProvider, principal);
+        if (await db.AiSettings.Where(settings => settings.Id == AiSettings.SingletonId)
+            .ExecuteUpdateAsync(update => update.SetProperty(settings => settings.ApplicationSummariesEnabled, enabled)) != 1)
+            throw new InvalidOperationException("AI settings are unavailable.");
+    }
+
     public async Task SetDocumentValidationEnabledAsync(ClaimsPrincipal principal, bool enabled)
     {
         await using var scope = scopes.CreateAsyncScope();

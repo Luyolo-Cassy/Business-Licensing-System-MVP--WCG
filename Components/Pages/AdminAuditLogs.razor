@@ -131,7 +131,7 @@ else if (result != null)
         {
             using var document = JsonDocument.Parse(item.MetadataJson);
             return document.RootElement.EnumerateObject().Select(property => (
-                property.Name switch { "message" => "Message", "request" => "Correction request", "decisionReason" => "Decision reason", "revisionNumber" => "Revision number", _ => property.Name },
+                property.Name switch { "message" => "Message", "request" => "Correction request", "decisionReason" => "Decision reason", "revisionNumber" => "Revision number", "formatVersion" => "Summary format version", "model" => "AI model", _ => property.Name },
                 property.Value.ValueKind == JsonValueKind.String ? property.Value.GetString() ?? "" : property.Value.ToString())).ToList();
         }
         catch (JsonException) { return [("Additional detail", "Stored detail could not be displayed.")]; }

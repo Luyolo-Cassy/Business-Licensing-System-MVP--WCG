@@ -20,6 +20,7 @@ namespace BusinessLicensing_Practice.Data
         public DbSet<Municipality> Municipalities { get; set; }
         public DbSet<AiSettings> AiSettings { get; set; }
         public DbSet<ApplicationAuditLog> ApplicationAuditLogs { get; set; }
+        public DbSet<ApplicationAiSummary> ApplicationAiSummaries { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -41,7 +42,8 @@ namespace BusinessLicensing_Practice.Data
             builder.Entity<AiSettings>().HasData(new AiSettings
             {
                 Id = BusinessLicensing_Practice.Models.AiSettings.SingletonId,
-                DocumentValidationEnabled = false
+                DocumentValidationEnabled = false,
+                ApplicationSummariesEnabled = false
             });
 
             builder.Entity<MunicipalMessage>(message =>
@@ -102,6 +104,17 @@ namespace BusinessLicensing_Practice.Data
                 audit.HasIndex(item => item.ActorDisplayName);
                 audit.HasIndex(item => item.Municipality);
                 audit.HasIndex(item => item.EventType);
+            });
+
+            builder.Entity<ApplicationAiSummary>(summary =>
+            {
+                summary.Property(item => item.SummaryText).HasMaxLength(4000).IsRequired();
+                summary.Property(item => item.GeneratedByUserId).HasMaxLength(450).IsRequired();
+                summary.Property(item => item.GeneratedByName).HasMaxLength(200).IsRequired();
+                summary.Property(item => item.Model).HasMaxLength(100).IsRequired();
+                summary.HasOne(item => item.Application).WithMany()
+                    .HasForeignKey(item => item.ApplicationId).OnDelete(DeleteBehavior.Cascade);
+                summary.HasIndex(item => new { item.ApplicationId, item.RevisionNumber }).IsUnique();
             });
         }
     }
