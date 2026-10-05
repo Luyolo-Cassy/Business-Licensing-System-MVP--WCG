@@ -16,14 +16,14 @@
 <p class="text-muted">Create and manage Official accounts and their municipality assignments.</p>
 @if (message != null)
 {
-    <div class="alert @(isError ? "alert-danger" : "alert-success")" role="alert">@message</div>
+    <div class="alert @(isError ? "alert-danger" : isWarning ? "alert-warning" : "alert-success")" role="alert">@message</div>
 }
 @if (busyAction != null) { <p class="text-muted" role="status">@BusyStatus</p> }
 @if (invitation != null)
 {
     <div class="alert alert-info">
         <strong>Account setup: @invitation.FullName (@invitation.Email)</strong>
-        <p>Automatic email delivery is not configured. Copy this private setup link and provide it securely to the Official. They will choose their own password. The link expires after one day and works only for initial setup.</p>
+        <p>This private setup link remains available as a fallback. The Official will choose their own password. The link expires after one day and works only for initial setup.</p>
         <label for="setup-link" class="form-label">Setup link (select and copy)</label>
         <input id="setup-link" class="form-control" readonly value="@setupLink" onclick="this.select()" />
         <button class="btn btn-outline-secondary btn-sm mt-2" @onclick="ClearInvitation">Dismiss link</button>
@@ -67,7 +67,7 @@
                         <button class="btn btn-outline-secondary btn-sm me-1" disabled="@busy" @onclick="() => SetActive(official)">@if (busy && busyAction == "status" && busyTargetId == official.Id) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> }@(busy && busyAction == "status" && busyTargetId == official.Id ? "Updating account status..." : official.IsActive ? "Deactivate" : "Activate")</button>
                         @if (official.NeedsSetup && official.IsActive)
                         {
-                            <button class="btn btn-outline-primary btn-sm" disabled="@busy" @onclick="() => Invite(official)">@if (busy && busyAction == "invite" && busyTargetId == official.Id) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> }@(busy && busyAction == "invite" && busyTargetId == official.Id ? "Generating setup link..." : "New Setup Link")</button>
+                            <button class="btn btn-outline-primary btn-sm" disabled="@busy" @onclick="() => Invite(official)">@if (busy && busyAction == "invite" && busyTargetId == official.Id) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> }@(busy && busyAction == "invite" && busyTargetId == official.Id ? "Resending setup email..." : "Resend Setup Email")</button>
                         }
                     </td>
                 </tr>
@@ -82,9 +82,9 @@
     private OfficialInput input = new();
     private string? editingId, currentMunicipality, message, setupLink;
     private OfficialInvitation? invitation;
-    private bool busy, isError;
+    private bool busy, isError, isWarning;
     private string? busyAction, busyTargetId;
-    private string BusyStatus => busyAction switch { "save" => "Saving official...", "status" => "Updating account status...", _ => "Generating setup link..." };
+    private string BusyStatus => busyAction switch { "save" => "Saving official...", "status" => "Updating account status...", _ => "Resending setup email..." };
     protected override async Task OnInitializedAsync() => await Run(() => Task.CompletedTask);
     private void ClearInvitation() { invitation = null; setupLink = null; }
     private void Cancel() { editingId = null; currentMunicipality = null; input = new(); }
@@ -103,9 +103,19 @@
     private async Task Save() => await Run(async () =>
     {
         var created = editingId == null;
-        ShowInvitation(await Officials.SaveAsync((await Authentication.GetAuthenticationStateAsync()).User,
-            editingId, input.FullName, input.Email, input.MunicipalityId));
-        Cancel(); message = created ? "Official created. Provide the setup link to the Official." : "Official updated. They must log in again to use the updated account.";
+        var principal = (await Authentication.GetAuthenticationStateAsync()).User;
+        var newInvitation = await Officials.SaveAsync(principal, editingId, input.FullName, input.Email, input.MunicipalityId);
+        ShowInvitation(newInvitation);
+        Cancel();
+        if (created && newInvitation != null)
+        {
+            var sent = await TrySendInvitationAsync(principal, newInvitation);
+            isWarning = !sent;
+            message = sent
+                ? $"Municipal Official created successfully. A setup email has been sent to {newInvitation.Email}."
+                : "Municipal Official created successfully, but the setup email could not be delivered. Copy the setup link below and provide it securely to the Official.";
+        }
+        else message = "Official updated. They must log in again to use the updated account.";
     }, "save");
     private async Task SetActive(OfficialSummary official) => await Run(async () =>
     {
@@ -114,13 +124,30 @@
     }, "status", official.Id);
     private async Task Invite(OfficialSummary official) => await Run(async () =>
     {
-        ShowInvitation(await Officials.GenerateInvitationAsync((await Authentication.GetAuthenticationStateAsync()).User, official.Id));
-        message = "New setup link generated. Previous setup links no longer work.";
+        var principal = (await Authentication.GetAuthenticationStateAsync()).User;
+        var newInvitation = await Officials.GenerateInvitationAsync(principal, official.Id);
+        ShowInvitation(newInvitation);
+        var sent = await TrySendInvitationAsync(principal, newInvitation);
+        isWarning = !sent;
+        message = sent
+            ? $"A fresh setup email has been sent to {newInvitation.Email}. Previous setup links no longer work."
+            : "A fresh setup link was generated, but the setup email could not be delivered. Previous links no longer work; copy the new link below and provide it securely to the Official.";
     }, "invite", official.Id);
+    private async Task<bool> TrySendInvitationAsync(System.Security.Claims.ClaimsPrincipal principal, OfficialInvitation value)
+    {
+        try
+        {
+            await Officials.SendInvitationEmailAsync(principal, value, setupLink!);
+            return true;
+        }
+        catch (ValidationException) { throw; }
+        catch (UnauthorizedAccessException) { throw; }
+        catch { return false; }
+    }
     private async Task Run(Func<Task> action, string? actionName = null, string? targetId = null)
     {
         if (busy) return;
-        busy = true; busyAction = actionName; busyTargetId = targetId; isError = false; message = null; ClearInvitation();
+        busy = true; busyAction = actionName; busyTargetId = targetId; isError = false; isWarning = false; message = null; ClearInvitation();
         try
         {
             await action();
