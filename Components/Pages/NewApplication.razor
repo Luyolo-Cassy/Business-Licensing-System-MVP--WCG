@@ -301,7 +301,9 @@ else
     }
 
     private string GetAnswer(string key) => LicenceAnswers.GetValueOrDefault(key, "");
-    private void SetAnswer(string key, string? value) => LicenceAnswers[key] = value?.Trim() ?? "";
+    private void SetAnswer(string key, string? value) => LicenceAnswers[key] = value ?? "";
+    private Dictionary<string, string> NormalizedLicenceAnswers() =>
+        LicenceAnswers.ToDictionary(answer => answer.Key, answer => answer.Value.Trim(), StringComparer.Ordinal);
     private async Task NextStep()
     {
         if (IsBusy) return;
@@ -529,7 +531,7 @@ else
                 ApplicationNumber = $"APP-{now.Year}-{count + 1:D3}", BusinessName = BusinessName.Trim(), RegistrationNumber = RegistrationNumber.Trim(), TaxNumber = TaxNumber.Trim(), BusinessCategory = BusinessCategory.Trim(),
                 PlaceOfBusinessAddress = address.Formatted, PlaceOfBusinessAddressLine1 = address.Line1, PlaceOfBusinessAddressLine2 = address.Line2, PlaceOfBusinessSuburb = address.Suburb, PlaceOfBusinessCity = address.City, PlaceOfBusinessPostalCode = address.PostalCode, LicenceType = LicenceType, Municipality = participatingMunicipality.Name,
                 PopiaConsentAccepted = true, Status = "Submitted", DateSubmitted = now, UserId = user.Id,
-                Details = new ApplicationDetails { ApplicationType = ApplicationType, ApplicantFirstName = ApplicantFirstName.Trim(), ApplicantLastName = ApplicantLastName.Trim(), ApplicantAddressLine1 = ApplicantAddressLine1.Trim(), ApplicantAddressLine2 = ApplicantAddressLine2.Trim(), ApplicantSuburb = ApplicantSuburb.Trim(), ApplicantCity = ApplicantCity.Trim(), ApplicantPostalCode = ApplicantPostalCode.Trim(), ApplicantTelephone = ApplicantTelephone.Trim(), ApplicantEmail = ApplicantEmail.Trim(), PostalAddressSameAsBusiness = PostalSameAsBusiness, PostalAddressLine1 = PostalSameAsBusiness == false ? PostalAddressLine1.Trim() : null, PostalAddressLine2 = PostalSameAsBusiness == false ? PostalAddressLine2.Trim() : null, PostalSuburb = PostalSameAsBusiness == false ? PostalSuburb.Trim() : null, PostalCity = PostalSameAsBusiness == false ? PostalCity.Trim() : null, PostalPostalCode = PostalSameAsBusiness == false ? PostalPostalCode.Trim() : null, ContactPerson = ContactPerson.Trim(), BusinessTelephone = BusinessTelephone.Trim(), BusinessEmail = BusinessEmail.Trim(), TradingHours = ApplicationEntry.SerializeTradingHours(TradingDays), OpenOnPublicHolidays = OpenOnPublicHolidays, LicenceSpecificDetailsJson = JsonSerializer.Serialize(LicenceAnswers), DeclarationAccepted = true, DeclarationAcceptedAt = now }
+                Details = new ApplicationDetails { ApplicationType = ApplicationType, ApplicantFirstName = ApplicantFirstName.Trim(), ApplicantLastName = ApplicantLastName.Trim(), ApplicantAddressLine1 = ApplicantAddressLine1.Trim(), ApplicantAddressLine2 = ApplicantAddressLine2.Trim(), ApplicantSuburb = ApplicantSuburb.Trim(), ApplicantCity = ApplicantCity.Trim(), ApplicantPostalCode = ApplicantPostalCode.Trim(), ApplicantTelephone = ApplicantTelephone.Trim(), ApplicantEmail = ApplicantEmail.Trim(), PostalAddressSameAsBusiness = PostalSameAsBusiness, PostalAddressLine1 = PostalSameAsBusiness == false ? PostalAddressLine1.Trim() : null, PostalAddressLine2 = PostalSameAsBusiness == false ? PostalAddressLine2.Trim() : null, PostalSuburb = PostalSameAsBusiness == false ? PostalSuburb.Trim() : null, PostalCity = PostalSameAsBusiness == false ? PostalCity.Trim() : null, PostalPostalCode = PostalSameAsBusiness == false ? PostalPostalCode.Trim() : null, ContactPerson = ContactPerson.Trim(), BusinessTelephone = BusinessTelephone.Trim(), BusinessEmail = BusinessEmail.Trim(), TradingHours = ApplicationEntry.SerializeTradingHours(TradingDays), OpenOnPublicHolidays = OpenOnPublicHolidays, LicenceSpecificDetailsJson = JsonSerializer.Serialize(NormalizedLicenceAnswers()), DeclarationAccepted = true, DeclarationAcceptedAt = now }
             };
             var draft = await Db.ApplicationDrafts.Include(item => item.Documents)
                 .SingleOrDefaultAsync(item => item.UserId == user.Id && item.SourceApplicationId == null);
@@ -649,7 +651,7 @@ else
         PostalAddressLine1 = PostalAddressLine1, PostalAddressLine2 = PostalAddressLine2,
         PostalSuburb = PostalSuburb, PostalCity = PostalCity, PostalPostalCode = PostalPostalCode,
         TradingDays = TradingDays.Select(day => new TradingDay { Day = day.Day, IsOpen = day.IsOpen, OpeningTime = day.OpeningTime, ClosingTime = day.ClosingTime }).ToList(),
-        OpenOnPublicHolidays = OpenOnPublicHolidays, LicenceAnswers = new(LicenceAnswers),
+        OpenOnPublicHolidays = OpenOnPublicHolidays, LicenceAnswers = NormalizedLicenceAnswers(),
         DeclarationAccepted = DeclarationAccepted, PopiaConsentAccepted = PopiaConsentAccepted,
         ProvisionalMunicipality = RoutingState.Municipality ?? ProvisionalMunicipality
     };
