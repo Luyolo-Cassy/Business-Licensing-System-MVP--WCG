@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using BusinessLicensing_Practice.Data;
 using BusinessLicensing_Practice.Models;
 using BusinessLicensing_Practice.Services;
+using BusinessLicensing_Practice.Services.Email;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -16,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Data.Sqlite;
 using System.Text.Json;
+using System.Text.Encodings.Web;
 
 // Run from the repository root. All test users, history and PDFs live in a temporary content root.
 var root = Path.Combine(Path.GetTempPath(), "official-management-" + Guid.NewGuid().ToString("N"));
@@ -36,6 +38,8 @@ async Task Start()
     var start = new ProcessStartInfo("dotnet") { WorkingDirectory = root, UseShellExecute = false, CreateNoWindow = true,
         RedirectStandardOutput = true, RedirectStandardError = true };
     foreach (var arg in new[] { appDll, "--contentRoot", root, "--urls", baseUrl, "--environment", "Development",
+        "--Database:Provider", "SQLite", "--ConnectionStrings:DefaultConnection", "Data Source=businesslicensing.db",
+        "--AdminBootstrap:Email", "dedat.admin@example.test", "--AdminBootstrap:Password", "DevOnly!DEDAT2026#", "--AdminBootstrap:FullName", "DEDAT Admin",
         "--Email:Enabled", "false",
         "--Logging:LogLevel:Default", "Warning", "--Logging:LogLevel:Microsoft.AspNetCore", "Warning",
         "--Logging:EventLog:LogLevel:Default", "None" }) start.ArgumentList.Add(arg);
@@ -118,6 +122,8 @@ try
     builder.Services.AddDataProtection();
     builder.Services.AddDbContext<ApplicationDbContext>(o => o.UseSqlite($"Data Source={Path.Combine(root, "businesslicensing.db")}"));
     builder.Services.AddIdentityCore<ApplicationUser>().AddRoles<IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
+    var recordedEmails = new RecordingEmailService();
+    builder.Services.AddSingleton<IEmailService>(recordedEmails);
     builder.Services.AddScoped<OfficialManagementService>(); builder.Services.AddScoped<MunicipalMessageService>();
     await using var provider = builder.Services.BuildServiceProvider();
     await using var scope = provider.CreateAsyncScope();
@@ -138,7 +144,7 @@ try
     };
     foreach (var email in legacyEmails)
     {
-        var fixture = new ApplicationUser { UserName = email, Email = email, FullName = "Legacy Fixture", Municipality = "Bergrivier Municipality" };
+        var fixture = new ApplicationUser { UserName = email, Email = email, EmailConfirmed = true, FullName = "Legacy Fixture", Municipality = "Bergrivier Municipality" };
         Check((await users.CreateAsync(fixture, "Password123!")).Succeeded, "Create isolated historical fixture");
         Check((await users.AddToRoleAsync(fixture, "MunicipalOfficial")).Succeeded, "Assign fixture role");
     }
@@ -147,7 +153,7 @@ try
     using var adminClient = await Login("dedat.admin@example.test", "DevOnly!DEDAT2026#", "/admin-dashboard");
     var adminHtml = await adminClient.GetStringAsync("/admin/officials");
     Check(adminHtml.Contains("bergrivier.official@westerncape.gov.za") && adminHtml.Contains("official@westerncape.gov.za"), "Admin management HTTP page shows legacy Officials");
-    var owner = new ApplicationUser { UserName = "owner@example.test", Email = "owner@example.test", FullName = "Test Owner" };
+    var owner = new ApplicationUser { UserName = "owner@example.test", Email = "owner@example.test", EmailConfirmed = true, FullName = "Test Owner" };
     Check((await users.CreateAsync(owner, "OwnerOnly!2026#")).Succeeded, "Create isolated applicant");
     await users.AddToRoleAsync(owner, "BusinessOwner");
     foreach (var principal in new[] { Principal(owner), Principal(legacy), new ClaimsPrincipal() })
@@ -166,15 +172,55 @@ try
             Check(response.StatusCode == HttpStatusCode.Forbidden || response.Headers.Location?.ToString().Contains("AccessDenied") == true, "Non-admin denied management URL");
         }
     }
-    var invite = (await management.SaveAsync(admin, null, "  Sarah Test  ", " sarah@example.test ", 1))!;
+    var invite = (await management.SaveAsync(admin, null, "  <Sarah> Test & Team  ", " sarah@example.test ", 1))!;
     db.ChangeTracker.Clear();
     var sarah = (await users.FindByIdAsync(invite.UserId))!;
     Check((await users.GetRolesAsync(sarah)).SequenceEqual(new[] { "MunicipalOfficial" }) && sarah.Municipality == "Bergrivier Municipality", "New Official has only MunicipalOfficial and one active assignment");
-    Check(!await users.HasPasswordAsync(sarah) && sarah.FullName == "Sarah Test", "New Official has no password; details trimmed");
+    Check(!await users.HasPasswordAsync(sarah) && sarah.FullName == "<Sarah> Test & Team", "New Official has no password; details trimmed");
     await Reject<ValidationException>(() => management.SaveAsync(admin, null, "Duplicate", "SARAH@example.test", 1));
     await Reject<ValidationException>(() => management.SaveAsync(admin, null, "Bad", "bad-email", 1));
     await Reject<ValidationException>(() => management.SaveAsync(admin, null, "No municipality", "none@example.test", null));
-    var setupUrl = QueryHelpers.AddQueryString("/Account/Setup-Official", new Dictionary<string, string?> { ["userId"] = invite.UserId, ["code"] = invite.Code });
+    string SetupUrl(OfficialInvitation value, bool absolute = false) => QueryHelpers.AddQueryString(
+        (absolute ? baseUrl : "") + "/Account/Setup-Official", new Dictionary<string, string?> { ["userId"] = value.UserId, ["code"] = value.Code });
+    var absoluteSetupUrl = SetupUrl(invite, true);
+    await management.SendInvitationEmailAsync(admin, invite, absoluteSetupUrl);
+    Check(recordedEmails.Messages.Count == 1, "Official creation invitation sends exactly one email");
+    var invitationEmail = recordedEmails.Messages.Single();
+    Check(invitationEmail.RecipientAddress == "sarah@example.test" && invitationEmail.RecipientName == "<Sarah> Test & Team", "Invitation uses authoritative Official recipient and display name");
+    Check(invitationEmail.Subject == "Set Up Your Municipal Official Account", "Invitation uses expected subject");
+    Check(invitationEmail.PlainTextBody.Contains(absoluteSetupUrl) && invitationEmail.HtmlBody.Contains(HtmlEncoder.Default.Encode(absoluteSetupUrl)), "Invitation contains setup URL in plain text and HTML");
+    Check(invitationEmail.PlainTextBody.Contains("Bergrivier Municipality") && invitationEmail.PlainTextBody.Contains("Dear <Sarah>") && invitationEmail.HtmlBody.Contains("Bergrivier Municipality"), "Invitation contains municipality and suitable greeting");
+    Check(invitationEmail.HtmlBody.Contains("Dear &lt;Sarah&gt;") && !invitationEmail.HtmlBody.Contains("Dear <Sarah>") &&
+        !invitationEmail.PlainTextBody.Contains("PasswordHash") && !invitationEmail.PlainTextBody.Contains(sarah.SecurityStamp!), "Invitation encodes HTML and excludes Identity internals");
+    foreach (var deniedPrincipal in new[] { Principal(owner), Principal(legacy), new ClaimsPrincipal() })
+        await Reject<UnauthorizedAccessException>(() => management.SendInvitationEmailAsync(deniedPrincipal, invite, absoluteSetupUrl));
+    Check(recordedEmails.Messages.Count == 1, "Unauthorized invitation attempts send no email");
+
+    var originalInvite = invite;
+    invite = await management.GenerateInvitationAsync(admin, sarah.Id);
+    Check(!await management.ValidateSetupAsync(originalInvite.UserId, originalInvite.Code) && await management.ValidateSetupAsync(invite.UserId, invite.Code), "Resend invalidates previous token and creates a valid fresh token");
+    recordedEmails.Messages.Clear();
+    absoluteSetupUrl = SetupUrl(invite, true);
+    await management.SendInvitationEmailAsync(admin, invite, absoluteSetupUrl);
+    Check(recordedEmails.Messages.Count == 1, "Resend sends exactly one fresh setup email");
+
+    var failedInvite = (await management.SaveAsync(admin, null, "Delivery Failure", "delivery.failure@example.test", 2))!;
+    var failedSetupUrl = SetupUrl(failedInvite, true);
+    recordedEmails.Throw = true;
+    await Reject<InvalidOperationException>(() => management.SendInvitationEmailAsync(admin, failedInvite, failedSetupUrl));
+    recordedEmails.Throw = false;
+    var failedOfficial = (await users.FindByIdAsync(failedInvite.UserId))!;
+    Check(await users.IsInRoleAsync(failedOfficial, "MunicipalOfficial") && failedOfficial.Municipality == "Cederberg Municipality" &&
+        !await users.HasPasswordAsync(failedOfficial) && !await users.IsLockedOutAsync(failedOfficial), "Email failure leaves created Official intact and active");
+    Check(await management.ValidateSetupAsync(failedInvite.UserId, failedInvite.Code) && failedSetupUrl.Contains(failedInvite.Code), "Email failure leaves the manual setup invitation available");
+    await management.SetActiveAsync(admin, failedOfficial.Id, false);
+    await Reject<ValidationException>(() => management.SendInvitationEmailAsync(admin, failedInvite, failedSetupUrl));
+    Check(recordedEmails.Messages.Count == 1, "Inactive Official receives no setup email");
+    db.ChangeTracker.Clear();
+    failedOfficial = (await users.FindByIdAsync(failedInvite.UserId))!;
+    Check((await users.DeleteAsync(failedOfficial)).Succeeded, "Remove isolated email-failure fixture");
+
+    var setupUrl = SetupUrl(invite);
     using var setupClient = Client();
     Check((await setupClient.GetStringAsync(setupUrl)).Contains("New Password"), "Generated setup link resolves on localhost");
     var mismatch = await Form(setupClient, setupUrl, new() { ["_handler"] = "official-setup", ["Input.Password"] = "OfficialOwn!2026#", ["Input.ConfirmPassword"] = "different" });
@@ -186,6 +232,8 @@ try
     Check(!await management.ValidateSetupAsync(invite.UserId, invite.Code), "Setup token cannot be reused");
     await Reject<ValidationException>(() => management.CompleteSetupAsync(invite.UserId, invite.Code, "Changed!2026#"));
     await Reject<ValidationException>(() => management.GenerateInvitationAsync(admin, sarah.Id));
+    await Reject<ValidationException>(() => management.SendInvitationEmailAsync(admin, invite, absoluteSetupUrl));
+    Check(recordedEmails.Messages.Count == 1, "Configured Official cannot receive another setup invitation");
     Check(!await management.ValidateSetupAsync(invite.UserId, "malformed!") && !await management.ValidateSetupAsync("missing", invite.Code), "Malformed and wrong-user tokens rejected");
     db.ChangeTracker.Clear(); sarah = (await users.FindByIdAsync(sarah.Id))!;
     var stale = Principal(sarah);
@@ -273,4 +321,17 @@ finally
 {
     Stop();
     // Intentionally do not print request logs, which could contain setup URLs.
+}
+
+sealed class RecordingEmailService : IEmailService
+{
+    public List<EmailMessage> Messages { get; } = [];
+    public bool Throw { get; set; }
+
+    public Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
+    {
+        if (Throw) throw new InvalidOperationException("Simulated SMTP failure.");
+        Messages.Add(message);
+        return Task.CompletedTask;
+    }
 }

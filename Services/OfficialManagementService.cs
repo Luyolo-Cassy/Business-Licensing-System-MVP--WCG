@@ -1,8 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Encodings.Web;
 using BusinessLicensing_Practice.Data;
 using BusinessLicensing_Practice.Models;
+using BusinessLicensing_Practice.Services.Email;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +14,7 @@ namespace BusinessLicensing_Practice.Services;
 public record OfficialSummary(string Id, string FullName, string Email, string Municipality, bool IsActive, bool NeedsSetup);
 public record OfficialInvitation(string UserId, string FullName, string Email, string Code);
 
-public class OfficialManagementService(IServiceScopeFactory scopes)
+public class OfficialManagementService(IServiceScopeFactory scopes, IEmailService? emails = null)
 {
     private const string SetupPurpose = "MunicipalOfficialInitialSetup";
     private static void Check(IdentityResult result)
@@ -110,11 +112,43 @@ public class OfficialManagementService(IServiceScopeFactory scopes)
         await transaction.CommitAsync();
         return invitation;
     }
+    public async Task SendInvitationEmailAsync(ClaimsPrincipal principal, OfficialInvitation invitation,
+        string absoluteSetupUrl, CancellationToken cancellationToken = default)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var users = await AuthorizeAsync(scope.ServiceProvider, principal);
+        var user = await users.FindByIdAsync(invitation.UserId);
+        if (!await EligibleAsync(users, user) || Decode(invitation.Code) is not string token ||
+            !await users.VerifyUserTokenAsync(user!, TokenOptions.DefaultProvider, SetupPurpose, token))
+            throw new ValidationException("Setup emails are only available for active Officials who have not set a password.");
+        if (!Uri.TryCreate(absoluteSetupUrl, UriKind.Absolute, out var setupUri) ||
+            setupUri.Scheme is not ("http" or "https") ||
+            !setupUri.AbsolutePath.EndsWith("/Account/Setup-Official", StringComparison.OrdinalIgnoreCase))
+            throw new ValidationException("The setup link is invalid.");
+        var query = QueryHelpers.ParseQuery(setupUri.Query);
+        if (!query.TryGetValue("userId", out var userId) || userId.Count != 1 || userId[0] != invitation.UserId ||
+            !query.TryGetValue("code", out var code) || code.Count != 1 || code[0] != invitation.Code)
+            throw new ValidationException("The setup link is invalid.");
+
+        var emailService = emails ?? throw new InvalidOperationException("Application email delivery is unavailable.");
+        await emailService.SendAsync(BuildInvitationEmail(user!, absoluteSetupUrl), cancellationToken);
+    }
     private static async Task<OfficialInvitation> InvitationAsync(UserManager<ApplicationUser> users, ApplicationUser user) =>
         new(user.Id, user.FullName, user.Email!, WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(
             await users.GenerateUserTokenAsync(user, TokenOptions.DefaultProvider, SetupPurpose))));
     private static async Task<bool> EligibleAsync(UserManager<ApplicationUser> users, ApplicationUser? user) =>
         user != null && await users.IsInRoleAsync(user, "MunicipalOfficial") && !await users.HasPasswordAsync(user) && !await users.IsLockedOutAsync(user);
+    private static EmailMessage BuildInvitationEmail(ApplicationUser user, string setupUrl)
+    {
+        var fullName = string.IsNullOrWhiteSpace(user.FullName) ? "Municipal Official" : user.FullName.Trim();
+        var greetingName = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "Municipal Official";
+        var municipality = string.IsNullOrWhiteSpace(user.Municipality) ? "Not assigned" : user.Municipality.Trim();
+        var plain = $"Dear {greetingName},\n\nA Municipal Official account has been created for you on the Provincial Business Licensing System.\n\nMunicipality: {municipality}\n\nPlease use the link below to set up your password and access your account.\n\n{setupUrl}\n\nThis setup link expires after one day.\n\nIf you did not expect this invitation, please contact the system administrator.\n\nRegards,\nProvincial Business Licensing System\n\nThis is an automated email. Please do not reply.";
+        static string E(string value) => HtmlEncoder.Default.Encode(value);
+        var encodedUrl = E(setupUrl);
+        var html = $"<p>Dear {E(greetingName)},</p><p>A Municipal Official account has been created for you on the Provincial Business Licensing System.</p><p><strong>Municipality:</strong> {E(municipality)}</p><p>Please use the link below to set up your password and access your account.</p><p><a href=\"{encodedUrl}\" style=\"display:inline-block;padding:10px 16px;background:#005ea8;color:#fff;text-decoration:none;border-radius:4px\">Set Up My Account</a></p><p>This setup link expires after one day.</p><p>If you did not expect this invitation, please contact the system administrator.</p><p>Regards,<br>Provincial Business Licensing System</p><p><em>This is an automated email. Please do not reply.</em></p>";
+        return new EmailMessage(user.Email!, fullName, "Set Up Your Municipal Official Account", plain, html);
+    }
     private static string? Decode(string? code)
     {
         try { return string.IsNullOrEmpty(code) ? null : Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code)); }
