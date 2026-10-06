@@ -7,6 +7,7 @@
 @using Microsoft.EntityFrameworkCore
 @using BusinessLicensing_Practice.Data
 @using BusinessLicensing_Practice.Models
+@using BusinessLicensing_Practice.Services
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
 
@@ -21,7 +22,7 @@
     </h1>
 
     <p class="text-muted">
-        Review and process business licence applications submitted by applicants.
+        Review and process business license applications submitted by applicants.
     </p>
 
 </div>
@@ -108,7 +109,7 @@
             <option value="Additional Information Required">Additional Information Required</option>
             <option value="Department Assessment">Department Assessment</option>
             <option value="Final Decision">Final Decision</option>
-            <option value="Licence Issued">Licence Issued</option>
+            <option value="Licence Issued">License Issued</option>
             <option value="Rejected">Rejected</option>
             <option value="Withdrawn">Withdrawn</option>
 
@@ -138,7 +139,7 @@
 
                     <th>Application No.</th>
                     <th>Business</th>
-                    <th>Licence</th>
+                    <th>License</th>
                     <th>Status</th>
                     <th>Date Submitted</th>
                     <th>Time Submitted</th>
@@ -158,11 +159,11 @@
 
                         <td>@app.BusinessName</td>
 
-                        <td>@app.LicenceType</td>
+                        <td>@ApplicationTerminology.ForDisplay(app.LicenceType)</td>
 
                         <td>
                             <span class="badge @GetBadge(app.Status)">
-                                @app.Status
+                                @ApplicationTerminology.ForDisplay(app.Status)
                             </span>
                         </td>
 

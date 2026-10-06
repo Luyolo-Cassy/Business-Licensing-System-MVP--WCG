@@ -67,7 +67,7 @@ public sealed class ReportExportService
     {
         xml.Append($"<row r=\"{number}\">"); var column = 0; foreach (var cell in cells) { var reference = ColumnName(++column) + number; if (cell.Numeric) xml.Append($"<c r=\"{reference}\" s=\"{(bold ? 1 : 0)}\"><v>{cell.Value}</v></c>"); else xml.Append($"<c r=\"{reference}\" t=\"inlineStr\" s=\"{(bold ? 1 : 0)}\"><is><t xml:space=\"preserve\">{Xml(cell.Value)}</t></is></c>"); } xml.Append("</row>");
     }
-    private static bool IsNumeric(string heading, string value) => heading is "Applications" or "Total Applications" or "Pending" or "Licence Issued" or "Rejected" or "Withdrawn" or "Applications Received" or "Decisions Made" or "Decisions Measured" or "Currently Pending" or "Days Since Submission" or "Processing Days" or "Average Processing Days"
+    private static bool IsNumeric(string heading, string value) => heading is "Applications" or "Total Applications" or "Pending" or "License Issued" or "Rejected" or "Withdrawn" or "Applications Received" or "Decisions Made" or "Decisions Measured" or "Currently Pending" or "Days Since Submission" or "Processing Days" or "Average Processing Days"
         && double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _);
     private static string ColumnName(int number) { var result = ""; while (number > 0) { number--; result = (char)('A' + number % 26) + result; number /= 26; } return result; }
     private static string WorksheetName(string value) { var invalid = new[] { ':', '\\', '/', '?', '*', '[', ']' }; var clean = new string(value.Where(c => !invalid.Contains(c)).ToArray()); return string.IsNullOrWhiteSpace(clean) ? "Report" : clean[..Math.Min(31, clean.Length)]; }
@@ -78,8 +78,8 @@ public sealed class ReportExportService
     {
         var values = new List<string>(); var prefix = reportKey is ReportKeys.ProcessingTime or ReportKeys.MunicipalityProcessing ? "Decision" : reportKey == ReportKeys.Processing ? "Period" : "Submitted";
         if (f.From != null) values.Add($"{prefix} From {f.From:yyyy-MM-dd}"); if (f.To != null) values.Add($"{prefix} To {f.To:yyyy-MM-dd}");
-        if (!string.IsNullOrWhiteSpace(f.Municipality)) values.Add($"Municipality: {f.Municipality}"); if (!string.IsNullOrWhiteSpace(f.LicenceType)) values.Add($"Licence: {f.LicenceType}");
-        if (!string.IsNullOrWhiteSpace(f.ApplicationType)) values.Add($"Application type: {f.ApplicationType}"); if (!string.IsNullOrWhiteSpace(f.Status)) values.Add($"Status: {f.Status}");
-        if (!string.IsNullOrWhiteSpace(f.Outcome)) values.Add($"Outcome: {f.Outcome}"); if (f.Grouping != "Monthly") values.Add($"Grouping: {f.Grouping}"); return values;
+        if (!string.IsNullOrWhiteSpace(f.Municipality)) values.Add($"Municipality: {f.Municipality}"); if (!string.IsNullOrWhiteSpace(f.LicenceType)) values.Add($"License: {ApplicationTerminology.ForDisplay(f.LicenceType)}");
+        if (!string.IsNullOrWhiteSpace(f.ApplicationType)) values.Add($"Application type: {f.ApplicationType}"); if (!string.IsNullOrWhiteSpace(f.Status)) values.Add($"Status: {ApplicationTerminology.ForDisplay(f.Status)}");
+        if (!string.IsNullOrWhiteSpace(f.Outcome)) values.Add($"Outcome: {ApplicationTerminology.ForDisplay(f.Outcome)}"); if (f.Grouping != "Monthly") values.Add($"Grouping: {f.Grouping}"); return values;
     }
 }

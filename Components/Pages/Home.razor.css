@@ -45,6 +45,12 @@
 .applicant-journey p { max-width: 780px; margin: 0; color: var(--wcg-muted); line-height: 1.55; }
 
 .applicant-ready { display: flex; align-items: center; justify-content: space-between; gap: 2rem; padding: clamp(1.5rem, 4vw, 2.25rem); background: var(--wcg-blue-tint); border-left: .3rem solid var(--wcg-blue); }
+.applicant-draft { display: flex; align-items: center; justify-content: space-between; gap: 1.25rem; margin-bottom: clamp(2.5rem, 6vw, 4.5rem); padding: 1rem 1.25rem; background: var(--wcg-blue-tint); border-left: .3rem solid var(--wcg-blue); }
+.applicant-draft-content { min-width: 0; }
+.applicant-draft .applicant-home-eyebrow { margin-bottom: .25rem; }
+.applicant-draft h2 { margin: 0 0 .35rem; font-size: clamp(1.2rem, 2.5vw, 1.5rem); font-weight: 700; }
+.applicant-draft-meta { display: flex; flex-wrap: wrap; gap: .2rem 1.25rem; color: var(--wcg-muted); font-size: .92rem; }
+.applicant-draft .applicant-ready-actions .btn { min-height: auto; }
 .applicant-ready-actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: .75rem; }
 .applicant-ready-actions .btn { min-height: 3rem; }
 .applicant-ready-actions .btn-primary ::deep .ph-icon { filter: brightness(0) invert(1); }
@@ -53,7 +59,7 @@
 @media (max-width: 800px) {
     .applicant-checklist { grid-template-columns: 1fr; }
     .applicant-checklist li:nth-child(odd), .applicant-checklist li:nth-child(even) { padding-inline: 0; border-left: 0; }
-    .applicant-ready { align-items: flex-start; flex-direction: column; }
+    .applicant-ready, .applicant-draft { align-items: flex-start; flex-direction: column; }
     .applicant-ready-actions { width: 100%; }
 }
 

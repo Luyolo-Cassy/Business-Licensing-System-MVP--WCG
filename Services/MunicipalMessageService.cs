@@ -48,7 +48,7 @@ public class MunicipalMessageService(ApplicationDbContext db, UserManager<Applic
         if (statusChanged && application.Status == ApplicationWorkflow.LicenceIssued)
         {
             ApplicationAuditService.Add(reviewDb, application, official, "MunicipalOfficial",
-                ApplicationAuditEventTypes.ApplicationApproved, "Application approved and licence issued.",
+                ApplicationAuditEventTypes.ApplicationApproved, "Application approved and license issued.",
                 previousStatus, application.Status, newMessage == null ? null :
                 new Dictionary<string, object?> { ["message"] = newMessage });
         }

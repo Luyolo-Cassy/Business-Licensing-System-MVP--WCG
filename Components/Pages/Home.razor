@@ -15,14 +15,18 @@
                 <header class="applicant-home-intro">
                     <span class="applicant-home-eyebrow">Applicant guidance</span>
                     <h1>Business Licensing</h1>
-                    <p>Everything you need to know before applying for a business licence.</p>
+                    <p>Everything you need to know before applying for a business license.</p>
                 </header>
 
                 @if (draft != null)
                 {
-                    <section class="applicant-ready" aria-labelledby="draft-heading">
-                        <div><span class="applicant-home-eyebrow">Application in progress</span><h2 id="draft-heading">Continue your application</h2><p>@DraftDescription(draft) Step @draft.CurrentStep of 7. Last saved @draft.LastSavedAtUtc.ToLocalTime().ToString("g").</p></div>
-                        <div class="applicant-ready-actions"><a class="btn btn-primary btn-lg" href="/new-application?resume=true">Continue application</a><button class="btn btn-outline-danger" @onclick="() => showDeleteDraft = true">Delete draft</button></div>
+                    <section class="applicant-draft" aria-labelledby="draft-heading">
+                        <div class="applicant-draft-content">
+                            <span class="applicant-home-eyebrow">Application in progress</span>
+                            <h2 id="draft-heading">@DisplayDraftLicense(draft)</h2>
+                            <div class="applicant-draft-meta"><span>Step @draft.CurrentStep of 7</span><span>Last saved @draft.LastSavedAtUtc.ToLocalTime().ToString("g")</span>@if (!string.IsNullOrWhiteSpace(draft.BusinessName)) { <span>@draft.BusinessName</span> }</div>
+                        </div>
+                        <div class="applicant-ready-actions"><a class="btn btn-primary" href="/new-application?resume=true">Continue application</a><button class="btn btn-outline-danger" @onclick="() => showDeleteDraft = true">Delete draft</button></div>
                     </section>
                 }
 
@@ -35,20 +39,20 @@
                         <li><PhosphorIcon Name="check-circle" /><span><strong>Applicant details</strong> — your name, contact information and residential or applicant address.</span></li>
                         <li><PhosphorIcon Name="check-circle" /><span><strong>Business details</strong> — the business name, activity, contact details, company registration number and tax number.</span></li>
                         <li><PhosphorIcon Name="check-circle" /><span><strong>Addresses</strong> — the physical Place of Business / Trading Address and, if different, the postal address.</span></li>
-                        <li><PhosphorIcon Name="check-circle" /><span><strong>Trading information</strong> — operating days, opening and closing times, and information relevant to the selected licence.</span></li>
-                        <li><PhosphorIcon Name="check-circle" /><span><strong>Supporting documents</strong> — requirements depend on the licence you select. The application will show the relevant documents when you reach that step.</span></li>
+                        <li><PhosphorIcon Name="check-circle" /><span><strong>Trading information</strong> — operating days, opening and closing times, and information relevant to the selected license.</span></li>
+                        <li><PhosphorIcon Name="check-circle" /><span><strong>Supporting documents</strong> — requirements depend on the license you select. The application will show the relevant documents when you reach that step.</span></li>
                     </ul>
                 </section>
 
                 <section class="applicant-guidance" aria-labelledby="application-process-heading">
                     <div class="applicant-section-heading">
                         <span class="applicant-section-icon" aria-hidden="true"><PhosphorIcon Name="list" /></span>
-                        <div><h2 id="application-process-heading">How the application works</h2><p>Follow the guided steps from licence selection through to submission.</p></div>
+                        <div><h2 id="application-process-heading">How the application works</h2><p>Follow the guided steps from license selection through to submission.</p></div>
                     </div>
                     <ol class="applicant-journey">
-                        <li><span class="applicant-step-number">1</span><div><h3>Choose your licence</h3><p>Select the business licence that matches your business activity.</p></div></li>
-                        <li><span class="applicant-step-number">2</span><div><h3>Complete your application</h3><p>Provide the applicant, business, contact, trading-address, trading-hours and licence-specific information requested.</p></div></li>
-                        <li><span class="applicant-step-number">3</span><div><h3>Provide supporting documents</h3><p>The system shows the documents required for your selected licence and allows you to upload them securely.</p></div></li>
+                        <li><span class="applicant-step-number">1</span><div><h3>Choose your license</h3><p>Select the business license that matches your business activity.</p></div></li>
+                        <li><span class="applicant-step-number">2</span><div><h3>Complete your application</h3><p>Provide the applicant, business, contact, trading-address, trading-hours and license-specific information requested.</p></div></li>
+                        <li><span class="applicant-step-number">3</span><div><h3>Provide supporting documents</h3><p>The system shows the documents required for your selected license and allows you to upload them securely.</p></div></li>
                         <li><span class="applicant-step-number">4</span><div><h3>Confirm the responsible municipality</h3><p>Your Place of Business / Trading Address is checked to identify the participating municipality responsible for your application.</p></div></li>
                         <li><span class="applicant-step-number">5</span><div><h3>Review and submit</h3><p>Review your information, complete the declarations and submit. The system then generates your official application PDF.</p></div></li>
                         <li><span class="applicant-step-number">6</span><div><h3>Track your application</h3><p>Use your dashboard to follow progress, view application information and read relevant municipal messages and updates.</p></div></li>
@@ -100,10 +104,10 @@
                     <div class="public-container public-hero-inner">
                         <div class="public-hero-copy">
                             <h1 id="hero-heading">Provincial Business<br class="desktop-break" /> Licensing System</h1>
-                            <p>Apply for and manage your Western Cape<br class="desktop-break" /> business licence online.</p>
+                            <p>Apply for and manage your Western Cape<br class="desktop-break" /> business license online.</p>
                             <a class="public-apply" href="/Account/Login?returnUrl=%2Fnew-application">
                                 <PhosphorIcon Name="file-plus" />
-                                <span>Apply for a business licence</span>
+                                <span>Apply for a business license</span>
                                 <PhosphorIcon Name="arrow-right" CssClass="public-apply-arrow" />
                             </a>
                             <p class="public-register">New here? <a href="/Account/Register?returnUrl=%2Fnew-application">Create an account</a></p>
@@ -115,7 +119,7 @@
                     <div class="public-container">
                         <div class="public-steps-heading">
                             <h2 id="steps-heading">How it works</h2>
-                            <p>Get your business licence in three simple steps.</p>
+                            <p>Get your business license in three simple steps.</p>
                         </div>
                         <ol class="public-step-list">
                             <li class="public-step">
@@ -173,10 +177,6 @@
         showDeleteDraft = false;
     }
 
-    private static string DraftDescription(ApplicationDraftSummary item)
-    {
-        var values = new[] { item.LicenceType, item.BusinessName }.Where(value => !string.IsNullOrWhiteSpace(value));
-        var description = string.Join(" — ", values);
-        return string.IsNullOrWhiteSpace(description) ? "" : description + ".";
-    }
+    private static string DisplayDraftLicense(ApplicationDraftSummary item) =>
+        string.IsNullOrWhiteSpace(item.LicenceType) ? "License not yet selected" : ApplicationTerminology.ForDisplay(item.LicenceType);
 }

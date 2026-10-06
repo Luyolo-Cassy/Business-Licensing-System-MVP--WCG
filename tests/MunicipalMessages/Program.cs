@@ -150,7 +150,7 @@ await using (var provider = CreateProvider())
     await applicationNotifications.NotifySubmissionAsync(applicationId);
     Check(email.Messages.Count == 1 && email.Messages[0].RecipientAddress == "owner@example.test" &&
         email.Messages[0].Subject == "Application Submitted Successfully – TEST-1", "Submission notification uses valid account-email fallback and expected subject");
-    Check(email.Messages[0].PlainTextBody.Contains("Status: Submitted") && email.Messages[0].PlainTextBody.Contains("Sale of Meals Licence"),
+    Check(email.Messages[0].PlainTextBody.Contains("Status: Submitted") && email.Messages[0].PlainTextBody.Contains("Sale of Meals License"),
         "Submission notification contains application details");
     Check(email.Messages[0].PlainTextBody.Contains("Current stage: Application Submitted") &&
         email.Messages[0].PlainTextBody.Contains("Next: The municipality will begin reviewing the application."),

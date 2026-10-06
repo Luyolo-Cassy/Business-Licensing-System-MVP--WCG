@@ -47,7 +47,7 @@ else
 
             <PhosphorIcon Name="info" CssClass="me-2" />
 
-            Review your application progress below. You can monitor each stage until the licence is issued.
+            Review your application progress below. You can monitor each stage until the license is issued.
 
         </div>
         @if (openCorrectionRequest != null)
@@ -72,7 +72,7 @@ else
 
                 <span class="badge @GetStatusBadge(application?.Status)">
 
-                    @application?.Status
+                    @ApplicationTerminology.ForDisplay(application?.Status)
 
                 </span>
 
@@ -82,14 +82,14 @@ else
         <div class="row mb-4">
 
             <div class="col-md-3">
-                <p class="text-muted mb-1">Licence Type</p>
-                <strong>@application?.LicenceType</strong>
+                <p class="text-muted mb-1">License Type</p>
+                <strong>@ApplicationTerminology.ForDisplay(application?.LicenceType)</strong>
             </div>
 
             <div class="col-md-3">
                 <p class="text-muted mb-1">Status</p>
                 <span class="badge @GetStatusBadge(application?.Status)">
-                    @application?.Status
+                    @ApplicationTerminology.ForDisplay(application?.Status)
                 </span>
             </div>
 
@@ -160,7 +160,7 @@ else
 
             <div class="progress-bar @GetProgressColour()" role="progressbar" style="width:@ProgressPercentage()%">
 
-                @application?.Status
+                @ApplicationTerminology.ForDisplay(application?.Status)
 
             </div>
 
@@ -227,7 +227,7 @@ else
                     @GetStepIcon("Licence Issued")
                 </div>
                 <strong class="@GetStepTextClass("Licence Issued")">
-                    Licence Issued
+                    License Issued
                 </strong>
             </div>
 
@@ -303,7 +303,7 @@ else
                 {
                     <p>
                         <strong>Completed:</strong>
-                        Licence Issued
+                        License Issued
                         <span class="float-end">
                             @application?.DateSubmitted.ToString("dd MMM yyyy")
                         </span>
@@ -333,7 +333,7 @@ else
                 {
                     <p>
                         <strong>Current Step:</strong>
-                        @application?.Status
+                        @ApplicationTerminology.ForDisplay(application?.Status)
                     </p>
                 }
 
@@ -419,7 +419,7 @@ else
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title fw-bold">Reapply for Licence</h5>
+                        <h5 class="modal-title fw-bold">Reapply for License</h5>
                         <button class="btn-close" disabled="@actionBusy" aria-label="Close" @onclick="() => showReapplyModal = false"></button>
                     </div>
                     <div class="modal-body">
