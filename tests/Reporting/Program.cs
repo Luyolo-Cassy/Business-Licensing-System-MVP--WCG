@@ -45,7 +45,7 @@ var quarters = await reporting.GenerateAsync(Principal(official), ReportAudience
 Check(quarters.Rows.Single().Values["Period"] == "2026 Q3", "quarterly event grouping");
 
 var time = await reporting.GenerateAsync(Principal(official), ReportAudience.MunicipalOfficial, ReportKeys.ProcessingTime, september);
-Check(time.Rows.Count == 2 && time.Rows.Any(r => r.Values["Outcome"] == "Licence Issued" && r.Values["Processing Days"] == "15.0") && time.Rows.Any(r => r.Values["Outcome"] == "Rejected" && r.Values["Processing Days"] == "21.0"), "processing time is decision-date filtered and includes issued and rejected durations");
+Check(time.Rows.Count == 2 && time.Rows.Any(r => r.Values["Outcome"] == "License Issued" && r.Values["Processing Days"] == "15.0") && time.Rows.Any(r => r.Values["Outcome"] == "Rejected" && r.Values["Processing Days"] == "21.0"), "processing time is decision-date filtered and includes issued and rejected durations");
 Check(time.Rows.All(r => r.Values["Application Number"] != "D" && r.Values["Application Number"] != "E"), "withdrawals and missing decision dates are excluded from processing time");
 
 var municipality = await reporting.GenerateAsync(Principal(admin), ReportAudience.DedatAdmin, ReportKeys.MunicipalityProcessing, september);

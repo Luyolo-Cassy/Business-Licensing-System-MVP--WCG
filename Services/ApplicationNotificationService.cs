@@ -134,25 +134,25 @@ public sealed class ApplicationNotificationService(
         };
         var intro = kind switch
         {
-            NotificationKind.Submission => "Your business licence application has been successfully submitted.",
-            NotificationKind.Message => "You have received a new message regarding your business licence application.",
-            NotificationKind.StatusAndMessage => "There has been an update to your business licence application.",
-            _ => "The status of your business licence application has been updated."
+            NotificationKind.Submission => "Your business license application has been successfully submitted.",
+            NotificationKind.Message => "You have received a new message regarding your business license application.",
+            NotificationKind.StatusAndMessage => "There has been an update to your business license application.",
+            _ => "The status of your business license application has been updated."
         };
         var status = kind == NotificationKind.Submission ? ApplicationWorkflow.Submitted : newStatus ?? application.Status;
         var context = ApplicationStatusContext.For(status);
         var details = new List<string>
         {
             $"Application Number: {application.ApplicationNumber}",
-            $"Licence Type: {application.LicenceType}",
+            $"License Type: {ApplicationTerminology.ForDisplay(application.LicenceType)}",
             $"Responsible Municipality: {application.Municipality ?? "Not assigned"}"
         };
         if (kind == NotificationKind.Submission) details.Add("Status: Submitted");
-        else if (kind == NotificationKind.Message) details.Add($"Current Status: {application.Status}");
+        else if (kind == NotificationKind.Message) details.Add($"Current Status: {ApplicationTerminology.ForDisplay(application.Status)}");
         else
         {
-            details.Add($"Previous Status: {previousStatus}");
-            details.Add($"New Status: {newStatus}");
+            details.Add($"Previous Status: {ApplicationTerminology.ForDisplay(previousStatus)}");
+            details.Add($"New Status: {ApplicationTerminology.ForDisplay(newStatus)}");
         }
         details.Add($"Current stage: {context.Title}");
         details.Add(context.Explanation);
@@ -190,7 +190,7 @@ public static class ApplicationStatusContext
             [ApplicationWorkflow.AdditionalInformationRequired] = new("Applicant Action Required", "The municipality requires changes, clarification, or additional documentation before processing can continue.", "Sign in, review the official's request, edit the application and resubmit it."),
             [ApplicationWorkflow.DepartmentAssessment] = new("Department Assessment", "The application is undergoing the relevant departmental assessment.", "Once the assessment is complete, the application can progress toward a final decision."),
             [ApplicationWorkflow.FinalDecision] = new("Final Decision", "The application has reached the decision stage.", "You will be notified once the outcome has been recorded."),
-            [ApplicationWorkflow.LicenceIssued] = new("Licence Issued", "The application has been approved and the licence has been issued.", null),
+            [ApplicationWorkflow.LicenceIssued] = new("License Issued", "The application has been approved and the license has been issued.", null),
             [ApplicationWorkflow.Rejected] = new("Application Unsuccessful", "The application was not approved.", null),
             [ApplicationWorkflow.Withdrawn] = new("Application Withdrawn", "The application is no longer progressing through the application process.", null)
         };

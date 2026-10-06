@@ -92,7 +92,7 @@
     <Authorized>
         <h1 class="fw-bold">Business Owner Dashboard</h1>
         <p class="text-muted">
-            Welcome back @currentUser?.FullName, Track your licence applications and view recent updates.
+            Welcome back @currentUser?.FullName, Track your license applications and view recent updates.
         </p>
     </Authorized>
 </AuthorizeView>
@@ -105,7 +105,7 @@
 {
     <section class="card border-primary mb-4" aria-labelledby="dashboard-draft-heading"><div class="card-body">
         <h2 class="h5" id="dashboard-draft-heading">Draft Application</h2>
-        <p class="mb-2"><strong>@(string.IsNullOrWhiteSpace(draft.BusinessName) ? "Application in progress" : draft.BusinessName)</strong><br />@(string.IsNullOrWhiteSpace(draft.LicenceType) ? "Licence type not yet selected" : draft.LicenceType)<br />Step @draft.CurrentStep of 7 · Last saved @draft.LastSavedAtUtc.ToLocalTime().ToString("g")</p>
+        <p class="mb-2"><strong>@(string.IsNullOrWhiteSpace(draft.BusinessName) ? "Application in progress" : draft.BusinessName)</strong><br />@(string.IsNullOrWhiteSpace(draft.LicenceType) ? "License type not yet selected" : ApplicationTerminology.ForDisplay(draft.LicenceType))<br />Step @draft.CurrentStep of 7 · Last saved @draft.LastSavedAtUtc.ToLocalTime().ToString("g")</p>
         <div class="d-flex flex-wrap gap-2"><a class="btn btn-primary" href="/new-application?resume=true">Continue application</a><button class="btn btn-outline-danger" @onclick="() => showDeleteDraft = true">Delete draft</button></div>
     </div></section>
 }
@@ -151,7 +151,7 @@
                     <tr>
                         <th>Application ID</th>
                         <th>Business Name</th>
-                        <th>Licence Type</th>
+                        <th>License Type</th>
                         <th>Status</th>
                         <th>Submitted</th>
                         <th>Action</th>
@@ -170,10 +170,10 @@
                                 }
                             </td>
                             <td>@application.BusinessName</td>
-                            <td>@application.LicenceType</td>
+                            <td>@ApplicationTerminology.ForDisplay(application.LicenceType)</td>
                             <td>
                                 <span class="badge @GetStatusBadge(application.Status)">
-                                    @application.Status
+                                    @ApplicationTerminology.ForDisplay(application.Status)
                                 </span>
                                 @if (application.Status == ApplicationWorkflow.AdditionalInformationRequired)
                                 {

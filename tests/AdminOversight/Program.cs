@@ -197,7 +197,7 @@ try
     var columnUrl = QueryHelpers.AddQueryString("/admin/applications", new Dictionary<string, string?> { ["search"] = "beta", ["columnMunicipality"] = "Swartland Municipality", ["columnStatus"] = "Rejected", ["reference"] = "OV-C" });
     var columnHtml = await adminClient.GetStringAsync(columnUrl);
     Check(columnHtml.Contains("OV-C") && !columnHtml.Contains("OV-D") && columnHtml.Contains("Filter applied") &&
-        columnHtml.Contains("Licence / Application Type") && !Regex.IsMatch(columnHtml, @"<th>\s*View\s*<details", RegexOptions.IgnoreCase), "Column-filter UI combines filters, indicates active state and leaves View action-only");
+        columnHtml.Contains("License / Application Type") && !Regex.IsMatch(columnHtml, @"<th>\s*View\s*<details", RegexOptions.IgnoreCase), "Column-filter UI combines filters, indicates active state and leaves View action-only");
     var detailHtml = await adminClient.GetStringAsync($"/admin/applications/{a.Id}");
     Check(detailHtml.Contains("REG-TEST") && detailHtml.Contains("Fresh meals") && detailHtml.Contains("proof.pdf") && detailHtml.Contains("History &lt;script&gt;"), "Admin HTTP detail renders application, licence, document and escaped communication data");
     Check(!Regex.IsMatch(detailHtml, @"<button\b[^>]*>\s*(Approve|Reject|Save Review|Send)", RegexOptions.IgnoreCase) &&

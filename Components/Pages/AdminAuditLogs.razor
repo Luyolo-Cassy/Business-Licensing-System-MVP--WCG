@@ -47,7 +47,7 @@ else if (result != null)
                     <td class="text-nowrap"><strong class="d-block">@item.OccurredAtUtc.ToString("dd MMM yyyy")</strong><small class="text-muted">@item.OccurredAtUtc.ToString("HH:mm 'UTC'")</small></td>
                     <td><strong class="d-block">@item.ActorDisplayName</strong><small class="text-muted">@RoleLabel(item.ActorRole) · @MunicipalityLabel(item.Municipality)</small></td>
                     <td><a href="admin/applications/@item.ApplicationId">@item.ApplicationNumber</a></td>
-                    <td>@EventLabel(item.EventType)</td><td>@item.Summary</td>
+                    <td>@EventLabel(item.EventType)</td><td>@ApplicationTerminology.ForDisplay(item.Summary)</td>
                     <td class="text-nowrap"><button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => ToggleDetails(item.Id)">@(expandedIds.Contains(item.Id) ? "Hide Details" : "View Details")</button></td>
                 </tr>
                 @if (expandedIds.Contains(item.Id))
@@ -67,7 +67,7 @@ else if (result != null)
                                 {
                                     <div class="col-md-4">
                                         <h3 class="h6 text-muted">Status</h3>
-                                        <dl class="mb-0">@if (item.PreviousStatus != null) { <dt>Previous status</dt><dd>@item.PreviousStatus</dd> }@if (item.NewStatus != null) { <dt>New status</dt><dd>@item.NewStatus</dd> }</dl>
+                                        <dl class="mb-0">@if (item.PreviousStatus != null) { <dt>Previous status</dt><dd>@ApplicationTerminology.ForDisplay(item.PreviousStatus)</dd> }@if (item.NewStatus != null) { <dt>New status</dt><dd>@ApplicationTerminology.ForDisplay(item.NewStatus)</dd> }</dl>
                                     </div>
                                 }
                                 @if (Details(item).Count > 0)

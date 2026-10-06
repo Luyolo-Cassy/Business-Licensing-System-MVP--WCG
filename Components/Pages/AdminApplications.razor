@@ -20,7 +20,7 @@
         </select></div>
         <div class="col-md-3"><label for="status" class="form-label">Status</label><select id="status" name="status" class="form-select">
             <option value="">All statuses</option>
-            @foreach (var status in result?.Statuses ?? []) { <option value="@status" selected="@(status == Status)">@status</option> }
+            @foreach (var status in result?.Statuses ?? []) { <option value="@status" selected="@(status == Status)">@ApplicationTerminology.ForDisplay(status)</option> }
         </select></div>
         <div class="col-md-2"><button type="submit" class="btn btn-primary">Filter</button> <a href="admin/applications" class="btn btn-link">Clear</a></div>
     </div>
@@ -35,7 +35,7 @@
             <thead><tr>
                 <th>@FilterHeader("Reference", "reference", !string.IsNullOrWhiteSpace(Reference), ReferenceFilter())</th>
                 <th>@FilterHeader("Applicant", "applicant", !string.IsNullOrWhiteSpace(Applicant), ApplicantFilter())</th>
-                <th>@FilterHeader("Licence / Application Type", "type", HasTypeFilter, TypeFilter())</th>
+                <th>@FilterHeader("License / Application Type", "type", HasTypeFilter, TypeFilter())</th>
                 <th>@FilterHeader("Municipality", "columnMunicipality", !string.IsNullOrEmpty(ColumnMunicipality), MunicipalityFilter())</th>
                 <th>@FilterHeader("Submitted", "submitted", Submitted.HasValue, SubmittedFilter())</th>
                 <th>@FilterHeader("Status", "columnStatus", !string.IsNullOrEmpty(ColumnStatus), StatusFilter())</th>
@@ -45,9 +45,9 @@
             {
                 <tr>
                     <td>@application.ApplicationNumber</td><td>@application.Applicant</td>
-                    <td>@application.LicenceType <small class="d-block text-muted">@application.ApplicationType</small></td>
+                    <td>@ApplicationTerminology.ForDisplay(application.LicenceType) <small class="d-block text-muted">@application.ApplicationType</small></td>
                     <td>@(string.IsNullOrWhiteSpace(application.Municipality) ? "Not assigned" : application.Municipality)</td>
-                    <td>@application.DateSubmitted.ToString("yyyy/MM/dd HH:mm")</td><td>@application.Status</td>
+                    <td>@application.DateSubmitted.ToString("yyyy/MM/dd HH:mm")</td><td>@ApplicationTerminology.ForDisplay(application.Status)</td>
                     <td><a class="btn btn-outline-primary btn-sm" href="admin/applications/@application.Id" aria-label="View @application.ApplicationNumber">View</a></td>
                 </tr>
             }</tbody>
@@ -98,12 +98,12 @@
     private RenderFragment ReferenceFilter() => FilterForm("reference", @<div><label for="column-reference" class="form-label">Reference contains</label><input id="column-reference" name="reference" value="@Reference" class="form-control form-control-sm" /></div>);
     private RenderFragment ApplicantFilter() => FilterForm("applicant", @<div><label for="column-applicant" class="form-label">Applicant contains</label><input id="column-applicant" name="applicant" value="@Applicant" class="form-control form-control-sm" /></div>);
     private RenderFragment TypeFilter() => FilterForm("type", @<div>
-        <label for="column-licence" class="form-label">Licence type</label><select id="column-licence" name="licenceType" class="form-select form-select-sm"><option value="">All licence types</option>@foreach (var value in result?.LicenceTypes ?? []) { <option value="@value" selected="@(value == LicenceType)">@value</option> }</select>
+        <label for="column-licence" class="form-label">License type</label><select id="column-licence" name="licenceType" class="form-select form-select-sm"><option value="">All license types</option>@foreach (var value in result?.LicenceTypes ?? []) { <option value="@value" selected="@(value == LicenceType)">@ApplicationTerminology.ForDisplay(value)</option> }</select>
         <label for="column-application-type" class="form-label mt-2">Application type</label><select id="column-application-type" name="applicationType" class="form-select form-select-sm"><option value="">All application types</option>@foreach (var value in result?.ApplicationTypes ?? []) { <option value="@value" selected="@(value == ApplicationType)">@value</option> }</select>
     </div>);
     private RenderFragment MunicipalityFilter() => FilterForm("columnMunicipality", @<div><label for="column-municipality" class="form-label">Municipality</label><select id="column-municipality" name="columnMunicipality" class="form-select form-select-sm"><option value="">All municipalities</option>@foreach (var value in result?.Municipalities ?? []) { <option value="@value" selected="@(value == ColumnMunicipality)">@value</option> }</select></div>);
     private RenderFragment SubmittedFilter() => FilterForm("submitted", @<div><label for="column-submitted" class="form-label">Submitted on</label><input id="column-submitted" name="submitted" type="date" value="@Submitted?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" /></div>);
-    private RenderFragment StatusFilter() => FilterForm("columnStatus", @<div><label for="column-status" class="form-label">Status</label><select id="column-status" name="columnStatus" class="form-select form-select-sm"><option value="">All statuses</option>@foreach (var value in result?.Statuses ?? []) { <option value="@value" selected="@(value == ColumnStatus)">@value</option> }</select></div>);
+    private RenderFragment StatusFilter() => FilterForm("columnStatus", @<div><label for="column-status" class="form-label">Status</label><select id="column-status" name="columnStatus" class="form-select form-select-sm"><option value="">All statuses</option>@foreach (var value in result?.Statuses ?? []) { <option value="@value" selected="@(value == ColumnStatus)">@ApplicationTerminology.ForDisplay(value)</option> }</select></div>);
 
     private RenderFragment HiddenInputs(params string[] excluded) => builder =>
     {

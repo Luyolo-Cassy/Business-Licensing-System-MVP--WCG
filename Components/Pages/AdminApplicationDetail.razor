@@ -23,12 +23,12 @@ else
         <div class="card-header"><h2 class="h5 mb-0">Application Summary</h2></div>
         <div class="card-body"><dl class="row mb-0">
             @Field("Application Reference", application.ApplicationNumber)
-            @Field("Status", application.Status)
+            @Field("Status", ApplicationTerminology.ForDisplay(application.Status))
             @Field("Revision", application.RevisionNumber.ToString())
             @Field("Last Resubmitted", application.LastResubmittedAtUtc?.ToString("yyyy/MM/dd HH:mm") + (application.LastResubmittedAtUtc.HasValue ? " UTC" : ""))
             @Field("Responsible Municipality", application.Municipality, "Not assigned")
             @Field("Submitted", application.DateSubmitted.ToString("yyyy/MM/dd HH:mm"))
-            @Field("Licence Type", application.LicenceType)
+            @Field("License Type", ApplicationTerminology.ForDisplay(application.LicenceType))
             @Field("Application Type", application.Details?.ApplicationType)
         </dl></div>
     </section>
@@ -61,7 +61,7 @@ else
         </dl></div>
     </section>
     <section class="card shadow-sm mb-4">
-        <div class="card-header"><h2 class="h5 mb-0">Licence-specific Information</h2></div>
+        <div class="card-header"><h2 class="h5 mb-0">License-specific Information</h2></div>
         <div class="card-body"><dl class="row mb-0">
             @Field("Food Handling Type", application.FoodHandlingType)
             @Field("Entertainment Activity", application.EntertainmentActivityType)

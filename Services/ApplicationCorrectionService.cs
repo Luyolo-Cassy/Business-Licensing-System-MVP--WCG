@@ -138,7 +138,7 @@ public sealed class ApplicationCorrectionService(
         var draft = await db.ApplicationDrafts.SingleOrDefaultAsync(d => d.SourceApplicationId == applicationId && d.UserId == user.Id)
             ?? throw new ValidationException("The correction draft is no longer available.");
         if (payload.LicenceType != (await db.Applications.Where(a => a.Id == applicationId).Select(a => a.LicenceType).SingleAsync()))
-            throw new ValidationException("The licence type cannot be changed while correcting an application.");
+            throw new ValidationException("The license type cannot be changed while correcting an application.");
         draft.PayloadJson = JsonSerializer.Serialize(payload, JsonOptions);
         draft.CurrentStep = Math.Clamp(currentStep, 1, 7);
         draft.LastSavedAtUtc = DateTime.UtcNow;
@@ -249,8 +249,8 @@ public sealed class ApplicationCorrectionService(
 
     private static void Validate(ApplicationDraftPayload p, IReadOnlyCollection<ApplicationDraftDocument> documents, string licenceType, bool aiValidationEnabled)
     {
-        var licence = LicenceApplicationCatalog.Find(licenceType) ?? throw new ValidationException("The licence type is no longer available.");
-        if (p.LicenceType != licenceType) throw new ValidationException("The licence type cannot be changed while correcting an application.");
+        var licence = LicenceApplicationCatalog.Find(licenceType) ?? throw new ValidationException("The license type is no longer available.");
+        if (p.LicenceType != licenceType) throw new ValidationException("The license type cannot be changed while correcting an application.");
         var error = ApplicationEntry.ValidateName(p.ApplicantFirstName, p.ApplicantLastName)
             ?? (!ApplicationEntry.ValidApplicationType(p.ApplicationType) ? "Select a valid application type." : null)
             ?? (Blank(p.ApplicantAddressLine1, p.ApplicantSuburb, p.ApplicantCity, p.ApplicantPostalCode, p.ApplicantTelephone, p.ApplicantEmail) ? "Complete all required applicant details." : null)
@@ -274,7 +274,7 @@ public sealed class ApplicationCorrectionService(
             ?? (p.PostalSameAsBusiness == false && (p.PostalAddressLine1.Trim().Length > 150 || p.PostalAddressLine2.Trim().Length > 150 ||
                 p.PostalSuburb.Trim().Length > 100 || p.PostalCity.Trim().Length > 100 || p.PostalPostalCode.Trim().Length > 12)
                 ? "One or more postal-address fields exceed the allowed length." : null)
-            ?? (licence.Questions.Any(q => !ApplicationEntry.ValidLicenceAnswer(p.LicenceAnswers.GetValueOrDefault(q.Key), q.Required, q.Options)) ? "Complete all required licence-specific questions." : null)
+            ?? (licence.Questions.Any(q => !ApplicationEntry.ValidLicenceAnswer(p.LicenceAnswers.GetValueOrDefault(q.Key), q.Required, q.Options)) ? "Complete all required license-specific questions." : null)
             ?? (licence.Documents.Any(r => r.Required && !documents.Any(d => d.DocumentType == r.DocumentType)) ? "Upload every required supporting document." : null)
             ?? (documents.Any(d => !licence.Documents.Any(r => r.DocumentType == d.DocumentType) &&
                 !ApplicationDocumentTypes.IsAdditional(d.DocumentType)) ? "The correction draft contains an unsupported document type." : null)

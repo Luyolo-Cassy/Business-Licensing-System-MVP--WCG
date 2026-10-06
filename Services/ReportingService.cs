@@ -19,16 +19,16 @@ public sealed class ReportingService(IServiceScopeFactory scopes)
             new(ReportKeys.Status, "Application Status Report", "See the current stage of applications submitted during the selected period."),
             new(ReportKeys.Pending, "Pending Applications Report", "See applications that are still being processed and how long it has been since they were submitted."),
             new(ReportKeys.Processing, "Application Processing Report", "Compare applications received with municipal decisions made over time."),
-            new(ReportKeys.Outcomes, "Application Outcome Report", "See issued licences, rejected applications and applicant withdrawals."),
-            new(ReportKeys.LicenceTypes, "Licence Type Report", "See which types of business licences receive the most applications."),
+            new(ReportKeys.Outcomes, "Application Outcome Report", "See issued licenses, rejected applications and applicant withdrawals."),
+            new(ReportKeys.LicenceTypes, "License Type Report", "See which types of business licenses receive the most applications."),
             new(ReportKeys.ProcessingTime, "Processing Time Report", "See how long applications took from submission to a municipal decision.")]
         : [
             new(ReportKeys.Status, "Provincial Licensing Overview", "See the current distribution of applications across the licensing process."),
             new(ReportKeys.MunicipalityActivity, "Municipality Application Overview", "Compare application volumes and current application states across municipalities."),
             new(ReportKeys.MunicipalityProcessing, "Municipality Processing Report", "Compare municipal decisions, current pending workload and processing times across municipalities."),
-            new(ReportKeys.Trends, "Provincial Application Trends Report", "See how many licence applications are submitted across the province over time."),
-            new(ReportKeys.LicenceTypes, "Provincial Licence Demand Report", "Compare demand for different licence types across municipalities."),
-            new(ReportKeys.Outcomes, "Provincial Application Outcome Report", "See issued licences, rejected applications and applicant withdrawals across the province.")];
+            new(ReportKeys.Trends, "Provincial Application Trends Report", "See how many license applications are submitted across the province over time."),
+            new(ReportKeys.LicenceTypes, "Provincial License Demand Report", "Compare demand for different license types across municipalities."),
+            new(ReportKeys.Outcomes, "Provincial Application Outcome Report", "See issued licenses, rejected applications and applicant withdrawals across the province.")];
 
     public async Task<ReportResult> GenerateAsync(ClaimsPrincipal principal, ReportAudience audience, string key, ReportFilter filter)
     {
@@ -81,7 +81,7 @@ public sealed class ReportingService(IServiceScopeFactory scopes)
             ReportKeys.Pending => PendingReport(card, scope, Submitted(), options),
             ReportKeys.Processing => ProcessingReport(card, scope, all, options, filter),
             ReportKeys.Outcomes => OutcomeReport(card, scope, Submitted(), options),
-            ReportKeys.LicenceTypes => CategoryReport(card, scope, Submitted(), options, x => Name(x.LicenceType), "Licence Type", "bar", licence: true),
+            ReportKeys.LicenceTypes => CategoryReport(card, scope, Submitted(), options, x => Name(x.LicenceType), "License Type", "bar", licence: true),
             ReportKeys.ProcessingTime => ProcessingTimeReport(card, scope, all.Where(x => x.DecisionDateUtc != null && InRange(x.DecisionDateUtc.Value, filter)).ToList(), options),
             ReportKeys.Trends => TrendsReport(card, scope, Submitted(), options, filter),
             ReportKeys.MunicipalityActivity => MunicipalityActivity(card, scope, Submitted(), options, municipalities),
@@ -97,7 +97,7 @@ public sealed class ReportingService(IServiceScopeFactory scopes)
         var rows = counts.Select(x => Row((category, x.Name), ("Applications", x.Count.ToString()))).ToList();
         var summaries = new List<ReportSummary> { new("Total Applications", data.Count.ToString()) };
         string? insight = null;
-        if (licence && counts.Count > 0) { var top = counts.OrderByDescending(x => x.Count).ThenBy(x => x.Name).First(); summaries.Add(new("Most Applied-For Licence", top.Name)); insight = $"{top.Name} was the most applied-for licence type with {top.Count} application{Plural(top.Count)}."; }
+        if (licence && counts.Count > 0) { var top = counts.OrderByDescending(x => x.Count).ThenBy(x => x.Name).First(); summaries.Add(new("Most Applied-For License", top.Name)); insight = $"{top.Name} was the most applied-for license type with {top.Count} application{Plural(top.Count)}."; }
         return Result(card, scope, options, rows, [Col(category), Col("Applications")], chartType, counts.Select(x => x.Name), [new("Applications", counts.Select(x => (double)x.Count).ToList())], summaries, insight);
     }
 
@@ -105,12 +105,12 @@ public sealed class ReportingService(IServiceScopeFactory scopes)
     {
         var now = DateTime.Now; var pending = data.Where(x => PendingStatuses.Contains(x.Status)).OrderBy(x => x.DateSubmitted).ToList();
         int Days(ReportingApplication x) => Math.Max(0, (int)(now - x.DateSubmitted).TotalDays);
-        var rows = pending.Select(x => Row(("Application Number", x.Number), ("Business Name", x.BusinessName), ("Licence Type", Name(x.LicenceType)),
+        var rows = pending.Select(x => Row(("Application Number", x.Number), ("Business Name", x.BusinessName), ("License Type", ApplicationTerminology.ForDisplay(Name(x.LicenceType))),
             ("Current Status", Name(x.Status)), ("Date Submitted", x.DateSubmitted.ToString("yyyy-MM-dd")), ("Days Since Submission", Days(x).ToString()))).ToList();
         string[] brackets = ["0-7 days", "8-14 days", "15-30 days", "31-60 days", "61+ days"];
         double[] values = [pending.Count(x => Days(x) <= 7), pending.Count(x => Days(x) is >= 8 and <= 14), pending.Count(x => Days(x) is >= 15 and <= 30), pending.Count(x => Days(x) is >= 31 and <= 60), pending.Count(x => Days(x) >= 61)];
         var over30 = pending.Count(x => Days(x) > 30); var insight = over30 == 0 ? null : $"{over30} application{Plural(over30)} have been waiting more than 30 days since submission.";
-        return Result(card, scope, options, rows, [Col("Application Number"), Col("Business Name"), Col("Licence Type"), Col("Current Status"), Col("Date Submitted"), Col("Days Since Submission")],
+        return Result(card, scope, options, rows, [Col("Application Number"), Col("Business Name"), Col("License Type"), Col("Current Status"), Col("Date Submitted"), Col("Days Since Submission")],
             "bar", brackets, [new("Applications by time since submission", values)], [new("Currently Pending", pending.Count.ToString()), new("Pending More Than 30 Days", over30.ToString())], insight);
     }
 
@@ -144,11 +144,11 @@ public sealed class ReportingService(IServiceScopeFactory scopes)
     {
         var decisions = data.Where(x => DecisionOutcomes.Contains(x.Status)).OrderByDescending(x => x.DecisionDateUtc).ToList();
         double? Days(ReportingApplication x) { var days = (x.DecisionDateUtc!.Value - x.DateSubmitted).TotalDays; return days < 0 ? null : days; }
-        var rows = decisions.Select(x => Row(("Application Number", x.Number), ("Licence Type", Name(x.LicenceType)), ("Date Submitted", x.DateSubmitted.ToString("yyyy-MM-dd")),
+        var rows = decisions.Select(x => Row(("Application Number", x.Number), ("License Type", ApplicationTerminology.ForDisplay(Name(x.LicenceType))), ("Date Submitted", x.DateSubmitted.ToString("yyyy-MM-dd")),
             ("Decision Date", x.DecisionDateUtc!.Value.ToString("yyyy-MM-dd")), ("Outcome", x.Status), ("Processing Days", Days(x)?.ToString("0.0", CultureInfo.InvariantCulture) ?? "N/A"))).ToList();
         var valid = decisions.Where(x => Days(x) != null).ToList(); var averages = valid.GroupBy(x => Name(x.LicenceType)).OrderBy(x => x.Key).Select(g => (g.Key, Value: g.Average(x => Days(x)!.Value))).ToList();
         var average = valid.Count == 0 ? (double?)null : valid.Average(x => Days(x)!.Value); var insight = average == null ? null : $"Applications with recorded decisions took an average of {average:0.0} days to process.";
-        return Result(card, scope, options, rows, [Col("Application Number"), Col("Licence Type"), Col("Date Submitted"), Col("Decision Date"), Col("Outcome"), Col("Processing Days")],
+        return Result(card, scope, options, rows, [Col("Application Number"), Col("License Type"), Col("Date Submitted"), Col("Decision Date"), Col("Outcome"), Col("Processing Days")],
             "bar", averages.Select(x => x.Key), [new("Average Processing Days", averages.Select(x => x.Value).ToList())],
             [new("Decisions Recorded", decisions.Count.ToString()), new("Average Processing Time", average == null ? "N/A" : average.Value.ToString("0.0", CultureInfo.InvariantCulture) + " days")], insight, wholeNumbers: false);
     }
@@ -166,10 +166,10 @@ public sealed class ReportingService(IServiceScopeFactory scopes)
         var names = (scope == "Province-wide" ? all : data.Select(x => Name(x.Municipality, "Not assigned"))).Union(data.Select(x => Name(x.Municipality, "Not assigned"))).Distinct().OrderBy(x => x).ToList();
         var groups = names.Select(n => (Name: n, Set: data.Where(x => Name(x.Municipality, "Not assigned") == n).ToList())).Where(x => x.Set.Count > 0).ToList();
         var rows = groups.Select(g => Row(("Municipality", g.Name), ("Total Applications", g.Set.Count.ToString()), ("Pending", g.Set.Count(x => PendingStatuses.Contains(x.Status)).ToString()),
-            ("Licence Issued", g.Set.Count(x => x.Status == "Licence Issued").ToString()), ("Rejected", g.Set.Count(x => x.Status == "Rejected").ToString()), ("Withdrawn", g.Set.Count(x => x.Status == "Withdrawn").ToString()))).ToList();
+            ("License Issued", g.Set.Count(x => x.Status == "Licence Issued").ToString()), ("Rejected", g.Set.Count(x => x.Status == "Rejected").ToString()), ("Withdrawn", g.Set.Count(x => x.Status == "Withdrawn").ToString()))).ToList();
         double[] Counts(Func<ReportingApplication, bool> match) => groups.Select(g => (double)g.Set.Count(match)).ToArray(); var pending = data.Count(x => PendingStatuses.Contains(x.Status));
-        return Result(card, scope, options, rows, [Col("Municipality"), Col("Total Applications"), Col("Pending"), Col("Licence Issued"), Col("Rejected"), Col("Withdrawn")], "bar", groups.Select(x => x.Name),
-            [new("Pending", Counts(x => PendingStatuses.Contains(x.Status))), new("Licence Issued", Counts(x => x.Status == "Licence Issued")), new("Rejected", Counts(x => x.Status == "Rejected")), new("Withdrawn", Counts(x => x.Status == "Withdrawn"))],
+        return Result(card, scope, options, rows, [Col("Municipality"), Col("Total Applications"), Col("Pending"), Col("License Issued"), Col("Rejected"), Col("Withdrawn")], "bar", groups.Select(x => x.Name),
+            [new("Pending", Counts(x => PendingStatuses.Contains(x.Status))), new("License Issued", Counts(x => x.Status == "Licence Issued")), new("Rejected", Counts(x => x.Status == "Rejected")), new("Withdrawn", Counts(x => x.Status == "Withdrawn"))],
             [new("Total Applications", data.Count.ToString()), new("Currently Pending", pending.ToString())], stacked: true);
     }
 
@@ -188,8 +188,21 @@ public sealed class ReportingService(IServiceScopeFactory scopes)
     }
 
     private static ReportResult Result(ReportCard card, string scope, ReportOptions options, IReadOnlyList<ReportRow> rows, IReadOnlyList<ReportColumn> columns,
-        string chartType, IEnumerable<string> labels, IReadOnlyList<ReportChartSeries> series, IReadOnlyList<ReportSummary> summaries, string? insight = null, bool stacked = false, bool wholeNumbers = true) =>
-        new(card.Key, card.Name, card.Description, scope, columns, rows, new(chartType, labels.ToList(), series, stacked, wholeNumbers), summaries, options, insight);
+        string chartType, IEnumerable<string> labels, IReadOnlyList<ReportChartSeries> series, IReadOnlyList<ReportSummary> summaries, string? insight = null, bool stacked = false, bool wholeNumbers = true)
+    {
+        var displayColumns = columns.Select(column => new ReportColumn(
+            ApplicationTerminology.ForDisplay(column.Key), ApplicationTerminology.ForDisplay(column.Heading))).ToList();
+        var displayRows = rows.Select(row => new ReportRow(row.Values.ToDictionary(
+            value => ApplicationTerminology.ForDisplay(value.Key), value => ApplicationTerminology.ForDisplay(value.Value)))).ToList();
+        var displaySeries = series.Select(item => new ReportChartSeries(
+            ApplicationTerminology.ForDisplay(item.Name), item.Values)).ToList();
+        var displaySummaries = summaries.Select(item => new ReportSummary(
+            ApplicationTerminology.ForDisplay(item.Label), ApplicationTerminology.ForDisplay(item.Value))).ToList();
+        return new(card.Key, ApplicationTerminology.ForDisplay(card.Name), ApplicationTerminology.ForDisplay(card.Description), scope,
+            displayColumns, displayRows,
+            new(chartType, labels.Select(ApplicationTerminology.ForDisplay).ToList(), displaySeries, stacked, wholeNumbers),
+            displaySummaries, options, insight == null ? null : ApplicationTerminology.ForDisplay(insight));
+    }
     private static bool InRange(DateTime value, ReportFilter filter) => (filter.From == null || value >= filter.From.Value.Date) && (filter.To == null || value < filter.To.Value.Date.AddDays(1));
     private static bool IsQuarterly(ReportFilter filter) => string.Equals(filter.Grouping, "Quarterly", StringComparison.OrdinalIgnoreCase);
     private static List<DateTime> Periods(ReportFilter filter, IEnumerable<DateTime> events)

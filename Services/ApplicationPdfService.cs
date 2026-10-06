@@ -22,7 +22,7 @@ namespace BusinessLicensing_Practice.Services
         public byte[] Generate(Application application)
         {
             using var document = new PdfDocument();
-            document.Info.Title = $"Business Licence Application {application.ApplicationNumber}";
+            document.Info.Title = $"Business License Application {application.ApplicationNumber}";
             document.Info.Author = "Western Cape Government - DEDAT";
 
             var renderer = new PdfRenderer(document, application.ApplicationNumber);
@@ -32,7 +32,7 @@ namespace BusinessLicensing_Practice.Services
             renderer.AddRows(
             [
                 ("Application reference", application.ApplicationNumber),
-                ("Licence type", application.LicenceType),
+                ("License type", ApplicationTerminology.ForDisplay(application.LicenceType)),
                 ("Application type", application.Details?.ApplicationType),
                 ("Responsible municipality", application.Municipality),
                 ("Applicant / owner", ApplicationEntry.FullName(application.Details)),
@@ -70,7 +70,7 @@ namespace BusinessLicensing_Practice.Services
             else renderer.AddRows([("Trading hours", tradingHours)]);
             renderer.AddRows([("Open on public holidays", ApplicationEntry.FormatPublicHolidayTrading(application.Details?.OpenOnPublicHolidays))]);
 
-            renderer.AddSection("Section C - Licence-Specific Information");
+            renderer.AddSection("Section C - License-Specific Information");
             renderer.AddLicenceSpecificRows(GetLicenceSpecificRows(
                 application.LicenceType, application.Details?.LicenceSpecificDetailsJson));
 
@@ -181,7 +181,7 @@ namespace BusinessLicensing_Practice.Services
 
                 const double headingX = logoX + logoWidth + 18;
                 graphics.DrawString("DEPARTMENT OF ECONOMIC DEVELOPMENT AND TOURISM", bold, XBrushes.White, new XPoint(headingX, 36));
-                graphics.DrawString("PROVINCIAL BUSINESS LICENCE APPLICATION", titleFont, XBrushes.White, new XPoint(headingX, 59));
+                graphics.DrawString("PROVINCIAL BUSINESS LICENSE APPLICATION", titleFont, XBrushes.White, new XPoint(headingX, 59));
                 y = 105;
             }
 

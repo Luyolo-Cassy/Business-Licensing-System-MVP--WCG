@@ -13,9 +13,9 @@ Email confirmation is disabled in the current MVP.
 ### Submit an application
 
 1. Open **New Application** from the navigation menu or dashboard.
-2. Select one of the available licence categories.
+2. Select one of the available license categories.
 3. Enter the required business, registration, tax, and address details.
-4. Complete any licence-specific information.
+4. Complete any license-specific information.
 5. Upload the completed official application form.
 6. Upload all four required supporting documents:
    - Certificate of Incorporation
@@ -37,7 +37,7 @@ The normal stages are:
 2. `Under Review`
 3. `Department Assessment`
 4. `Final Decision`
-5. `Licence Issued` or `Rejected`
+5. `License Issued` or `Rejected`
 
 An application may also be marked `Withdrawn`. A rejected or withdrawn application can be reset and resubmitted, or used as the starting point for a new application.
 
@@ -64,7 +64,7 @@ Open **Reports** to see:
 
 - Counts by status
 - Monthly submission volumes
-- Distribution by licence type
+- Distribution by license type
 
 The charts use the current records in the SQLite database and are rendered with Chart.js.
 
