@@ -43,6 +43,8 @@ namespace BusinessLicensing_Practice.Data
             {
                 Id = BusinessLicensing_Practice.Models.AiSettings.SingletonId,
                 DocumentValidationEnabled = false,
+                CertificateOfIncorporationValidationEnabled = false,
+                ProofOfAddressValidationEnabled = false,
                 ApplicationSummariesEnabled = false
             });
 

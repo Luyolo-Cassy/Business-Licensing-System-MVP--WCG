@@ -430,10 +430,7 @@
 }
 
 .supporting-document-item {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr);
-    gap: 1.25rem;
-    padding: 1.25rem;
+    overflow: hidden;
     border: 1px solid #d7dce5;
     border-radius: 0.75rem;
     background-color: #fff;
@@ -443,13 +440,20 @@
     display: flex;
     align-items: flex-start;
     gap: 1rem;
+    min-width: 0;
+    padding: 1.15rem 1.25rem;
 }
 
 .supporting-document-upload {
-    padding: 1rem;
-    border: 1px solid #cfd6e1;
-    border-radius: 0.75rem;
+    padding: 1.15rem 1.25rem 1.25rem;
+    border-top: 1px solid #e1e6ee;
     background-color: #f8faff;
+}
+
+.supporting-document-additional-upload {
+    margin-top: 1rem;
+    border: 1px solid #e1e6ee;
+    border-radius: 0.75rem;
 }
 
 .supporting-documents-step .form-label {
@@ -469,10 +473,86 @@
 
 .supporting-document-selected-file {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-width: 0;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e1e6ee;
     color: #172033;
     font-size: 0.925rem;
 }
+
+.document-validation-feedback {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.85rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    color: #334155;
+    background-color: #f8fafc;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.supporting-document-file-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    min-width: 0;
+}
+
+.supporting-document-file-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    margin-top: 0.1rem;
+}
+
+.supporting-document-file-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.supporting-document-filename {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.supporting-document-file-status {
+    color: #64748b;
+    font-size: 0.82rem;
+}
+
+.supporting-document-remove {
+    flex: 0 0 auto;
+    padding-right: 0;
+    padding-left: 0;
+}
+
+.supporting-document-additional-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-right: 1.25rem;
+}
+
+.document-validation-feedback .document-validation-icon,
+.document-validation-feedback .spinner-border { display: inline-flex; width: 1rem; height: 1rem; flex: 0 0 1rem; }
+.document-validation-feedback.is-pending { color: #174a78; border-color: #a9c9e5; background-color: #eef6fc; }
+.document-validation-feedback.is-match { color: #24613b; border-color: #9dcead; background-color: #edf8f0; }
+.document-validation-feedback.is-mismatch { color: #9b2c2c; border-color: #dfa8a8; background-color: #fceeee; }
+.document-validation-feedback.is-unable { color: #755600; border-color: #ddc575; background-color: #fff7dc; }
+
+.document-validation-feedback.is-match .document-validation-icon ::deep .ph-icon,
+.supporting-document-file-icon ::deep .ph-icon { filter: brightness(0) saturate(100%) invert(35%) sepia(45%) saturate(800%) hue-rotate(91deg) brightness(86%) contrast(87%); }
+.document-validation-feedback.is-mismatch .document-validation-icon ::deep .ph-icon { filter: brightness(0) saturate(100%) invert(22%) sepia(61%) saturate(2417%) hue-rotate(337deg) brightness(90%) contrast(92%); }
+.document-validation-feedback.is-unable .document-validation-icon ::deep .ph-icon { filter: brightness(0) saturate(100%) invert(36%) sepia(82%) saturate(698%) hue-rotate(7deg) brightness(93%) contrast(101%); }
 
 .supporting-document-selected-file .bi {
     color: var(--wcg-blue);
@@ -491,20 +571,29 @@
     color: var(--wcg-blue);
 }
 
-@media (max-width: 991.98px) {
-    .supporting-document-item {
-        grid-template-columns: 1fr;
-    }
-}
-
 @media (max-width: 575.98px) {
     .supporting-documents-card .card-body {
         padding: 1.25rem;
     }
 
-    .supporting-document-item,
+    .supporting-document-details,
     .supporting-document-upload {
         padding: 1rem;
+    }
+
+    .supporting-document-selected-file,
+    .supporting-document-additional-item {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .supporting-document-additional-item {
+        padding: 0 1rem 1rem;
+    }
+
+    .supporting-document-additional-item .supporting-document-details {
+        padding-right: 0;
+        padding-left: 0;
     }
 }
 

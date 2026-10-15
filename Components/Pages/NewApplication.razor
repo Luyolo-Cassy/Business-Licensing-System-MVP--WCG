@@ -25,6 +25,7 @@
 @inject MunicipalRoutingService RoutingService
 @inject AiSettingsService AiSettings
 @inject AiDocumentValidationPolicy AiValidation
+@inject AiDocumentValidationWorkflow AiValidationWorkflow
 @inject IApplicationNotificationService Notifications
 @inject ApplicationDraftService Drafts
 @inject ApplicationCorrectionService Corrections
@@ -161,20 +162,57 @@ else
             @foreach (var requirement in SelectedLicence?.Documents ?? [])
             {
                 var selected = SelectedDocuments.FirstOrDefault(document => document.DocumentType == requirement.DocumentType);
-                <div class="supporting-document-item"><div class="supporting-document-details"><span class="supporting-document-icon"><PhosphorIcon Name="file-text" /></span><div><h6 class="fw-bold mb-1">@requirement.DocumentType <span class="text-danger">*</span></h6><p class="text-muted mb-0">@requirement.Description</p></div></div><div class="supporting-document-upload"><label class="form-label fw-semibold">@(selected == null ? "Upload" : "Replace") @requirement.DocumentType</label><InputFile class="form-control" accept=".pdf,.png,.jpg,.jpeg" disabled="@(ReadingDocumentType == requirement.DocumentType || (requirement.DocumentType == OwnerIdDocumentType && OwnerIdValidationInProgress))" OnChange="@(e => HandleFileSelected(e, requirement.DocumentType))" />@if (ReadingDocumentType == requirement.DocumentType) { <div class="mt-2 text-muted" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Reading document...</div> }@if (selected != null) { <div class="supporting-document-selected-file mt-3"><PhosphorIcon Name="check-circle" CssClass="me-2" /><strong>@selected.FileName</strong> — Uploaded <button type="button" class="btn btn-link btn-sm text-danger" @onclick="() => RemoveDocument(selected.DocumentType)">Remove</button></div> }@if (requirement.DocumentType == OwnerIdDocumentType && AiDocumentValidationEnabled) { @if (OwnerIdValidationInProgress) { <div class="mt-2 text-muted" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Verifying document...</div> } else if (OwnerIdValidationStatus == AiDocumentValidationStatus.Match) { <div class="alert alert-success mt-2 mb-0" role="status"><strong>Document verified.</strong> This file appears to be an Owner ID or Passport document. This is a document-type check only, not authentication.</div> } else if (OwnerIdValidationStatus == AiDocumentValidationStatus.NoMatch) { <div class="alert alert-danger mt-2 mb-0" role="alert"><strong>Incorrect document.</strong> This file does not appear to be an Owner ID or Passport. Please upload the correct document.</div> } else if (OwnerIdValidationStatus == AiDocumentValidationStatus.Unavailable) { <div class="alert alert-warning mt-2 mb-0" role="status">Automatic document verification is currently unavailable. Your document can still be submitted for municipal review.</div> } }</div></div>
+                <div class="supporting-document-item">
+                    <div class="supporting-document-details"><span class="supporting-document-icon"><PhosphorIcon Name="file-text" /></span><div><h6 class="fw-bold mb-1">@requirement.DocumentType <span class="text-danger">*</span></h6><p class="text-muted mb-0">@requirement.Description</p></div></div>
+                    <div class="supporting-document-upload">
+                        <label class="form-label fw-semibold">@(selected == null ? "Upload" : "Replace") @requirement.DocumentType</label>
+                        <InputFile class="form-control" accept=".pdf,.png,.jpg,.jpeg" disabled="@(ReadingDocumentType == requirement.DocumentType || DocumentValidationsInProgress.Contains(requirement.DocumentType))" OnChange="@(e => HandleFileSelected(e, requirement.DocumentType))" />
+                        @if (ReadingDocumentType == requirement.DocumentType) { <div class="document-validation-feedback is-pending" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span><span>Reading document...</span></div> }
+                        @if (selected != null)
+                        {
+                            <div class="supporting-document-selected-file">
+                                <div class="supporting-document-file-info">
+                                    <span class="supporting-document-file-icon"><PhosphorIcon Name="check-circle" /></span>
+                                    <div class="supporting-document-file-copy"><strong class="supporting-document-filename" title="@selected.FileName">@selected.FileName</strong><span class="supporting-document-file-status">Uploaded</span></div>
+                                </div>
+                                <button type="button" class="btn btn-link btn-sm text-danger supporting-document-remove" @onclick="() => RemoveDocument(selected.DocumentType)">Remove</button>
+                            </div>
+                        }
+                        @if (ShouldShowValidationFeedback(requirement.DocumentType))
+                        {
+                            <div class="@ValidationFeedbackClass(requirement.DocumentType)" role="@(DocumentValidationStatuses.GetValueOrDefault(requirement.DocumentType) == AiDocumentValidationStatus.NoMatch ? "alert" : "status")" aria-live="polite">
+                                @if (DocumentValidationsInProgress.Contains(requirement.DocumentType))
+                                {
+                                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                }
+                                else
+                                {
+                                    <span class="document-validation-icon"><PhosphorIcon Name="@ValidationFeedbackIcon(requirement.DocumentType)" /></span>
+                                }
+                                <span>@ValidationFeedbackMessage(requirement.DocumentType)</span>
+                            </div>
+                        }
+                    </div>
+                </div>
             }
         </div></div></div>
         <div class="card supporting-documents-card mb-4"><div class="card-body">
             <div class="supporting-documents-card-heading"><span class="supporting-documents-card-icon"><PhosphorIcon Name="file-plus" /></span><div><h5 class="mb-1">Additional Supporting Documents (Optional)</h5><p class="text-muted mb-0">Upload any additional documents relevant to your application or requested by your municipality.</p></div></div>
-            <div class="supporting-document-upload mt-3"><label class="form-label fw-semibold">Add supporting document</label><InputFile class="form-control" accept=".pdf,.png,.jpg,.jpeg" disabled="@AddingAdditionalDocument" OnChange="HandleAdditionalFileSelected" />
-                @if (AddingAdditionalDocument) { <div class="mt-2 text-muted" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Uploading document...</div> }
+            <div class="supporting-document-upload supporting-document-additional-upload"><label class="form-label fw-semibold">Add supporting document</label><InputFile class="form-control" accept=".pdf,.png,.jpg,.jpeg" disabled="@AddingAdditionalDocument" OnChange="HandleAdditionalFileSelected" />
+                @if (AddingAdditionalDocument) { <div class="document-validation-feedback is-pending" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span><span>Uploading document...</span></div> }
             </div>
             @if (AdditionalDocuments.Count > 0)
             {
                 <div class="supporting-document-list mt-3">
                     @foreach (var document in AdditionalDocuments)
                     {
-                        <div class="supporting-document-item" @key="document.DocumentType"><div class="supporting-document-details"><span class="supporting-document-icon"><PhosphorIcon Name="file-text" /></span><div><strong>@document.FileName</strong><p class="text-muted mb-0">Additional supporting document</p></div></div><button type="button" class="btn btn-link btn-sm text-danger" @onclick="() => RemoveDocument(document.DocumentType)">Remove</button></div>
+                        <div class="supporting-document-item supporting-document-additional-item" @key="document.DocumentType">
+                            <div class="supporting-document-details">
+                                <span class="supporting-document-icon"><PhosphorIcon Name="file-text" /></span>
+                                <div class="supporting-document-file-copy"><strong class="supporting-document-filename" title="@document.FileName">@document.FileName</strong><span class="supporting-document-file-status">Additional supporting document</span></div>
+                            </div>
+                            <button type="button" class="btn btn-link btn-sm text-danger supporting-document-remove" @onclick="() => RemoveDocument(document.DocumentType)">Remove</button>
+                        </div>
                     }
                 </div>
             }
@@ -218,7 +256,8 @@ else
     private const string OwnerIdDocumentType = "Owner ID Document";
     private int CurrentStep = 1;
     private bool IsSubmitting, MessageIsError, DeclarationAccepted, PopiaConsentAccepted, ScrollToStep;
-    private bool AiDocumentValidationEnabled, OwnerIdValidationInProgress, AddingAdditionalDocument;
+    private AiDocumentValidationSettings AiValidationSettings = new(false, false, false);
+    private bool AddingAdditionalDocument;
     private bool ShowExistingDraftChoice, ShowDeleteConfirmation, DeletingDraft;
     private bool? PostalSameAsBusiness;
     private bool? OpenOnPublicHolidays;
@@ -232,7 +271,10 @@ else
     private ApplicationDraftSummary? ExistingDraftSummary;
     private CancellationTokenSource? AutosaveDelay;
     private readonly SemaphoreSlim SaveGate = new(1, 1);
-    private AiDocumentValidationStatus? OwnerIdValidationStatus;
+    private readonly Dictionary<string, AiDocumentValidationStatus> DocumentValidationStatuses = new();
+    private readonly Dictionary<string, string> DocumentValidationValues = new();
+    private readonly HashSet<string> DocumentValidationsInProgress = [];
+    private readonly Dictionary<string, string?> DocumentValidationReasons = new();
     private string Message = "", LicenceType = "", ApplicationType = "", ApplicantFirstName = "", ApplicantLastName = "", ApplicantAddressLine1 = "", ApplicantAddressLine2 = "", ApplicantSuburb = "", ApplicantCity = "", ApplicantPostalCode = "", ApplicantTelephone = "", ApplicantEmail = "";
     private string BusinessName = "", RegistrationNumber = "", TaxNumber = "", BusinessCategory = "", ContactPerson = "", BusinessTelephone = "", BusinessEmail = "";
     private string PlaceOfBusinessAddressLine1 = "", PlaceOfBusinessAddressLine2 = "", PlaceOfBusinessSuburb = "", PlaceOfBusinessCity = "", PlaceOfBusinessPostalCode = "", PostalAddressLine1 = "", PostalAddressLine2 = "", PostalSuburb = "", PostalCity = "", PostalPostalCode = "";
@@ -263,7 +305,7 @@ else
         var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = await UserManager.GetUserAsync(state.User);
         if (user != null) { var split = user.FullName.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries); ApplicantFirstName = split.ElementAtOrDefault(0) ?? ""; ApplicantLastName = split.ElementAtOrDefault(1) ?? ""; ApplicantEmail = user.Email ?? ""; ApplicantTelephone = user.PhoneNumber ?? ""; }
-        AiDocumentValidationEnabled = await AiSettings.IsDocumentValidationEnabledAsync();
+        AiValidationSettings = await AiSettings.GetDocumentValidationSettingsAsync();
         if (IsCorrectionMode)
         {
             try
@@ -295,7 +337,7 @@ else
         if (ExistingDraft != null)
             foreach (var document in SelectedDocuments.ToList())
                 await Drafts.RemoveDocumentAsync((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User, document.DocumentType);
-        LicenceType = definition.Name; LicenceAnswers.Clear(); SelectedDocuments.Clear(); OwnerIdValidationStatus = null; OwnerIdValidationInProgress = false;
+        LicenceType = definition.Name; LicenceAnswers.Clear(); SelectedDocuments.Clear(); DocumentValidationStatuses.Clear(); DocumentValidationValues.Clear(); DocumentValidationReasons.Clear(); DocumentValidationsInProgress.Clear();
         foreach (var question in definition.Questions) LicenceAnswers[question.Key] = "";
         DraftChanged(default!);
     }
@@ -390,8 +432,8 @@ else
             4 when SelectedLicence?.Questions.Any(question => question.Required && string.IsNullOrWhiteSpace(GetAnswer(question.Key))) == true => "Please answer every required license-specific question.",
             4 when SelectedLicence?.Questions.Any(question => !ApplicationEntry.ValidLicenceAnswer(GetAnswer(question.Key), question.Required, question.Options)) == true => "Select a valid option for every required license-specific question.",
             5 when SelectedLicence?.Documents.Any(requirement => requirement.Required && !SelectedDocuments.Any(document => document.DocumentType == requirement.DocumentType)) == true => "Please upload every required supporting document.",
-            5 when AiDocumentValidationEnabled && SelectedDocuments.Any(document => document.DocumentType == OwnerIdDocumentType) && (OwnerIdValidationInProgress || OwnerIdValidationStatus == null) => "Please wait for Owner ID document verification to finish.",
-            5 when AiDocumentValidationEnabled && OwnerIdValidationStatus is { } status && AiDocumentValidationPolicy.BlocksProgress(status) => "The Owner ID document is the incorrect document type. Please upload an Owner ID or Passport document.",
+            5 when DocumentValidationsInProgress.Count > 0 => "Please wait for document verification to finish.",
+            5 when CurrentMismatch() is { } mismatch => AiDocumentValidationWorkflow.MismatchMessage(mismatch),
             6 when !DeclarationAccepted || !PopiaConsentAccepted => "Please accept both the declaration and POPIA consent before continuing.",
             _ => null
         };
@@ -420,29 +462,36 @@ else
 
     private async Task HandleFileSelected(InputFileChangeEventArgs args, string documentType)
     {
-        if (ReadingDocumentType == documentType || OwnerIdValidationInProgress || IsSubmitting) return;
+        if (ReadingDocumentType == documentType || DocumentValidationsInProgress.Count > 0 || IsSubmitting) return;
         Message = ""; var file = args.File; var extension = Path.GetExtension(file.Name).ToLowerInvariant();
         if (extension is not (".pdf" or ".png" or ".jpg" or ".jpeg")) { SetError("Supporting documents must be PDF, PNG or JPEG files."); return; }
         ReadingDocumentType = documentType;
         SelectedDocument? selected = null;
-        try { using var stream = new MemoryStream(); await file.OpenReadStream(MaxFileSize).CopyToAsync(stream); selected = new(documentType, Path.GetFileName(file.Name), null, stream.ToArray()); if (documentType == OwnerIdDocumentType) OwnerIdValidationStatus = null; }
+        try { using var stream = new MemoryStream(); await file.OpenReadStream(MaxFileSize).CopyToAsync(stream); selected = new(documentType, Path.GetFileName(file.Name), null, stream.ToArray()); DocumentValidationStatuses.Remove(documentType); DocumentValidationValues.Remove(documentType); DocumentValidationReasons.Remove(documentType); }
         catch (IOException) { SetError("The selected document exceeds the 10 MB file limit."); }
         finally { ReadingDocumentType = null; }
         if (selected == null) return;
-        if (documentType == OwnerIdDocumentType)
+        string? validationValue = null;
+        if (AiDocumentValidationPolicy.TryGetKind(documentType, out _))
         {
-            AiDocumentValidationEnabled = await AiSettings.IsDocumentValidationEnabledAsync();
-            if (AiDocumentValidationEnabled)
+            AiValidationSettings = await AiSettings.GetDocumentValidationSettingsAsync();
+            if (AiValidationSettings.EnabledFor(documentType))
             {
-                OwnerIdValidationInProgress = true;
-                StateHasChanged();
+                DocumentValidationsInProgress.Add(documentType);
+                await InvokeAsync(StateHasChanged);
+                await Task.Yield();
                 try
                 {
-                    OwnerIdValidationStatus = (await AiValidation.EvaluateAsync(true, documentType, selected.FileName, selected.FileBytes!)).Status;
+                    var result = await AiValidation.EvaluateAsync(true, documentType, selected.FileName, selected.FileBytes!, AiDocumentValidationWorkflow.Expected(CreatePayload()));
+                    DocumentValidationStatuses[documentType] = result.Status;
+                    DocumentValidationReasons[documentType] = result.ReasonCode;
+                    validationValue = result.StoredValue;
+                    if (validationValue != null) DocumentValidationValues[documentType] = validationValue;
                 }
                 finally
                 {
-                    OwnerIdValidationInProgress = false;
+                    DocumentValidationsInProgress.Remove(documentType);
+                    await InvokeAsync(StateHasChanged);
                 }
             }
         }
@@ -453,7 +502,7 @@ else
             try
             {
                 await Drafts.ReplaceDocumentAsync((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User,
-                    documentType, selected.FileName, reference, documentType == OwnerIdDocumentType ? OwnerIdValidationStatus : null,
+                    documentType, selected.FileName, reference, validationValue,
                     CorrectionApplicationId);
             }
             catch
@@ -512,6 +561,10 @@ else
             MessageIsError = false;
             Message = "Saving application and generating PDF...";
             StateHasChanged();
+            var validationDraft = await Db.ApplicationDrafts.Include(item => item.Documents)
+                .SingleOrDefaultAsync(item => item.UserId == user.Id && item.SourceApplicationId == null);
+            if (validationDraft == null) throw new InvalidOperationException("The saved draft is unavailable.");
+            await AiValidationWorkflow.EnforceAsync(Db, CreatePayload(), validationDraft.Documents);
             await using var transaction = await Db.Database.BeginTransactionAsync();
             BusinessLicensing_Practice.Models.Municipality participatingMunicipality;
             try
@@ -552,6 +605,11 @@ else
                     application.Id, application.ApplicationNumber, application.Municipality, error.GetType().Name);
             }
             MessageIsError = false; Message = "Application submitted successfully. Your official PDF has been generated."; Nav.NavigateTo($"/tracking/{application.Id}");
+        }
+        catch (System.ComponentModel.DataAnnotations.ValidationException error)
+        {
+            CurrentStep = 5;
+            SetError(error.Message);
         }
         catch (Exception)
         {
@@ -686,8 +744,16 @@ else
         SelectedDocuments.Clear();
         foreach (var document in draft.Documents)
             SelectedDocuments.Add(new(document.DocumentType, document.FileName, document.FilePath, null));
-        var ownerDocument = draft.Documents.SingleOrDefault(item => item.DocumentType == OwnerIdDocumentType);
-        OwnerIdValidationStatus = Enum.TryParse<AiDocumentValidationStatus>(ownerDocument?.AiValidationStatus, out var status) ? status : null;
+        DocumentValidationStatuses.Clear();
+        DocumentValidationValues.Clear();
+        DocumentValidationReasons.Clear();
+        var expected = AiDocumentValidationWorkflow.Expected(payload);
+        foreach (var document in draft.Documents)
+            if (AiValidation.IsCurrent(document.AiValidationStatus, document.DocumentType, expected, out var status))
+            {
+                DocumentValidationStatuses[document.DocumentType] = status;
+                DocumentValidationValues[document.DocumentType] = document.AiValidationStatus!;
+            }
         CurrentStep = Math.Clamp(draft.CurrentStep, 1, TotalSteps);
         ShowExistingDraftChoice = false;
         SaveState = $"Saved {draft.LastSavedAtUtc.ToLocalTime():g}";
@@ -702,7 +768,9 @@ else
     {
         await Drafts.RemoveDocumentAsync((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User, documentType, CorrectionApplicationId);
         SelectedDocuments.RemoveAll(item => item.DocumentType == documentType);
-        if (documentType == OwnerIdDocumentType) OwnerIdValidationStatus = null;
+        DocumentValidationStatuses.Remove(documentType);
+        DocumentValidationValues.Remove(documentType);
+        DocumentValidationReasons.Remove(documentType);
         SaveState = "Saved";
     }
 
@@ -719,5 +787,47 @@ else
     }
 
     private static string DisplayDraftValue(string? value) => string.IsNullOrWhiteSpace(value) ? "Not yet provided" : value;
+    private string? CurrentMismatch()
+    {
+        var expected = AiDocumentValidationWorkflow.Expected(CreatePayload());
+        foreach (var document in SelectedDocuments)
+            if (DocumentValidationValues.GetValueOrDefault(document.DocumentType) is { } saved &&
+                AiValidation.IsCurrent(saved, document.DocumentType, expected, out var status) && status == AiDocumentValidationStatus.NoMatch)
+                return document.DocumentType;
+        return null;
+    }
+    private bool ShouldShowValidationFeedback(string documentType) =>
+        AiValidationSettings.EnabledFor(documentType) &&
+        (DocumentValidationsInProgress.Contains(documentType) || DocumentValidationStatuses.ContainsKey(documentType));
+    private string ValidationFeedbackClass(string documentType) => "document-validation-feedback " +
+        (DocumentValidationsInProgress.Contains(documentType) ? "is-pending" : DocumentValidationStatuses.GetValueOrDefault(documentType) switch
+        {
+            AiDocumentValidationStatus.Match => "is-match",
+            AiDocumentValidationStatus.NoMatch => "is-mismatch",
+            _ => "is-unable"
+        });
+    private string ValidationFeedbackIcon(string documentType) => DocumentValidationStatuses.GetValueOrDefault(documentType) switch
+    {
+        AiDocumentValidationStatus.Match => "check-circle",
+        AiDocumentValidationStatus.NoMatch => "x-circle",
+        _ => "warning"
+    };
+    private string ValidationFeedbackMessage(string documentType) => DocumentValidationsInProgress.Contains(documentType) ? "Verifying document..." :
+        DocumentValidationStatuses.GetValueOrDefault(documentType) switch
+        {
+            AiDocumentValidationStatus.Match when documentType == OwnerIdDocumentType => "Document type recognised.",
+            AiDocumentValidationStatus.Match => "Document details match the application.",
+            AiDocumentValidationStatus.NoMatch => ValidationMismatchText(documentType, DocumentValidationReasons.GetValueOrDefault(documentType)),
+            AiDocumentValidationStatus.UnableToVerify or AiDocumentValidationStatus.Unavailable => "Unable to verify automatically. Manual review required.",
+            _ => "Unable to verify automatically. Manual review required."
+        };
+    private static string ValidationMismatchText(string documentType, string? reason) => reason switch
+    {
+        "DocumentTypeMismatch" => "Unsupported document type. Upload the required document.",
+        "RegistrationNumberMismatch" => "The company registration number does not match the application.",
+        "BusinessNameMismatch" => "The registered business name does not match the application.",
+        "TradingAddressMismatch" => "The physical address does not match the trading address.",
+        _ => "Document does not meet the validation requirements."
+    };
     private sealed record SelectedDocument(string DocumentType, string FileName, string? FilePath, byte[]? FileBytes);
 }

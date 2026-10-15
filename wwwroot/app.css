@@ -78,6 +78,132 @@ h1, h2, h3, h4, h5, h6 {
 .progress { background-color: #e7e9ee; border-radius: var(--wcg-radius); }
 .progress-bar { background-color: var(--wcg-blue); }
 
+.tracking-current-status {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.65rem 0.85rem;
+    border: 1px solid var(--wcg-border);
+    border-radius: var(--wcg-radius);
+    background-color: var(--wcg-surface-subtle);
+}
+
+.tracking-current-status strong { color: var(--wcg-blue); }
+
+.tracking-current-status-dot {
+    width: 0.65rem;
+    height: 0.65rem;
+    flex: 0 0 0.65rem;
+    border-radius: 50%;
+    background-color: var(--wcg-blue);
+}
+
+.tracking-stages {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tracking-stage {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0 0.45rem;
+    text-align: center;
+}
+
+.tracking-stage:not(:first-child)::before {
+    position: absolute;
+    top: 1.15rem;
+    right: 50%;
+    width: 100%;
+    height: 2px;
+    background-color: #d8dee8;
+    content: "";
+    z-index: 0;
+}
+
+.tracking-stage.is-complete::before,
+.tracking-stage.is-current::before { background-color: #8fa3d7; }
+
+.tracking-stage-marker {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    width: 2.3rem;
+    height: 2.3rem;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #cbd3df;
+    border-radius: 50%;
+    background-color: #fff;
+}
+
+.tracking-stage.is-complete .tracking-stage-marker {
+    border-color: #aebce0;
+    background-color: #edf1fb;
+}
+
+.tracking-stage.is-current .tracking-stage-marker {
+    border-color: var(--wcg-blue);
+    background-color: var(--wcg-blue);
+    box-shadow: 0 0 0 0.22rem rgba(0, 20, 137, 0.12);
+}
+
+.tracking-stage-marker .ph-icon {
+    width: 1.15rem;
+    height: 1.15rem;
+}
+
+.tracking-stage.is-current .tracking-stage-marker .ph-icon { filter: brightness(0) invert(1); }
+.tracking-stage.is-upcoming .tracking-stage-marker .ph-icon { filter: grayscale(1) opacity(0.55); }
+
+.tracking-stage-label {
+    color: #687386;
+    font-size: 0.86rem;
+    line-height: 1.25;
+}
+
+.tracking-stage.is-complete .tracking-stage-label { color: #42526b; }
+.tracking-stage.is-current .tracking-stage-label { color: var(--wcg-blue); }
+
+@media (max-width: 767.98px) {
+    .tracking-current-status {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .tracking-current-status-dot { margin-top: 0.25rem; }
+
+    .tracking-stages {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .tracking-stage {
+        min-height: 3.6rem;
+        flex-direction: row;
+        gap: 0.85rem;
+        padding: 0 0 1rem;
+        text-align: left;
+    }
+
+    .tracking-stage:not(:first-child)::before {
+        top: -1.3rem;
+        right: auto;
+        left: 1.1rem;
+        width: 2px;
+        height: 1.6rem;
+    }
+
+    .tracking-stage-label { font-size: 0.9rem; }
+}
+
 .form-control, .form-select, .form-check-input { border-color: #aeb6c3; }
 .form-check-input:checked {
     background-color: var(--wcg-blue);
