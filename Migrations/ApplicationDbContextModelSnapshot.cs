@@ -26,7 +26,13 @@ namespace BusinessLicensing_Practice.Migrations
                     b.Property<bool>("ApplicationSummariesEnabled")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("CertificateOfIncorporationValidationEnabled")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("DocumentValidationEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ProofOfAddressValidationEnabled")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
@@ -38,7 +44,9 @@ namespace BusinessLicensing_Practice.Migrations
                         {
                             Id = 1,
                             ApplicationSummariesEnabled = false,
-                            DocumentValidationEnabled = false
+                            CertificateOfIncorporationValidationEnabled = false,
+                            DocumentValidationEnabled = false,
+                            ProofOfAddressValidationEnabled = false
                         });
                 });
 

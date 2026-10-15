@@ -120,6 +120,7 @@ builder.Services.AddSingleton<ReportExportService>();
 builder.Services.AddScoped<ApplicantApplicationService>();
 builder.Services.AddScoped<AiSettingsService>();
 builder.Services.AddScoped<AiDocumentValidationPolicy>();
+builder.Services.AddScoped<AiDocumentValidationWorkflow>();
 builder.Services.AddScoped<ApplicationSummaryService>();
 builder.Services.AddScoped<InitialAdminBootstrapper>();
 builder.Services.AddHttpClient<IAiDocumentValidationService, GeminiDocumentValidationService>(client =>

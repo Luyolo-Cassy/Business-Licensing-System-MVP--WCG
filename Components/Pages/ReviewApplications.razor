@@ -74,14 +74,11 @@ else
         </div>
 
         <div class="card-body">
-            <h5 class="mb-3">Application Progress</h5>
-
-            <div class="progress mb-4" style="height:25px;">
-                <div class="progress-bar bg-success" role="progressbar" style="width:@GetProgressPercentage()%">
-
-                    @ApplicationTerminology.ForDisplay(application?.Status)
-
-                </div>
+            <h5 class="mb-3">Application Status</h5>
+            <div class="d-flex align-items-center gap-2 rounded border px-3 py-2 mb-4 bg-light" role="status" aria-label="Current application status">
+                <span class="rounded-circle bg-primary" style="width:.65rem;height:.65rem;flex:0 0 .65rem" aria-hidden="true"></span>
+                <span class="small text-muted">Current status</span>
+                <strong class="text-primary">@ApplicationTerminology.ForDisplay(application?.Status)</strong>
             </div>
 
             <div class="row mb-3">
@@ -521,22 +518,6 @@ else
             "Rejected" => "bg-danger",
             "Withdrawn" => "bg-dark",
             _ => "bg-secondary"
-        };
-    }
-
-    private int GetProgressPercentage()
-    {
-        return application?.Status switch
-        {
-            "Submitted" => 20,
-            "Under Review" => 40,
-            "Additional Information Required" => 40,
-            "Department Assessment" => 60,
-            "Final Decision" => 80,
-            "Licence Issued" => 100,
-            "Rejected" => 100,
-            "Withdrawn" => 100,
-            _ => 0
         };
     }
 

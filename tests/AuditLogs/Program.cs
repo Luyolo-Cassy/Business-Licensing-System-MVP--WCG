@@ -30,6 +30,10 @@ services.AddSingleton<IWebHostEnvironment>(new TestEnvironment(root));
 services.AddSingleton<IPrivateFileStore, LocalPrivateFileStore>();
 services.AddSingleton<ApplicationFileService>();
 services.AddSingleton<ProtectedUploadService>();
+services.AddSingleton<IAiDocumentValidationService, NoDocumentExtraction>();
+services.AddScoped<AiDocumentValidationPolicy>();
+services.AddScoped<AiSettingsService>();
+services.AddScoped<AiDocumentValidationWorkflow>();
 services.AddSingleton<ApplicationPdfService>();
 services.AddScoped<MunicipalMessageService>();
 services.AddScoped<ApplicationAuditService>();
@@ -173,6 +177,11 @@ sealed class NoNotifications : IApplicationNotificationService
     public Task NotifySubmissionAsync(int applicationId, CancellationToken cancellationToken = default) => Task.CompletedTask;
     public Task NotifyReviewAsync(int applicationId, string previousStatus, string newStatus, string? municipalMessage, CancellationToken cancellationToken = default) => Task.CompletedTask;
     public Task NotifyResubmissionAsync(int applicationId, CancellationToken cancellationToken = default) => Task.CompletedTask;
+}
+sealed class NoDocumentExtraction : IAiDocumentValidationService
+{
+    public Task<AiDocumentExtraction?> ExtractAsync(AiDocumentKind documentKind, string fileName, byte[] fileBytes,
+        CancellationToken cancellationToken = default) => Task.FromResult<AiDocumentExtraction?>(null);
 }
 sealed class JsonHandler(string json) : HttpMessageHandler
 {

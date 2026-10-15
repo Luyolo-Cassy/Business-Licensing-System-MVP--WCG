@@ -48,7 +48,7 @@ public sealed class ApplicationDraftService(IServiceScopeFactory scopes, Protect
     }
 
     public async Task<ApplicationDraftDocument> ReplaceDocumentAsync(ClaimsPrincipal principal, string documentType,
-        string fileName, string filePath, AiDocumentValidationStatus? validationStatus, int? sourceApplicationId = null)
+        string fileName, string filePath, string? validationStatus, int? sourceApplicationId = null)
     {
         await using var scope = scopes.CreateAsyncScope();
         var (db, user) = await AuthorizeOwnerAsync(scope.ServiceProvider, principal);
@@ -66,7 +66,7 @@ public sealed class ApplicationDraftService(IServiceScopeFactory scopes, Protect
         }
         existing.FileName = Path.GetFileName(fileName);
         existing.FilePath = filePath;
-        existing.AiValidationStatus = validationStatus?.ToString();
+        existing.AiValidationStatus = validationStatus;
         draft.LastSavedAtUtc = DateTime.UtcNow;
         try { await db.SaveChangesAsync(); }
         catch
@@ -78,6 +78,10 @@ public sealed class ApplicationDraftService(IServiceScopeFactory scopes, Protect
             await uploads.DeleteIfUnreferencedAsync(db, oldPath);
         return existing;
     }
+
+    public Task<ApplicationDraftDocument> ReplaceDocumentAsync(ClaimsPrincipal principal, string documentType,
+        string fileName, string filePath, AiDocumentValidationStatus? validationStatus, int? sourceApplicationId = null) =>
+        ReplaceDocumentAsync(principal, documentType, fileName, filePath, validationStatus?.ToString(), sourceApplicationId);
 
     public async Task RemoveDocumentAsync(ClaimsPrincipal principal, string documentType, int? sourceApplicationId = null)
     {

@@ -14,6 +14,7 @@ public sealed class ApplicationCorrectionService(
     ApplicationPdfService pdfs,
     ApplicationFileService files,
     ProtectedUploadService uploads,
+    AiDocumentValidationWorkflow aiValidation,
     IApplicationNotificationService notifications,
     ILogger<ApplicationCorrectionService> logger)
 {
@@ -152,7 +153,6 @@ public sealed class ApplicationCorrectionService(
         var services = scope.ServiceProvider;
         var db = services.GetRequiredService<ApplicationDbContext>();
         var user = await RequireOwnerAsync(services, principal);
-        await using var transaction = await db.Database.BeginTransactionAsync();
         var application = await RequireEditableApplicationAsync(db, user.Id, applicationId);
         var requests = await db.MunicipalMessages.Where(m => m.ApplicationId == applicationId &&
             m.MessageType == ApplicationWorkflow.CorrectionRequestMessage && m.ResolvedAtUtc == null).ToListAsync();
@@ -161,9 +161,9 @@ public sealed class ApplicationCorrectionService(
             .SingleOrDefaultAsync(d => d.SourceApplicationId == applicationId && d.UserId == user.Id)
             ?? throw new ValidationException("The correction draft is no longer available.");
         var payload = ApplicationDraftService.Deserialize(draft.PayloadJson);
-        var aiValidationEnabled = await db.AiSettings.AsNoTracking().Where(s => s.Id == AiSettings.SingletonId)
-            .Select(s => s.DocumentValidationEnabled).SingleAsync();
-        Validate(payload, draft.Documents, application.LicenceType, aiValidationEnabled);
+        Validate(payload, draft.Documents, application.LicenceType);
+        await aiValidation.EnforceAsync(db, payload, draft.Documents);
+        await using var transaction = await db.Database.BeginTransactionAsync();
 
         var address = new TradingAddress(payload.PlaceOfBusinessAddressLine1.Trim(), payload.PlaceOfBusinessAddressLine2.Trim(),
             payload.PlaceOfBusinessSuburb.Trim(), payload.PlaceOfBusinessCity.Trim(), payload.PlaceOfBusinessPostalCode.Trim());
@@ -247,7 +247,7 @@ public sealed class ApplicationCorrectionService(
         catch (JsonException) { return []; }
     }
 
-    private static void Validate(ApplicationDraftPayload p, IReadOnlyCollection<ApplicationDraftDocument> documents, string licenceType, bool aiValidationEnabled)
+    private static void Validate(ApplicationDraftPayload p, IReadOnlyCollection<ApplicationDraftDocument> documents, string licenceType)
     {
         var licence = LicenceApplicationCatalog.Find(licenceType) ?? throw new ValidationException("The license type is no longer available.");
         if (p.LicenceType != licenceType) throw new ValidationException("The license type cannot be changed while correcting an application.");
@@ -278,8 +278,6 @@ public sealed class ApplicationCorrectionService(
             ?? (licence.Documents.Any(r => r.Required && !documents.Any(d => d.DocumentType == r.DocumentType)) ? "Upload every required supporting document." : null)
             ?? (documents.Any(d => !licence.Documents.Any(r => r.DocumentType == d.DocumentType) &&
                 !ApplicationDocumentTypes.IsAdditional(d.DocumentType)) ? "The correction draft contains an unsupported document type." : null)
-            ?? (aiValidationEnabled && documents.FirstOrDefault(d => d.DocumentType == "Owner ID Document") is { AiValidationStatus: null or nameof(AiDocumentValidationStatus.NoMatch) }
-                ? "Upload a valid Owner ID or Passport document." : null)
             ?? (!p.DeclarationAccepted || !p.PopiaConsentAccepted ? "Accept the declaration and POPIA consent before resubmitting." : null);
         if (error != null) throw new ValidationException(error);
     }

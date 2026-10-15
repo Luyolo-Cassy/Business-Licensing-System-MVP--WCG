@@ -33,7 +33,13 @@ namespace BusinessLicensing.PostgreSqlMigrations.Migrations
                     b.Property<bool>("ApplicationSummariesEnabled")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("CertificateOfIncorporationValidationEnabled")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("DocumentValidationEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ProofOfAddressValidationEnabled")
                         .HasColumnType("boolean");
 
                     b.HasKey("Id");
@@ -45,7 +51,9 @@ namespace BusinessLicensing.PostgreSqlMigrations.Migrations
                         {
                             Id = 1,
                             ApplicationSummariesEnabled = false,
-                            DocumentValidationEnabled = false
+                            CertificateOfIncorporationValidationEnabled = false,
+                            DocumentValidationEnabled = false,
+                            ProofOfAddressValidationEnabled = false
                         });
                 });
 

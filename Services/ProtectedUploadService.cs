@@ -29,6 +29,12 @@ public class ProtectedUploadService(IPrivateFileStore store, IWebHostEnvironment
         return PrivateFileKeys.ToUploadReference(objectKey);
     }
 
+    public async Task<byte[]?> ReadAsync(string reference, CancellationToken cancellationToken = default)
+    {
+        if (!TryResolveReference(reference, out var objectKey)) return null;
+        return await store.ReadAsync(objectKey, cancellationToken);
+    }
+
     public async Task DeleteIfUnreferencedAsync(ApplicationDbContext db, string reference)
     {
         if (!TryResolveReference(reference, out var objectKey)) return;

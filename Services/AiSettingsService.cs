@@ -18,6 +18,15 @@ public class AiSettingsService(IServiceScopeFactory scopes)
             .SingleAsync();
     }
 
+    public async Task<AiDocumentValidationSettings> GetDocumentValidationSettingsAsync()
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().AiSettings.AsNoTracking()
+            .Where(x => x.Id == AiSettings.SingletonId)
+            .Select(x => new AiDocumentValidationSettings(x.DocumentValidationEnabled,
+                x.CertificateOfIncorporationValidationEnabled, x.ProofOfAddressValidationEnabled)).SingleAsync();
+    }
+
     public async Task<bool> GetDocumentValidationEnabledAsync(ClaimsPrincipal principal)
     {
         await using var scope = scopes.CreateAsyncScope();
@@ -62,6 +71,20 @@ public class AiSettingsService(IServiceScopeFactory scopes)
             throw new InvalidOperationException("AI settings are unavailable.");
     }
 
+    public async Task SetCertificateValidationEnabledAsync(ClaimsPrincipal principal, bool enabled)
+    {
+        await using var scope = scopes.CreateAsyncScope(); var db = await AuthorizeAsync(scope.ServiceProvider, principal);
+        if (await db.AiSettings.Where(x => x.Id == AiSettings.SingletonId).ExecuteUpdateAsync(u => u.SetProperty(x => x.CertificateOfIncorporationValidationEnabled, enabled)) != 1)
+            throw new InvalidOperationException("AI settings are unavailable.");
+    }
+
+    public async Task SetProofOfAddressValidationEnabledAsync(ClaimsPrincipal principal, bool enabled)
+    {
+        await using var scope = scopes.CreateAsyncScope(); var db = await AuthorizeAsync(scope.ServiceProvider, principal);
+        if (await db.AiSettings.Where(x => x.Id == AiSettings.SingletonId).ExecuteUpdateAsync(u => u.SetProperty(x => x.ProofOfAddressValidationEnabled, enabled)) != 1)
+            throw new InvalidOperationException("AI settings are unavailable.");
+    }
+
     private static async Task<ApplicationDbContext> AuthorizeAsync(IServiceProvider services, ClaimsPrincipal principal)
     {
         var users = services.GetRequiredService<UserManager<ApplicationUser>>();
@@ -70,4 +93,15 @@ public class AiSettingsService(IServiceScopeFactory scopes)
             throw new UnauthorizedAccessException();
         return services.GetRequiredService<ApplicationDbContext>();
     }
+}
+
+public sealed record AiDocumentValidationSettings(bool OwnerId, bool CertificateOfIncorporation, bool ProofOfAddress)
+{
+    public bool EnabledFor(string documentType) => documentType switch
+    {
+        "Owner ID Document" => OwnerId,
+        "Certificate of Incorporation" => CertificateOfIncorporation,
+        "Proof of Address" => ProofOfAddress,
+        _ => false
+    };
 }

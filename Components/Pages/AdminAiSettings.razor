@@ -19,13 +19,18 @@
 <div class="card shadow-sm mb-4"><div class="card-body">
     <h2 class="h5">AI Document Validation</h2>
     <p>Automatically checks whether uploaded documents appear to match the required document type.</p>
-    <p><strong>Currently supported document:</strong> Owner ID Document</p>
+    <p>Configure each supported document check independently.</p>
     <div class="form-check form-switch mb-3">
         <input id="ai-document-validation" class="form-check-input" type="checkbox" role="switch"
                checked="@enabled" disabled="@busy" @onchange="Toggle" />
         <label class="form-check-label" for="ai-document-validation">Enable AI Document Validation: @(enabled ? "ON" : "OFF")</label>
     </div>
-    <p class="text-muted mb-0">This checks document type only. It does not authenticate documents or verify a person's identity.</p>
+    <p class="text-muted mb-0">Checks whether the upload appears to be a supported Owner ID or Passport document. It does not authenticate documents or verify a person's identity.</p>
+    <hr />
+    <div class="form-check form-switch mb-3"><input id="ai-certificate-validation" class="form-check-input" type="checkbox" role="switch" checked="@certificateEnabled" disabled="@certificateBusy" @onchange="ToggleCertificate" /><label class="form-check-label" for="ai-certificate-validation">Certificate of Incorporation Validation: @(certificateEnabled ? "ON" : "OFF")</label></div>
+    <p class="text-muted">Compares the registered business name and company registration number. This does not authenticate the certificate.</p>
+    <div class="form-check form-switch mb-3"><input id="ai-address-validation" class="form-check-input" type="checkbox" role="switch" checked="@addressEnabled" disabled="@addressBusy" @onchange="ToggleAddress" /><label class="form-check-label" for="ai-address-validation">Proof of Address Validation: @(addressEnabled ? "ON" : "OFF")</label></div>
+    <p class="text-muted mb-0">Compares the document's relevant physical address with the Place of Business / Trading Address. This does not authenticate the document.</p>
 </div></div>
 
 <div class="card shadow-sm"><div class="card-body">
@@ -44,6 +49,7 @@
     private bool busy;
     private bool summariesEnabled;
     private bool summariesBusy;
+    private bool certificateEnabled, certificateBusy, addressEnabled, addressBusy;
     private bool isError;
     private string? message;
 
@@ -55,12 +61,35 @@
         {
             var principal = (await Authentication.GetAuthenticationStateAsync()).User;
             enabled = await Settings.GetDocumentValidationEnabledAsync(principal);
+            var documentSettings = await Settings.GetDocumentValidationSettingsAsync();
+            certificateEnabled = documentSettings.CertificateOfIncorporation;
+            addressEnabled = documentSettings.ProofOfAddress;
             summariesEnabled = await Settings.GetApplicationSummariesEnabledAsync(principal);
         }
         catch (UnauthorizedAccessException)
         {
             isError = true; message = "You do not have permission to manage AI settings.";
         }
+    }
+
+    private async Task ToggleCertificate(ChangeEventArgs args)
+    {
+        if (certificateBusy) return; certificateBusy = true; message = null; isError = false;
+        var requested = args.Value is true || string.Equals(args.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+        try { await Settings.SetCertificateValidationEnabledAsync((await Authentication.GetAuthenticationStateAsync()).User, requested); certificateEnabled = requested; message = $"Certificate of Incorporation Validation is now {(requested ? "enabled" : "disabled")}."; }
+        catch (UnauthorizedAccessException) { isError = true; message = "You do not have permission to manage AI settings."; }
+        catch { isError = true; message = "The setting could not be updated. Refresh the page and try again."; }
+        finally { certificateBusy = false; }
+    }
+
+    private async Task ToggleAddress(ChangeEventArgs args)
+    {
+        if (addressBusy) return; addressBusy = true; message = null; isError = false;
+        var requested = args.Value is true || string.Equals(args.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+        try { await Settings.SetProofOfAddressValidationEnabledAsync((await Authentication.GetAuthenticationStateAsync()).User, requested); addressEnabled = requested; message = $"Proof of Address Validation is now {(requested ? "enabled" : "disabled")}."; }
+        catch (UnauthorizedAccessException) { isError = true; message = "You do not have permission to manage AI settings."; }
+        catch { isError = true; message = "The setting could not be updated. Refresh the page and try again."; }
+        finally { addressBusy = false; }
     }
 
     private async Task ToggleSummaries(ChangeEventArgs args)

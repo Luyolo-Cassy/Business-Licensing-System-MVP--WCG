@@ -53,7 +53,7 @@ else
         @if (openCorrectionRequest != null)
         {
             <section class="alert alert-warning mb-4" aria-labelledby="correction-request-heading">
-                <h4 id="correction-request-heading" class="h5">Additional information required</h4>
+                <h4 id="correction-request-heading" class="h5 d-flex align-items-center gap-2"><PhosphorIcon Name="warning" />Additional information required</h4>
                 <p>The municipality needs you to update this application before processing can continue.</p>
                 <div class="border-start border-warning border-3 ps-3 mb-3" style="white-space:pre-wrap">@openCorrectionRequest.Content</div>
                 <p class="small mb-3">Requested @openCorrectionRequest.CreatedAtUtc.ToLocalTime().ToString("dd MMM yyyy HH:mm")</p>
@@ -137,7 +137,7 @@ else
         <hr />
 
         <section class="card mb-4" aria-labelledby="municipal-messages">
-            <div class="card-header"><h5 id="municipal-messages" class="mb-0">Municipal Messages</h5></div>
+            <div class="card-header"><h5 id="municipal-messages" class="mb-0 d-flex align-items-center gap-2"><PhosphorIcon Name="info" />Municipal Messages</h5></div>
             <div class="card-body">
                 @if (municipalMessages.Count == 0)
                 {
@@ -146,7 +146,7 @@ else
                 @foreach (var message in municipalMessages)
                 {
                     <article class="border-bottom pb-3 mb-3">
-                        <small class="text-muted">@message.SenderName ? @message.CreatedAtUtc.ToString("dd MMM yyyy HH:mm") UTC</small>
+                        <small class="text-muted">@message.SenderName <span class="mx-1" aria-hidden="true">|</span> @message.CreatedAtUtc.ToString("dd MMM yyyy HH:mm") UTC</small>
                         <div style="white-space: pre-wrap; overflow-wrap: anywhere;">@message.Content</div>
                     </article>
                 }
@@ -156,82 +156,21 @@ else
             Application Progress
         </h5>
 
-        <div class="progress mb-4">
-
-            <div class="progress-bar @GetProgressColour()" role="progressbar" style="width:@ProgressPercentage()%">
-
-                @ApplicationTerminology.ForDisplay(application?.Status)
-
-            </div>
-
+        <div class="tracking-current-status mb-4" role="status" aria-label="Current application status">
+            <span class="tracking-current-status-dot" aria-hidden="true"></span>
+            <span class="small text-muted">Current status</span>
+            <strong>@ApplicationTerminology.ForDisplay(application?.Status)</strong>
         </div>
 
-        <div class="d-flex align-items-start justify-content-between text-center mb-5 flex-wrap">
-
-            <!-- Submitted -->
-            <div class="mx-2 mb-4">
-                <div class="@GetStepClass("Submitted")"
-                     style="width:35px; height:35px; line-height:35px; border-radius:50%; margin:auto;">
-                    @GetStepIcon("Submitted")
-                </div>
-                <strong class="@GetStepTextClass("Submitted")">
-                    Submitted
-                </strong>
-            </div>
-
-            <div class="flex-grow-1 mt-3 mx-2 bg-light" style="height:3px;"></div>
-
-            <!-- Under Review -->
-            <div class="mx-2 mb-4">
-                <div class="@GetStepClass("Under Review")"
-                     style="width:35px; height:35px; line-height:35px; border-radius:50%; margin:auto;">
-                    @GetStepIcon("Under Review")
-                </div>
-                <strong class="@GetStepTextClass("Under Review")">
-                    Under Review
-                </strong>
-            </div>
-
-            <div class="flex-grow-1 mt-3 mx-2 bg-light" style="height:3px;"></div>
-
-            <!-- Department Assessment -->
-            <div class="mx-2 mb-4">
-                <div class="@GetStepClass("Department Assessment")"
-                     style="width:35px; height:35px; line-height:35px; border-radius:50%; margin:auto;">
-                    @GetStepIcon("Department Assessment")
-                </div>
-                <strong class="@GetStepTextClass("Department Assessment")">
-                    Department Assessment
-                </strong>
-            </div>
-
-            <div class="flex-grow-1 mt-3 mx-2 bg-light" style="height:3px;"></div>
-
-            <!-- Final Decision -->
-            <div class="mx-2 mb-4">
-                <div class="@GetStepClass("Final Decision")"
-                     style="width:35px; height:35px; line-height:35px; border-radius:50%; margin:auto;">
-                    @GetStepIcon("Final Decision")
-                </div>
-                <strong class="@GetStepTextClass("Final Decision")">
-                    Final Decision
-                </strong>
-            </div>
-
-            <div class="flex-grow-1 mt-3 mx-2 bg-light" style="height:3px;"></div>
-
-            <!-- Licence Issued -->
-            <div class="mx-2 mb-4">
-                <div class="@GetStepClass("Licence Issued")"
-                     style="width:35px; height:35px; line-height:35px; border-radius:50%; margin:auto;">
-                    @GetStepIcon("Licence Issued")
-                </div>
-                <strong class="@GetStepTextClass("Licence Issued")">
-                    License Issued
-                </strong>
-            </div>
-
-        </div>
+        <ol class="tracking-stages mb-5" aria-label="Application stages">
+            @foreach (var step in StatusOrder)
+            {
+                <li class="tracking-stage @GetTrackingStageClass(step)" aria-current="@(IsCurrentTrackingStage(step) ? "step" : null)">
+                    <span class="tracking-stage-marker"><PhosphorIcon Name="@GetTrackingStageIcon(step)" /></span>
+                    <strong class="tracking-stage-label">@(step == "Licence Issued" ? "License Issued" : step)</strong>
+                </li>
+            }
+        </ol>
 
         @if (showSuccess)
         {
@@ -580,20 +519,23 @@ else
         return StatusOrder.IndexOf(statusToCheck) >= StatusOrder.IndexOf(step);
     }
 
-    private string GetStepClass(string step)
+    private string? CurrentTrackingStage() => application?.Status switch
     {
-        if (application?.Status == "Rejected" && step == "Final Decision")
-            return "bg-danger text-white";
+        "Additional Information Required" => "Under Review",
+        "Rejected" or "Approved" => "Final Decision",
+        "Withdrawn" => null,
+        string status when StatusOrder.Contains(status) => status,
+        _ => null
+    };
 
-        return IsCompleted(step) ? "bg-success text-white" : "border bg-white";
-    }
+    private bool IsCurrentTrackingStage(string step) => CurrentTrackingStage() == step;
 
-    private string GetStepTextClass(string step)
+    private string GetTrackingStageClass(string step)
     {
-        if (application?.Status == "Rejected" && step == "Final Decision")
-            return "text-danger";
-
-        return IsCompleted(step) ? "text-success" : "";
+        var currentStage = CurrentTrackingStage();
+        if (currentStage == step) return "is-current";
+        if (currentStage == null) return application?.Status == "Withdrawn" && step == "Submitted" ? "is-complete" : "is-upcoming";
+        return StatusOrder.IndexOf(step) < StatusOrder.IndexOf(currentStage) ? "is-complete" : "is-upcoming";
     }
 
     private async Task WithdrawApplication()
@@ -602,28 +544,14 @@ else
         showWithdrawModal = false;
     }
 
-    private string GetStepIcon(string step)
+    private string GetTrackingStageIcon(string step)
     {
-        return IsCompleted(step) ? "✓" : "□";
+        if (IsCurrentTrackingStage(step) && application?.Status == "Rejected") return "x-circle";
+        if (GetTrackingStageClass(step) == "is-complete" || step == "Licence Issued" && IsCurrentTrackingStage(step)) return "check-circle";
+        return "clock-clockwise";
     }
 
     private bool showReapplyModal = false;
-
-    private int ProgressPercentage()
-    {
-        return application?.Status switch
-        {
-            "Submitted" => 20,
-            "Under Review" => 40,
-            "Additional Information Required" => 40,
-            "Department Assessment" => 60,
-            "Final Decision" => 80,
-            "Licence Issued" => 100,
-            "Rejected" => 100,
-            "Withdrawn" => 100,
-            _ => 0
-        };
-    }
 
     private async Task ReapplyExisting()
     {
@@ -652,15 +580,5 @@ else
         showReapplyModal = false;
         Navigation.NavigateTo("/new-application");
     }
-
-   private string GetProgressColour()
-{
-    return application?.Status switch
-    {
-        "Rejected" => "bg-danger",
-        "Withdrawn" => "bg-dark",
-        _ => "bg-success"
-    };
-}
 
 }
