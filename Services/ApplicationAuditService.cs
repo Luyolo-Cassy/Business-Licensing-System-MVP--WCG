@@ -18,7 +18,7 @@ public record AuditLogResult(List<ApplicationAuditLog> Records, AuditLogOptions 
 
 public sealed class ApplicationAuditService(IServiceScopeFactory scopes)
 {
-    public const int PageSize = 50;
+    public const int PageSize = Paging.PageSize;
 
     public static void Add(ApplicationDbContext db, Application application, ApplicationUser actor,
         string actorRole, string eventType, string summary, string? previousStatus = null,

@@ -9,7 +9,10 @@ namespace BusinessLicensing_Practice.Services;
 public record AdminApplicationRow(int Id, string ApplicationNumber, string Applicant, string LicenceType,
     string? ApplicationType, string? Municipality, DateTime DateSubmitted, string Status);
 public record AdminApplicationList(List<AdminApplicationRow> Applications, List<string> Municipalities, List<string> Statuses,
-    List<string> LicenceTypes, List<string> ApplicationTypes);
+    List<string> LicenceTypes, List<string> ApplicationTypes, int TotalCount, int Page)
+{
+    public int TotalPages => Paging.TotalPages(TotalCount);
+}
 public record AdminCommunication(string SenderName, string Content, string MessageType, DateTime CreatedAtUtc, DateTime? ReadAtUtc, DateTime? ResolvedAtUtc);
 public record AdminApplicationDetail(Application Application, string ApplicantName, string? ApplicantEmail,
     string? ApplicantTelephone, List<AdminCommunication> Communications);
@@ -31,7 +34,7 @@ public class AdminApplicationService(IServiceScopeFactory scopes)
 
     public async Task<AdminApplicationList> ListAsync(ClaimsPrincipal principal, string? search = null, string? municipality = null, string? status = null,
         string? reference = null, string? applicant = null, string? licenceType = null, string? applicationType = null,
-        string? columnMunicipality = null, DateTime? submitted = null, string? columnStatus = null)
+        string? columnMunicipality = null, DateTime? submitted = null, string? columnStatus = null, int page = 1)
     {
         await using var scope = scopes.CreateAsyncScope();
         var db = await AuthorizeAsync(scope.ServiceProvider, principal);
@@ -70,7 +73,10 @@ public class AdminApplicationService(IServiceScopeFactory scopes)
             rows = rows.Where(a => a.DateSubmitted >= from && a.DateSubmitted < until);
         }
         if (!string.IsNullOrEmpty(columnStatus)) rows = rows.Where(a => a.Status == columnStatus);
+        var totalCount = await rows.CountAsync();
+        page = Paging.ClampPage(page, totalCount);
         var applications = await rows.OrderByDescending(a => a.DateSubmitted).ThenByDescending(a => a.Id)
+            .Skip((page - 1) * Paging.PageSize).Take(Paging.PageSize)
             .Select(a => new AdminApplicationRow(a.Id, a.ApplicationNumber,
                 a.Details != null && a.Details.ApplicantFirstName != null && a.Details.ApplicantFirstName != "" ? a.Details.ApplicantFirstName + " " + a.Details.ApplicantLastName :
                     a.Details != null && a.Details.ApplicantName != null && a.Details.ApplicantName != "" ? a.Details.ApplicantName : a.User != null ? a.User.FullName : "",
@@ -82,7 +88,7 @@ public class AdminApplicationService(IServiceScopeFactory scopes)
         var licenceTypes = await db.Applications.Where(a => a.LicenceType != "").Select(a => a.LicenceType).Distinct().OrderBy(s => s).ToListAsync();
         var applicationTypes = await db.ApplicationDetails.Where(d => d.ApplicationType != null && d.ApplicationType != "")
             .Select(d => d.ApplicationType!).Distinct().OrderBy(s => s).ToListAsync();
-        return new(applications, municipalities, statuses, licenceTypes, applicationTypes);
+        return new(applications, municipalities, statuses, licenceTypes, applicationTypes, totalCount, page);
     }
 
     public async Task<AdminApplicationDetail?> DetailAsync(ClaimsPrincipal principal, int id)

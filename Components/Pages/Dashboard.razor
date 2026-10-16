@@ -21,7 +21,8 @@
 
 
     
-    private List<BusinessLicensing_Practice.Models.Application> applications = new();
+    private PagedResult<BusinessLicensing_Practice.Models.Application> applications = new([], 0, 1);
+    private int inProgressCount, approvedCount, rejectedCount;
 
     private ApplicationUser? currentUser;
     private Dictionary<int, int> unreadCounts = [];
@@ -47,22 +48,26 @@
 
         if (currentUser != null)
         {
-            applications = await Db.Applications
-                .Where(a => a.UserId == currentUser.Id)
-                .ToListAsync();
+            await LoadApplications();
         }
     }
 
-    private async Task LoadApplications()
+    private async Task LoadApplications(int page = 1)
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = await UserManager.GetUserAsync(authState.User);
 
         if (user != null)
         {
-            applications = await Db.Applications
-                .Where(a => a.UserId == user.Id)
-                .ToListAsync();
+            var query = Db.Applications.AsNoTracking().Where(a => a.UserId == user.Id);
+            var total = await query.CountAsync();
+            page = Paging.ClampPage(page, total);
+            var items = await query.OrderByDescending(a => a.DateSubmitted).ThenByDescending(a => a.Id)
+                .Skip((page - 1) * Paging.PageSize).Take(Paging.PageSize).ToListAsync();
+            applications = new(items, total, page);
+            inProgressCount = await query.CountAsync(a => a.Status != "Licence Issued" && a.Status != "Rejected" && a.Status != "Withdrawn");
+            approvedCount = await query.CountAsync(a => a.Status == "Licence Issued");
+            rejectedCount = await query.CountAsync(a => a.Status == "Rejected" || a.Status == "Withdrawn");
         }
     }
     private string GetStatusBadge(string status)
@@ -113,29 +118,28 @@
     <div class="col-md-3">
         <div class="card p-3 shadow-sm">
             <h6>Total Applications</h6>
-            <h2 style="color: blue;">@applications.Count</h2>
+            <h2 style="color: blue;">@applications.TotalCount</h2>
         </div>
     </div>
 
     <div class="col-md-3">
         <div class="card p-3 shadow-sm">
             <h6>In Progress</h6>
-            <h2 style="color: blue;">@applications.Count(a => a.Status != "Licence Issued" && a.Status != "Rejected" &&
-                                                                a.Status != "Withdrawn")</h2>
+            <h2 style="color: blue;">@inProgressCount</h2>
             </div>
         </div>
 
         <div class="col-md-3">
             <div class="card p-3 shadow-sm">
                 <h6>Approved</h6>
-                <h2 style="color: green;">@applications.Count(a => a.Status == "Licence Issued")</h2>
+                <h2 style="color: green;">@approvedCount</h2>
             </div>
         </div>
 
         <div class="col-md-3">
             <div class="card p-3 shadow-sm">
                 <h6>Rejected</h6>
-                <h2 style="color: red;">@applications.Count(a => a.Status == "Rejected" || a.Status == "Withdrawn")</h2>
+                <h2 style="color: red;">@rejectedCount</h2>
             </div>
         </div>
     </div>
@@ -159,7 +163,7 @@
                 </thead>
 
                 <tbody>
-                    @foreach (var application in applications)
+                    @foreach (var application in applications.Items)
                     {
                         <tr>
                             <td>
@@ -188,6 +192,7 @@
                     }
                 </tbody>
             </table>
+            <Pagination Page="applications.Page" TotalPages="applications.TotalPages" PageChanged="LoadApplications" AriaLabel="Applicant application pages" />
         </div>
     </div>
 

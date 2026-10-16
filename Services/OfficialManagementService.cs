@@ -36,6 +36,24 @@ public class OfficialManagementService(IServiceScopeFactory scopes, IEmailServic
             .OrderBy(u => u.FullName).Select(u => new OfficialSummary(u.Id, u.FullName, u.Email ?? "", u.Municipality ?? "",
                 !(u.LockoutEnabled && u.LockoutEnd > DateTimeOffset.UtcNow), u.PasswordHash == null)).ToList();
     }
+    public async Task<PagedResult<OfficialSummary>> ListPageAsync(ClaimsPrincipal principal, int page)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        await AuthorizeAsync(scope.ServiceProvider, principal);
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var rows = from user in db.Users.AsNoTracking()
+                   join membership in db.UserRoles on user.Id equals membership.UserId
+                   join role in db.Roles on membership.RoleId equals role.Id
+                   where role.NormalizedName == "MUNICIPALOFFICIAL"
+                   select user;
+        var total = await rows.CountAsync();
+        page = Paging.ClampPage(page, total);
+        var officials = await rows.OrderBy(user => user.FullName).ThenBy(user => user.Id)
+            .Skip((page - 1) * Paging.PageSize).Take(Paging.PageSize)
+            .Select(user => new OfficialSummary(user.Id, user.FullName, user.Email ?? "", user.Municipality ?? "",
+                !(user.LockoutEnabled && user.LockoutEnd > DateTimeOffset.UtcNow), user.PasswordHash == null)).ToListAsync();
+        return new(officials, total, page);
+    }
     public async Task<List<Municipality>> ActiveMunicipalitiesAsync(ClaimsPrincipal principal)
     {
         await using var scope = scopes.CreateAsyncScope();

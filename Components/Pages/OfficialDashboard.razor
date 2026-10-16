@@ -32,7 +32,7 @@
     <div class="col-md-3">
         <div class="card shadow-sm p-3">
             <h6>Total Applications</h6>
-            <h2 class="text-primary fw-bold">@applications.Count</h2>
+            <h2 class="text-primary fw-bold">@totalApplications</h2>
         </div>
     </div>
 
@@ -40,10 +40,7 @@
         <div class="card shadow-sm p-3">
             <h6>In Progress</h6>
             <h2 class="text-info fw-bold">
-                @applications.Count(a =>
-                    a.Status != "Licence Issued" &&
-                    a.Status != "Rejected" &&
-                    a.Status != "Withdrawn")
+                @inProgressCount
             </h2>
         </div>
     </div>
@@ -52,7 +49,7 @@
         <div class="card shadow-sm p-3">
             <h6>Approved</h6>
             <h2 class="text-success fw-bold">
-                @applications.Count(a => a.Status == "Licence Issued")
+                @approvedCount
             </h2>
         </div>
     </div>
@@ -61,9 +58,7 @@
         <div class="card shadow-sm p-3">
             <h6>Rejected</h6>
             <h2 class="text-danger fw-bold">
-                @applications.Count(a =>
-                    a.Status == "Rejected" ||
-                    a.Status == "Withdrawn")
+                @rejectedCount
             </h2>
         </div>
     </div>
@@ -76,7 +71,7 @@
         <PhosphorIcon Name="bell" CssClass="me-2" />
 
         <strong>
-            @applications.Count(a => a.Status == "Submitted")
+            @awaitingReviewCount
         </strong>
 
         applications are awaiting review.
@@ -94,14 +89,15 @@
                    placeholder="Search by Business Name or Application Number..."
                    aria-label="Search applications"
                    @bind="SearchText"
-                   @bind:event="oninput" />
+                   @bind:event="oninput"
+                   @bind:after="FiltersChanged" />
         </div>
 
     </div>
 
     <div class="col-md-3">
 
-        <select class="form-select" @bind="SelectedStatus">
+        <select class="form-select" @bind="SelectedStatus" @bind:after="FiltersChanged">
 
             <option value="All">All Statuses</option>
             <option value="Submitted">Submitted</option>
@@ -151,7 +147,7 @@
 
             <tbody>
 
-                @foreach (var app in FilteredApplications)
+                @foreach (var app in applications.Items)
                 {
                     <tr>
 
@@ -194,6 +190,7 @@
             </tbody>
 
         </table>
+        <Pagination Page="applications.Page" TotalPages="applications.TotalPages" PageChanged="LoadApplications" AriaLabel="Municipal application pages" />
 
     </div>
 
@@ -203,7 +200,9 @@
 
 @code {
 
-    private List<Application> applications = new();
+    private PagedResult<Application> applications = new([], 0, 1);
+    private string? municipality;
+    private int totalApplications, inProgressCount, approvedCount, rejectedCount, awaitingReviewCount;
 
     private string SearchText = "";
 
@@ -216,24 +215,41 @@
 
         if (official == null || string.IsNullOrWhiteSpace(official.Municipality))
         {
-            applications = new();
+            applications = new([], 0, 1);
             return;
         }
-
-        applications = await Db.Applications
-            .Where(application => application.Municipality == official.Municipality)
-            .OrderByDescending(a => a.DateSubmitted)
-            .ToListAsync();
+        municipality = official.Municipality;
+        var authorized = Db.Applications.AsNoTracking().Where(application => application.Municipality == municipality);
+        totalApplications = await authorized.CountAsync();
+        inProgressCount = await authorized.CountAsync(a => a.Status != "Licence Issued" && a.Status != "Rejected" && a.Status != "Withdrawn");
+        approvedCount = await authorized.CountAsync(a => a.Status == "Licence Issued");
+        rejectedCount = await authorized.CountAsync(a => a.Status == "Rejected" || a.Status == "Withdrawn");
+        awaitingReviewCount = await authorized.CountAsync(a => a.Status == "Submitted");
+        await LoadApplications();
     }
 
-    private IEnumerable<Application> FilteredApplications =>
-        applications.Where(a =>
-            (string.IsNullOrWhiteSpace(SearchText)
-            || a.BusinessName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
-            || a.ApplicationNumber.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
-            &&
-            (SelectedStatus == "All"
-            || a.Status == SelectedStatus));
+    private async Task FiltersChanged() => await LoadApplications(1);
+
+    private async Task LoadApplications(int page = 1)
+    {
+        if (string.IsNullOrWhiteSpace(municipality))
+        {
+            applications = new([], 0, 1);
+            return;
+        }
+        var query = Db.Applications.AsNoTracking().Where(a => a.Municipality == municipality);
+        if (!string.IsNullOrWhiteSpace(SearchText))
+        {
+            var term = SearchText.Trim().ToLowerInvariant();
+            query = query.Where(a => a.BusinessName.ToLower().Contains(term) || a.ApplicationNumber.ToLower().Contains(term));
+        }
+        if (SelectedStatus != "All") query = query.Where(a => a.Status == SelectedStatus);
+        var total = await query.CountAsync();
+        page = Paging.ClampPage(page, total);
+        var items = await query.OrderByDescending(a => a.DateSubmitted).ThenByDescending(a => a.Id)
+            .Skip((page - 1) * Paging.PageSize).Take(Paging.PageSize).ToListAsync();
+        applications = new(items, total, page);
+    }
 
     private string GetBadge(string status)
     {
