@@ -27,7 +27,7 @@
 </form>
 @if (result != null)
 {
-    <p role="status">@result.Applications.Count application(s) found.</p>
+    <p role="status">@result.TotalCount application(s) found.</p>
     @if (result.Applications.Count == 0) { <div class="alert alert-info">No applications match these filters.</div> }
     @if (result.Applications.Count > 0 || HasAnyColumnFilter)
     {
@@ -53,6 +53,9 @@
             }</tbody>
         </table></div>
     }
+    <Pagination Page="result.Page" TotalPages="result.TotalPages"
+                PreviousUrl="@(result.Page > 1 ? PageUrl(result.Page - 1) : null)"
+                NextUrl="@(result.Page < result.TotalPages ? PageUrl(result.Page + 1) : null)" AriaLabel="Application pages" />
 }
 
 @code {
@@ -66,6 +69,7 @@
     [SupplyParameterFromQuery] public string? ColumnMunicipality { get; set; }
     [SupplyParameterFromQuery] public DateTime? Submitted { get; set; }
     [SupplyParameterFromQuery] public string? ColumnStatus { get; set; }
+    [SupplyParameterFromQuery] public int Page { get; set; } = 1;
     private AdminApplicationList? result;
     private bool HasTypeFilter => !string.IsNullOrEmpty(LicenceType) || !string.IsNullOrEmpty(ApplicationType);
     private bool HasAnyColumnFilter => HasTypeFilter || !string.IsNullOrWhiteSpace(Reference) || !string.IsNullOrWhiteSpace(Applicant) ||
@@ -73,7 +77,7 @@
 
     protected override async Task OnParametersSetAsync() =>
         result = await Oversight.ListAsync((await Authentication.GetAuthenticationStateAsync()).User, Search, Municipality, Status,
-            Reference, Applicant, LicenceType, ApplicationType, ColumnMunicipality, Submitted, ColumnStatus);
+            Reference, Applicant, LicenceType, ApplicationType, ColumnMunicipality, Submitted, ColumnStatus, Page);
 
     private RenderFragment FilterHeader(string label, string key, bool active, RenderFragment content) => @<div class="column-heading">
         <span>@label</span>
@@ -108,7 +112,7 @@
     private RenderFragment HiddenInputs(params string[] excluded) => builder =>
     {
         var sequence = 0;
-        foreach (var pair in CurrentFilters().Where(pair => !excluded.Contains(pair.Key) && !string.IsNullOrWhiteSpace(pair.Value)))
+        foreach (var pair in CurrentFilters().Where(pair => pair.Key != "page" && !excluded.Contains(pair.Key) && !string.IsNullOrWhiteSpace(pair.Value)))
         {
             builder.OpenElement(sequence++, "input"); builder.AddAttribute(sequence++, "type", "hidden");
             builder.AddAttribute(sequence++, "name", pair.Key); builder.AddAttribute(sequence++, "value", pair.Value); builder.CloseElement();
@@ -119,14 +123,23 @@
     {
         ["search"] = Search, ["municipality"] = Municipality, ["status"] = Status, ["reference"] = Reference,
         ["applicant"] = Applicant, ["licenceType"] = LicenceType, ["applicationType"] = ApplicationType,
-        ["columnMunicipality"] = ColumnMunicipality, ["submitted"] = Submitted?.ToString("yyyy-MM-dd"), ["columnStatus"] = ColumnStatus
+        ["columnMunicipality"] = ColumnMunicipality, ["submitted"] = Submitted?.ToString("yyyy-MM-dd"), ["columnStatus"] = ColumnStatus,
+        ["page"] = Page > 1 ? Page.ToString() : null
     };
 
     private string ClearUrl(string key)
     {
         var excluded = key == "type" ? new[] { "licenceType", "applicationType" } : new[] { key };
-        var remaining = CurrentFilters().Where(pair => !excluded.Contains(pair.Key) && !string.IsNullOrWhiteSpace(pair.Value))
+        var remaining = CurrentFilters().Where(pair => pair.Key != "page" && !excluded.Contains(pair.Key) && !string.IsNullOrWhiteSpace(pair.Value))
             .ToDictionary(pair => pair.Key, pair => pair.Value);
         return QueryHelpers.AddQueryString("/admin/applications", remaining);
+    }
+
+    private string PageUrl(int page)
+    {
+        var values = CurrentFilters();
+        values["page"] = page.ToString();
+        return QueryHelpers.AddQueryString("/admin/applications", values
+            .Where(pair => !string.IsNullOrWhiteSpace(pair.Value)).ToDictionary(pair => pair.Key, pair => pair.Value));
     }
 }

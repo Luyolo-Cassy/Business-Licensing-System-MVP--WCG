@@ -150,6 +150,29 @@ Ensure(historical.ActorDisplayName == "Original Official" && historical.Municipa
 var auditService = scope.ServiceProvider.GetRequiredService<ApplicationAuditService>();
 var result = await auditService.ListAsync(Principal(admin), new("AUD-2026", "Original Official", "Bergrivier Municipality", null, null, null));
 Ensure(result.TotalCount > 0 && result.Records.All(item => item.ApplicationNumber == "AUD-2026-001"), "DEDATAdmin can filter audit records");
+db.ApplicationAuditLogs.AddRange(Enumerable.Range(1, 21).Select(index => new ApplicationAuditLog
+{
+    ApplicationId = application.Id,
+    ApplicationNumber = application.ApplicationNumber,
+    ActorUserId = official.Id,
+    ActorDisplayName = "Paging Official",
+    ActorRole = "MunicipalOfficial",
+    Municipality = "Bergrivier Municipality",
+    EventType = index <= 10 ? "paging-exact" : "paging-over",
+    OccurredAtUtc = DateTime.UtcNow.AddSeconds(index),
+    Summary = $"Paging record {index}"
+}));
+await db.SaveChangesAsync();
+var emptyPage = await auditService.ListAsync(Principal(admin), new("does-not-exist", null, null, null, null, null, 99));
+Ensure(emptyPage.TotalCount == 0 && emptyPage.Page == 1 && emptyPage.TotalPages == 1 && emptyPage.Records.Count == 0,
+    "zero records clamp to page 1 of 1");
+var exactPage = await auditService.ListAsync(Principal(admin), new(null, null, null, "paging-exact", null, null, 99));
+Ensure(exactPage.TotalCount == 10 && exactPage.Page == 1 && exactPage.TotalPages == 1 && exactPage.Records.Count == 10,
+    "exactly ten records use one full page");
+var firstOverPage = await auditService.ListAsync(Principal(admin), new(null, null, null, "paging-over", null, null));
+var secondOverPage = await auditService.ListAsync(Principal(admin), new(null, null, null, "paging-over", null, null, 2));
+Ensure(firstOverPage.TotalCount == 11 && firstOverPage.TotalPages == 2 && firstOverPage.Records.Count == 10 &&
+    secondOverPage.Page == 2 && secondOverPage.Records.Count == 1, "eleven records split into pages of ten and one");
 await Denied(() => auditService.ListAsync(Principal(official), new(null, null, null, null, null, null)));
 await Denied(() => auditService.ListAsync(Principal(otherOfficial), new(null, null, null, null, null, null)));
 Ensure(true, "Municipal Officials cannot query admin audit logs");

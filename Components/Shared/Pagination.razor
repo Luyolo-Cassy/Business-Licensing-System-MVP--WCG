@@ -1,0 +1,45 @@
+<nav class="d-flex flex-wrap align-items-center justify-content-center gap-2 mt-3" aria-label="@AriaLabel">
+    @if (Page <= 1)
+    {
+        <button type="button" class="btn btn-outline-secondary btn-sm" disabled>Previous</button>
+    }
+    else if (!string.IsNullOrWhiteSpace(PreviousUrl))
+    {
+        <a class="btn btn-outline-secondary btn-sm" href="@PreviousUrl">Previous</a>
+    }
+    else
+    {
+        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="Previous">Previous</button>
+    }
+    <span class="mx-2" aria-live="polite">Page @Page of @TotalPages</span>
+    @if (Page >= TotalPages)
+    {
+        <button type="button" class="btn btn-outline-secondary btn-sm" disabled>Next</button>
+    }
+    else if (!string.IsNullOrWhiteSpace(NextUrl))
+    {
+        <a class="btn btn-outline-secondary btn-sm" href="@NextUrl">Next</a>
+    }
+    else
+    {
+        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="Next">Next</button>
+    }
+</nav>
+
+@code {
+    [Parameter] public int Page { get; set; } = 1;
+    [Parameter] public int TotalPages { get; set; } = 1;
+    [Parameter] public string AriaLabel { get; set; } = "Table pages";
+    [Parameter] public string? PreviousUrl { get; set; }
+    [Parameter] public string? NextUrl { get; set; }
+    [Parameter] public EventCallback<int> PageChanged { get; set; }
+
+    private Task Previous() => ChangePage(Page - 1);
+    private Task Next() => ChangePage(Page + 1);
+
+    private Task ChangePage(int page)
+    {
+        var target = Math.Clamp(page, 1, Math.Max(1, TotalPages));
+        return target == Page ? Task.CompletedTask : PageChanged.InvokeAsync(target);
+    }
+}

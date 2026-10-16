@@ -55,7 +55,7 @@
     <table class="table table-hover align-middle mb-0">
         <thead><tr><th>Full Name</th><th>Email</th><th>Municipality</th><th>Account Status</th><th>Actions</th></tr></thead>
         <tbody>
-            @foreach (var official in officials)
+            @foreach (var official in officials.Items)
             {
                 <tr @key="official.Id">
                     <td>@official.FullName</td><td>@official.Email</td><td>@official.Municipality</td>
@@ -74,10 +74,11 @@
             }
         </tbody>
     </table>
+    <Pagination Page="officials.Page" TotalPages="officials.TotalPages" PageChanged="LoadPage" AriaLabel="Municipal official pages" />
 </div></div>
 
 @code {
-    private List<OfficialSummary> officials = [];
+    private PagedResult<OfficialSummary> officials = new([], 0, 1);
     private List<Municipality> municipalities = [];
     private OfficialInput input = new();
     private string? editingId, currentMunicipality, message, setupLink;
@@ -152,13 +153,21 @@
         {
             await action();
             var principal = (await Authentication.GetAuthenticationStateAsync()).User;
-            officials = await Officials.ListAsync(principal);
+            officials = await Officials.ListPageAsync(principal, officials.Page);
             municipalities = await Officials.ActiveMunicipalitiesAsync(principal);
         }
         catch (ValidationException error) { isError = true; message = error.Message; }
-        catch (UnauthorizedAccessException) { isError = true; message = "You do not have permission to manage Officials."; officials = []; }
+        catch (UnauthorizedAccessException) { isError = true; message = "You do not have permission to manage Officials."; officials = new([], 0, 1); }
         catch (Exception) { isError = true; message = "The operation could not be completed. Refresh the page and try again."; }
         finally { busy = false; busyAction = null; busyTargetId = null; }
+    }
+    private async Task LoadPage(int page)
+    {
+        if (busy) return;
+        busy = true;
+        try { officials = await Officials.ListPageAsync((await Authentication.GetAuthenticationStateAsync()).User, page); }
+        catch (UnauthorizedAccessException) { isError = true; message = "You do not have permission to manage Officials."; officials = new([], 0, 1); }
+        finally { busy = false; }
     }
     private sealed class OfficialInput
     {

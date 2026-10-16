@@ -27,6 +27,18 @@ public class MunicipalityManagementService(IServiceScopeFactory scopes)
         return await db.Municipalities.AsNoTracking().OrderBy(m => m.Name).ToListAsync();
     }
 
+    public async Task<PagedResult<Municipality>> ListPageAsync(ClaimsPrincipal principal, int page)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var db = await AuthorizeAsync(scope.ServiceProvider, principal);
+        var rows = db.Municipalities.AsNoTracking();
+        var total = await rows.CountAsync();
+        page = Paging.ClampPage(page, total);
+        var municipalities = await rows.OrderBy(m => m.Name).ThenBy(m => m.Id)
+            .Skip((page - 1) * Paging.PageSize).Take(Paging.PageSize).ToListAsync();
+        return new(municipalities, total, page);
+    }
+
     public async Task<List<WesternCapeMunicipalityDefinition>> EligibleForAddAsync(ClaimsPrincipal principal)
     {
         await using var scope = scopes.CreateAsyncScope();
