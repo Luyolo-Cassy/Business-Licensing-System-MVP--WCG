@@ -94,7 +94,11 @@ public class OfficialManagementService(IServiceScopeFactory scopes, IEmailServic
         }
         else
         {
-            if (user.Email != email) Check(await users.SetEmailAsync(user, email));
+            if (user.Email != email)
+            {
+                Check(await users.SetEmailAsync(user, email));
+                user.EmailConfirmed = true;
+            }
             if (user.UserName != email) Check(await users.SetUserNameAsync(user, email));
             Check(await users.UpdateAsync(user));
             Check(await users.UpdateSecurityStampAsync(user));
