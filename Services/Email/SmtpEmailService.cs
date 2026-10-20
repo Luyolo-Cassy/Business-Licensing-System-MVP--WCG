@@ -5,6 +5,8 @@ using MimeKit;
 
 namespace BusinessLicensing_Practice.Services.Email;
 
+// Sends application and Identity notifications through SMTP using explicit
+// transport-security settings and bounded timeouts.
 public sealed class SmtpEmailService(IOptions<EmailOptions> configuredOptions) : IEmailService
 {
     public async Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)

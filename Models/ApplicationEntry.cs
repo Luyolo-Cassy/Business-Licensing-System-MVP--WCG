@@ -13,6 +13,8 @@ public sealed class TradingDay
     public string ClosingTime { get; set; } = "";
 }
 
+// Provides the shared validation and formatting rules used by initial submission,
+// correction resubmission, PDF generation, and application displays.
 public static class ApplicationEntry
 {
     public const int MaxEmailLength = 254;
@@ -71,6 +73,8 @@ public static class ApplicationEntry
         return options.Count == 0 || options.Contains(trimmed, StringComparer.Ordinal);
     }
 
+    // Requires one ordered entry per weekday and valid opening/closing times for
+    // every day marked open.
     public static string? ValidateTradingHours(IReadOnlyList<TradingDay> days)
     {
         if (days.Count != Days.Length || days.Where((day, index) => day.Day != Days[index]).Any())

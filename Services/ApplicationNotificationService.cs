@@ -7,6 +7,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BusinessLicensing_Practice.Services;
 
+/// <summary>
+/// Builds applicant and municipal-official email notifications from committed
+/// application state and delegates delivery to the configured email provider.
+/// </summary>
 public sealed class ApplicationNotificationService(
     IServiceScopeFactory scopes,
     IEmailService emails,

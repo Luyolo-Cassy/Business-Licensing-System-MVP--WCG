@@ -1,6 +1,8 @@
 using BusinessLicensing_Practice.Services;
 using System.ComponentModel.DataAnnotations;
 
+// Verify that routing results are reused only for the unchanged address and that
+// failed participation checks clear retained state.
 internal static class RetainedRoutingStateTests
 {
     public static async Task RunAsync()

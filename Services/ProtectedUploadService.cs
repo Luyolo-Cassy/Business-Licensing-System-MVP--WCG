@@ -7,6 +7,10 @@ using BusinessLicensing_Practice.Services.Storage;
 
 namespace BusinessLicensing_Practice.Services;
 
+/// <summary>
+/// Stores supporting documents under private object keys and serves them only
+/// after application- or draft-level authorization.
+/// </summary>
 public class ProtectedUploadService(IPrivateFileStore store, IWebHostEnvironment environment)
 {
     private readonly string legacyRoot = Path.GetFullPath(Path.Combine(environment.WebRootPath ?? Path.Combine(environment.ContentRootPath, "wwwroot"), "uploads"));
@@ -50,6 +54,8 @@ public class ProtectedUploadService(IPrivateFileStore store, IWebHostEnvironment
         return localStore.MoveLegacyUploads(legacyRoot);
     }
 
+    // Validate the compatibility URL, check submitted-application access, then
+    // fall back to ownership of an active draft document before streaming a file.
     public async Task<IResult> DownloadAsync(HttpContext context, ApplicationDbContext db, UserManager<ApplicationUser> users)
     {
         context.Response.Headers.CacheControl = "private, no-store";

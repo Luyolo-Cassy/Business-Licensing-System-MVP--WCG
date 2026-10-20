@@ -1,5 +1,6 @@
 namespace BusinessLicensing_Practice.Models;
 
+// Stores administrator-controlled AI feature flags in a single seeded row.
 public class AiSettings
 {
     public const int SingletonId = 1;

@@ -15,6 +15,8 @@ namespace BusinessLicensing_Practice.Models
         public Application? Application { get; set; }
     }
 
+    // Generates unique type keys for optional uploads while preserving a common label
+    // for display alongside the fixed required-document types.
     public static class ApplicationDocumentTypes
     {
         public const string AdditionalSupportingDocument = "Additional Supporting Document";

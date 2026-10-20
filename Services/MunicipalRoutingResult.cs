@@ -1,5 +1,7 @@
 namespace BusinessLicensing_Practice.Services;
 
+// Models routing as an explicit success or failure so callers can distinguish an
+// imprecise address, unavailable provider, ambiguity, and unsupported municipality.
 public sealed record TradingAddress(string Line1, string Line2, string Suburb, string City, string PostalCode)
 {
     public string Formatted => string.Join(", ", new[] { Line1, Line2, Suburb, City, PostalCode }.Where(s => !string.IsNullOrWhiteSpace(s)));

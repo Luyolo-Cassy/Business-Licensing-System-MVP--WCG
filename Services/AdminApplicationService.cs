@@ -32,6 +32,8 @@ public class AdminApplicationService(IServiceScopeFactory scopes)
         return services.GetRequiredService<ApplicationDbContext>();
     }
 
+    // Build the administrator's filtered, paged oversight projection without
+    // exposing full Identity records.
     public async Task<AdminApplicationList> ListAsync(ClaimsPrincipal principal, string? search = null, string? municipality = null, string? status = null,
         string? reference = null, string? applicant = null, string? licenceType = null, string? applicationType = null,
         string? columnMunicipality = null, DateTime? submitted = null, string? columnStatus = null, int page = 1)

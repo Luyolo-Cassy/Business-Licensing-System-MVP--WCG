@@ -4,6 +4,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
 
+// Validate the Gemini request and structured-response contract with controlled
+// fixture input; the test does not expose extracted personal information.
 const string model = "gemini-3.5-flash-lite";
 const string endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent";
 const string prompt = """

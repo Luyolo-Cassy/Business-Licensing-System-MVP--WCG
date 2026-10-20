@@ -2,6 +2,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace BusinessLicensing_Practice.Services.Storage;
 
+// Validates the production object-store configuration at startup without exposing
+// credential values in validation messages.
 public sealed class CloudflareR2Options : IValidatableObject
 {
     public const string SectionName = "Storage:R2";

@@ -1,5 +1,7 @@
 namespace BusinessLicensing_Practice.Models
 {
+    // Represents a submitted application snapshot; later corrections update the same
+    // record and increment RevisionNumber so revision-specific artifacts remain identifiable.
     public class Application
     {
         public int Id { get; set; }

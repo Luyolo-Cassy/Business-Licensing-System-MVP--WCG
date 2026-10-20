@@ -44,6 +44,8 @@ internal static class PoiAddressValidator
             && Normal(Field(a, "StName") + " " + Field(a, "StType")) == Normal(street)
             && Normal(Field(a, "StAddr")) == Normal(returnedNumber + " " + street);
     }
+    // Accept a POI only when its name, address, region, town, and coordinates agree;
+    // any conflicting or truncated candidate set is treated as ambiguous.
     public static GeocodedPoint? Validate(TradingAddress input, JsonElement candidates)
     {
         var parts = Split(input);

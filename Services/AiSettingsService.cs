@@ -6,6 +6,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BusinessLicensing_Practice.Services;
 
+/// <summary>
+/// Reads system-wide AI feature flags and restricts changes to authenticated
+/// DEDAT administrators.
+/// </summary>
 public class AiSettingsService(IServiceScopeFactory scopes)
 {
     public async Task<bool> IsDocumentValidationEnabledAsync()

@@ -10,6 +10,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PdfSharp.Fonts;
 
+// Verify audience scoping, date boundaries, report calculations, and both export
+// formats using controlled application history.
 GlobalFontSettings.FontResolver = new LiberationSansFontResolver();
 var root = Path.Combine(Path.GetTempPath(), "reporting-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
 var services = new ServiceCollection(); services.AddLogging(); services.AddDbContext<ApplicationDbContext>(o => o.UseSqlite($"Data Source={Path.Combine(root, "test.db")}"));

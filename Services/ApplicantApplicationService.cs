@@ -10,6 +10,8 @@ namespace BusinessLicensing_Practice.Services;
 // Recheck ownership and allowed transitions when a previously rendered applicant action is used.
 public class ApplicantApplicationService(IServiceScopeFactory scopes)
 {
+    // Withdraw an eligible owned application, or prepare a rejected application for
+    // a fresh submission, after rechecking ownership and its current persisted state.
     public async Task ChangeSubmissionAsync(ClaimsPrincipal principal, int applicationId, bool reapply)
     {
         await using var scope = scopes.CreateAsyncScope();

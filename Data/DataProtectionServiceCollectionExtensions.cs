@@ -3,6 +3,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BusinessLicensing_Practice.Data;
 
+/// <summary>
+/// Persists production data-protection keys in PostgreSQL so authentication and
+/// antiforgery data remain valid across deployments and application instances.
+/// </summary>
 public static class DataProtectionServiceCollectionExtensions
 {
     public const string ApplicationName = "ProvincialBusinessLicensingSystem";

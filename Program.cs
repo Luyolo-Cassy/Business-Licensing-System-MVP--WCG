@@ -19,6 +19,8 @@ GlobalFontSettings.FontResolver = new LiberationSansFontResolver();
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Use local private storage during development and an R2-compatible object store
+// in production so uploaded documents are never served as public static files.
 if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddSingleton<IPrivateFileStore, LocalPrivateFileStore>();
@@ -49,6 +51,8 @@ else
         $"No IPrivateFileStore implementation is configured for environment '{builder.Environment.EnvironmentName}'.");
 }
 
+// Select the configured provider explicitly and fail during startup rather than
+// silently connecting to an unintended database.
 var databaseProvider = builder.Configuration["Database:Provider"]?.Trim();
 if (string.IsNullOrWhiteSpace(databaseProvider))
     throw new InvalidOperationException("Database:Provider must be configured as SQLite or PostgreSQL.");
@@ -100,7 +104,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 // Revoke changed/deactivated accounts on the next HTTP request as well as circuit actions.
 builder.Services.Configure<SecurityStampValidatorOptions>(options => options.ValidationInterval = TimeSpan.Zero);
 
-// Add services to the container.
+// Register application workflows and bounded external-service clients.
 builder.Services.AddTransient<IEmailSender<ApplicationUser>, IdentityEmailSender>();
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
 builder.Services.AddTransient<IEmailService, SmtpEmailService>();
@@ -144,7 +148,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
     app.Services.GetRequiredService<ProtectedUploadService>().MoveLegacyUploads();
 
-// Configure the HTTP request pipeline.
+// Production requests receive centralized error handling and strict transport security.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
@@ -180,6 +184,8 @@ app.MapRazorComponents<App>()
 
 app.MapAdditionalIdentityEndpoints();
 
+// Stream generated PDFs only after reloading the application and confirming
+// that the current user is allowed to read it.
 app.MapGet("/applications/{id:int}/official-pdf", async (
     int id,
     HttpContext context,
@@ -219,6 +225,8 @@ app.MapGet("/applications/{id:int}/official-pdf", async (
     return Results.Stream(file.Content, "application/pdf", application.ApplicationFormFileName);
 }).RequireAuthorization();
 
+// Reconstruct a validated report request server-side; ReportingService applies
+// the caller's municipal or administrator scope before data is exported.
 app.MapGet("/reports/export", async (HttpContext context, ClaimsPrincipal principal, ReportingService reports, ReportExportService exports) =>
 {
     context.Response.Headers.CacheControl = "private, no-store";
@@ -237,6 +245,8 @@ app.MapGet("/reports/export", async (HttpContext context, ClaimsPrincipal princi
     catch (ArgumentException error) { return Results.BadRequest(error.Message); }
 }).RequireAuthorization();
 
+// Perform idempotent startup initialization for roles and the optional first
+// administrator after applying development-only SQLite migrations.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

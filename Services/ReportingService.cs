@@ -7,6 +7,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BusinessLicensing_Practice.Services;
 
+/// <summary>
+/// Builds role-scoped operational reports and returns table, chart, filter,
+/// summary, and insight models for the shared reporting interface.
+/// </summary>
 public sealed class ReportingService(IServiceScopeFactory scopes)
 {
     public static readonly string[] WorkflowStatuses = ["Submitted", "Under Review", "Additional Information Required", "Department Assessment", "Final Decision", "Licence Issued", "Rejected", "Withdrawn"];
@@ -30,6 +34,8 @@ public sealed class ReportingService(IServiceScopeFactory scopes)
             new(ReportKeys.LicenceTypes, "Provincial License Demand Report", "Compare demand for different license types across municipalities."),
             new(ReportKeys.Outcomes, "Provincial Application Outcome Report", "See issued licenses, rejected applications and applicant withdrawals across the province.")];
 
+    // Establish the caller's permitted municipal scope before applying report
+    // filters or materializing application data.
     public async Task<ReportResult> GenerateAsync(ClaimsPrincipal principal, ReportAudience audience, string key, ReportFilter filter)
     {
         if (filter.From?.Date > filter.To?.Date) throw new ArgumentException("From date must be on or before To date.");
@@ -114,6 +120,8 @@ public sealed class ReportingService(IServiceScopeFactory scopes)
             "bar", brackets, [new("Applications by time since submission", values)], [new("Currently Pending", pending.Count.ToString()), new("Pending More Than 30 Days", over30.ToString())], insight);
     }
 
+    // Compare applications received with decisions completed in each reporting
+    // period; these are independent event counts rather than a cohort conversion.
     private static ReportResult ProcessingReport(ReportCard card, string scope, List<ReportingApplication> all, ReportOptions options, ReportFilter filter)
     {
         var received = all.Where(x => InRange(x.DateSubmitted, filter)).ToList();
@@ -140,6 +148,8 @@ public sealed class ReportingService(IServiceScopeFactory scopes)
         return result with { SecondaryTitle = "Recorded Rejection Reasons", SecondaryRows = reasons, SecondaryColumns = [Col("Rejection Reason"), Col("Applications")] };
     }
 
+    // Calculate elapsed calendar days for applications with final decision
+    // statuses, assuming their decision dates have been recorded.
     private static ReportResult ProcessingTimeReport(ReportCard card, string scope, List<ReportingApplication> data, ReportOptions options)
     {
         var decisions = data.Where(x => DecisionOutcomes.Contains(x.Status)).OrderByDescending(x => x.DecisionDateUtc).ToList();

@@ -101,6 +101,8 @@
         addInput = new();
         message = "Municipality added and activated.";
     }, "save");
+    // Persist an approved display change while the service protects canonical
+    // routing identities and existing application assignments.
     private async Task Save() => await Run(async () =>
     {
         await Management.SaveAsync((await Authentication.GetAuthenticationStateAsync()).User, editingId, input.Name, originalName);

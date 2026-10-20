@@ -1,5 +1,7 @@
 namespace BusinessLicensing_Practice.Models
 {
+    // Stores structured applicant, contact, trading, and declaration details for the
+    // one-to-one application record while retaining combined legacy fields for compatibility.
     public class ApplicationDetails
     {
         public int Id { get; set; }

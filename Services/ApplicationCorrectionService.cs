@@ -8,6 +8,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BusinessLicensing_Practice.Services;
 
+/// <summary>
+/// Coordinates correction requests, editable correction drafts, and atomic
+/// resubmission of an existing application.
+/// </summary>
 public sealed class ApplicationCorrectionService(
     IServiceScopeFactory scopes,
     MunicipalRoutingService routing,
@@ -18,6 +22,8 @@ public sealed class ApplicationCorrectionService(
     IApplicationNotificationService notifications,
     ILogger<ApplicationCorrectionService> logger)
 {
+    // Move an eligible application into the correction state and record the
+    // official's request and audit event in the same transaction.
     public async Task RequestCorrectionsAsync(ClaimsPrincipal principal, int applicationId, string request)
     {
         request = request.Trim();
@@ -55,6 +61,8 @@ public sealed class ApplicationCorrectionService(
         catch (Exception error) { logger.LogError(error, "Post-commit correction-request notification failed. ApplicationId={ApplicationId}", application.Id); }
     }
 
+    // Reuse an existing correction draft or create one from the submitted
+    // application and its current supporting documents.
     public async Task<(ApplicationDraft Draft, MunicipalMessage Request)> LoadOrCreateDraftAsync(ClaimsPrincipal principal, int applicationId)
     {
         await using var scope = scopes.CreateAsyncScope();
@@ -147,6 +155,8 @@ public sealed class ApplicationCorrectionService(
         return draft;
     }
 
+    // Revalidate corrected data and documents, preserve municipal ownership,
+    // replace the official PDF, increment the revision, and resolve the request.
     public async Task ResubmitAsync(ClaimsPrincipal principal, int applicationId)
     {
         await using var scope = scopes.CreateAsyncScope();
@@ -163,6 +173,8 @@ public sealed class ApplicationCorrectionService(
         var payload = ApplicationDraftService.Deserialize(draft.PayloadJson);
         Validate(payload, draft.Documents, application.LicenceType);
         await aiValidation.EnforceAsync(db, payload, draft.Documents);
+        // Commit all database-visible changes together; newly written files are
+        // tracked separately so they can be removed if the transaction fails.
         await using var transaction = await db.Database.BeginTransactionAsync();
 
         var address = new TradingAddress(payload.PlaceOfBusinessAddressLine1.Trim(), payload.PlaceOfBusinessAddressLine2.Trim(),
@@ -209,6 +221,8 @@ public sealed class ApplicationCorrectionService(
             throw;
         }
 
+        // Delete superseded files only after commit so the old application remains
+        // readable if resubmission fails.
         foreach (var path in oldDocumentPaths)
             try { await uploads.DeleteIfUnreferencedAsync(db, path); }
             catch (Exception cleanupError) { logger.LogWarning(cleanupError, "Unable to clean up a superseded application document. ApplicationId={ApplicationId}", application.Id); }

@@ -359,6 +359,8 @@ else
     private bool summaryUnavailable;
     private CancellationTokenSource? summaryAnimationCancellation;
 
+    // Load the application through the official's municipal scope together with
+    // its communication history and any current AI summary.
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
@@ -380,6 +382,8 @@ else
 
     }
 
+    // Request a revision-specific summary; the service remains responsible for
+    // authorization, feature settings, caching, and audit recording.
     private async Task GenerateSummary()
     {
         if (application == null || summaryLoading || summaryState.Summary != null) return;
@@ -434,6 +438,8 @@ else
         summaryAnimationCancellation?.Cancel();
     }
 
+    // Map the selected action to a workflow state and delegate atomic status,
+    // message, audit, and post-commit notification handling to the service.
     private async Task SaveReview(string action)
     {
         if (application != null && !saving)

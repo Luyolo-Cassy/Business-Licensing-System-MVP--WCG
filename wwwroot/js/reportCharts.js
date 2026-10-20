@@ -1,5 +1,7 @@
 
 
+// Maintains one Chart.js instance per canvas so changing reports replaces the
+// previous chart instead of layering another instance over it.
 window.reportCharts = (() => {
     const charts = new Map();
     const colors = ["#005a8b", "#2f9e44", "#f59f00", "#c92a2a", "#7048e8", "#0c8599", "#495057"];

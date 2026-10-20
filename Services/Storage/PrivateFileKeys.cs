@@ -1,5 +1,7 @@
 namespace BusinessLicensing_Practice.Services.Storage;
 
+// Defines private storage namespaces and rejects rooted, nested, or parent-directory
+// filename representations before a provider resolves them.
 public static class PrivateFileKeys
 {
     public const string ProtectedUploadsPrefix = "protected-uploads";
@@ -30,6 +32,8 @@ public static class PrivateFileKeys
         return UploadReferencePrefix + RequireSingleSegment(normalized[prefix.Length..]);
     }
 
+    // Canonicalize separators and reject paths that could escape the intended
+    // logical storage namespace.
     public static string Normalize(string objectKey)
     {
         if (string.IsNullOrWhiteSpace(objectKey) || objectKey.StartsWith('/') || objectKey.EndsWith('/') ||

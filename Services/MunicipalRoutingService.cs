@@ -1,8 +1,14 @@
 namespace BusinessLicensing_Practice.Services;
 
+/// <summary>
+/// Resolves a validated trading address to a supported Western Cape municipality
+/// by combining geocoding with an authoritative boundary lookup.
+/// </summary>
 public sealed class MunicipalRoutingService(ArcGisGeocodingService geocoder, WcgMunicipalBoundaryService boundaries,
     ILogger<MunicipalRoutingService> logger)
 {
+    // Convert ambiguity and external-service failures into explicit routing outcomes
+    // rather than guessing which municipality should receive an application.
     public async Task<MunicipalRoutingResult> ResolveAsync(TradingAddress address, CancellationToken cancellationToken = default)
     {
         try

@@ -1,5 +1,8 @@
 namespace BusinessLicensing_Practice.Services;
 
+/// <summary>
+/// Defines post-commit notifications for application submission and review events.
+/// </summary>
 public interface IApplicationNotificationService
 {
     Task NotifySubmissionAsync(int applicationId, CancellationToken cancellationToken = default);

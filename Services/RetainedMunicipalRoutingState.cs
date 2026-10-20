@@ -1,5 +1,7 @@
 namespace BusinessLicensing_Practice.Services;
 
+// Retains a successful municipality only for the exact address that was routed
+// and prevents overlapping routing requests from advancing the wizard twice.
 public sealed class RetainedMunicipalRoutingState
 {
     public string? Municipality { get; private set; }

@@ -2,6 +2,8 @@ using BusinessLicensing_Practice.Services.Storage;
 
 namespace BusinessLicensing_Practice.Services;
 
+// Stores generated application PDFs under private object keys and returns streams
+// whose lifetime remains owned by the selected storage provider.
 public sealed class ApplicationFileService(IPrivateFileStore store)
 {
     public async Task<string> SaveGeneratedPdfAsync(int applicationId, string fileName, byte[] contents,

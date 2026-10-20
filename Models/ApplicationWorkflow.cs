@@ -1,5 +1,7 @@
 namespace BusinessLicensing_Practice.Models;
 
+// Centralizes persisted workflow and message-type values shared by pages, services,
+// audit records, and reporting queries.
 public static class ApplicationWorkflow
 {
     public const string Submitted = "Submitted";

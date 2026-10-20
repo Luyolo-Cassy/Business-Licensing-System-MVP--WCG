@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Identity;
 
 namespace BusinessLicensing_Practice.Data;
 
+/// <summary>
+/// Provisions the optional first DEDAT administrator from startup configuration
+/// without replacing an existing account's password or profile.
+/// </summary>
 public sealed class InitialAdminBootstrapper(
     IConfiguration configuration,
     UserManager<ApplicationUser> users,
@@ -41,6 +45,8 @@ public sealed class InitialAdminBootstrapper(
             return;
         }
 
+        // Re-running startup is safe: an existing account is confirmed and assigned
+        // the administrator role without changing its credentials.
         var admin = await users.FindByEmailAsync(email!);
         if (admin != null)
         {

@@ -2,6 +2,10 @@ using System.Text.Json;
 
 namespace BusinessLicensing_Practice.Services;
 
+/// <summary>
+/// Geocodes trading addresses through ArcGIS and accepts only sufficiently precise
+/// address or conservatively matched point-of-interest results.
+/// </summary>
 public sealed class ArcGisGeocodingService(HttpClient client, IConfiguration configuration)
 {
     public async Task<GeocodedPoint?> GeocodeAsync(TradingAddress address, CancellationToken cancellationToken = default)
@@ -17,6 +21,8 @@ public sealed class ArcGisGeocodingService(HttpClient client, IConfiguration con
             ["outSR"] = "4326", ["outFields"] = "Addr_type", ["maxLocations"] = "1", ["forStorage"] = "false"
         }, cancellationToken);
         var candidates = json.RootElement.GetProperty("candidates");
+        // Prefer a high-precision address candidate before attempting the stricter
+        // point-of-interest fallback.
         if (candidates.GetArrayLength() > 0)
         {
             var candidate = candidates[0];
@@ -26,6 +32,8 @@ public sealed class ArcGisGeocodingService(HttpClient client, IConfiguration con
                 && PoiAddressValidator.Point(candidate) is { } precise)
                 return precise;
         }
+        // POI fallback requires a named premises and street so a broad place-name
+        // result cannot determine municipal routing by itself.
         if (!PoiAddressValidator.HasNamedStreet(address)) return null;
         using var fallback = await RequestAsync(new Dictionary<string, string>
         {

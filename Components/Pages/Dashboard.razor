@@ -52,6 +52,8 @@
         }
     }
 
+    // Load only the signed-in applicant's applications and combine them with
+    // unread municipal-message counts for dashboard indicators.
     private async Task LoadApplications(int page = 1)
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();

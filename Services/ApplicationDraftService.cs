@@ -7,6 +7,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BusinessLicensing_Practice.Services;
 
+/// <summary>
+/// Persists an applicant's in-progress wizard state and manages the lifecycle of
+/// privately stored documents attached to ordinary and correction drafts.
+/// </summary>
 public sealed class ApplicationDraftService(IServiceScopeFactory scopes, ProtectedUploadService uploads)
 {
     public const int CurrentSchemaVersion = 1;
@@ -28,6 +32,7 @@ public sealed class ApplicationDraftService(IServiceScopeFactory scopes, Protect
         return new(draft.Id, payload.LicenceType, payload.BusinessName, draft.CurrentStep, draft.LastSavedAtUtc);
     }
 
+    // Create or update the authenticated owner's single ordinary application draft.
     public async Task<ApplicationDraft> SaveAsync(ClaimsPrincipal principal, ApplicationDraftPayload payload, int currentStep)
     {
         await using var scope = scopes.CreateAsyncScope();
@@ -47,6 +52,8 @@ public sealed class ApplicationDraftService(IServiceScopeFactory scopes, Protect
         return draft;
     }
 
+    // Replace one allowed draft document and clean up both failed and superseded
+    // private objects only after their database references are known.
     public async Task<ApplicationDraftDocument> ReplaceDocumentAsync(ClaimsPrincipal principal, string documentType,
         string fileName, string filePath, string? validationStatus, int? sourceApplicationId = null)
     {
@@ -115,6 +122,7 @@ public sealed class ApplicationDraftService(IServiceScopeFactory scopes, Protect
     public static ApplicationDraftPayload Deserialize(string json) =>
         JsonSerializer.Deserialize<ApplicationDraftPayload>(json, JsonOptions) ?? new();
 
+    // Revalidate role, lockout state, and security stamp for every draft operation.
     private static async Task<(ApplicationDbContext Db, ApplicationUser User)> AuthorizeOwnerAsync(
         IServiceProvider services, ClaimsPrincipal principal)
     {

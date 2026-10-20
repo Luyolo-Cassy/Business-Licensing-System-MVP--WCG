@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
+// Verify authorization, feature flags, revision-aware caching, and concurrent
+// generation behaviour using an isolated database and fake provider.
 var database = Path.Combine(Path.GetTempPath(), $"ai-summary-{Guid.NewGuid():N}.db");
 var fake = new FakeProvider();
 var services = new ServiceCollection(); services.AddLogging();

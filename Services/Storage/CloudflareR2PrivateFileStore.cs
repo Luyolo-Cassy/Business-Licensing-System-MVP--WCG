@@ -5,6 +5,8 @@ using Microsoft.Extensions.Options;
 
 namespace BusinessLicensing_Practice.Services.Storage;
 
+// Implements production private storage through the S3-compatible Cloudflare R2
+// API while normalizing object keys before every operation.
 public sealed class CloudflareR2PrivateFileStore(
     IAmazonS3 client,
     IOptions<CloudflareR2Options> options) : IPrivateFileStore
@@ -98,6 +100,8 @@ public sealed class CloudflareR2PrivateFileStore(
         string.Equals(exception.ErrorCode, "NoSuchKey", StringComparison.Ordinal) ||
         string.Equals(exception.ErrorCode, "NotFound", StringComparison.Ordinal);
 
+    // Keep the S3 response alive for the content stream's lifetime and dispose
+    // both resources when the caller finishes reading.
     private sealed class ResponseOwningStream(Stream inner, IDisposable owner) : Stream
     {
         public override bool CanRead => inner.CanRead;
