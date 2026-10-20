@@ -1,4 +1,5 @@
 using BusinessLicensing_Practice.Data;
+using BusinessLicensing_Practice.Fonts;
 using BusinessLicensing_Practice.Models;
 using BusinessLicensing_Practice.Services;
 using Microsoft.EntityFrameworkCore;
@@ -193,7 +194,7 @@ try
         Check(saved.Details?.PostalAddressSameAsBusiness == false && ApplicationEntry.PostalAddress(saved).StartsWith("PO Box 12"), "separate postal persistence");
         Check(ApplicationEntry.FormatTradingHours(saved.Details!.TradingHours).Contains("Sunday: Closed"), "trading hours persistence");
         Check(saved.Details.OpenOnPublicHolidays == true, "public holiday Yes persists");
-        GlobalFontSettings.UseWindowsFontsUnderWindows = true;
+        GlobalFontSettings.FontResolver = new LiberationSansFontResolver();
         using var pdf = PdfReader.Open(new MemoryStream(new ApplicationPdfService().Generate(saved)), PdfDocumentOpenMode.Import);
         Check(pdf.PageCount >= 1, "official PDF generated with structured entry");
         static IEnumerable<string> PdfStrings(CSequence sequence)

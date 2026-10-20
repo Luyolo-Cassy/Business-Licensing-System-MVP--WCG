@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Security.Claims;
 using System.Xml.Linq;
 using BusinessLicensing_Practice.Data;
+using BusinessLicensing_Practice.Fonts;
 using BusinessLicensing_Practice.Models;
 using BusinessLicensing_Practice.Services;
 using Microsoft.AspNetCore.Identity;
@@ -9,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PdfSharp.Fonts;
 
-GlobalFontSettings.UseWindowsFontsUnderWindows = true;
+GlobalFontSettings.FontResolver = new LiberationSansFontResolver();
 var root = Path.Combine(Path.GetTempPath(), "reporting-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
 var services = new ServiceCollection(); services.AddLogging(); services.AddDbContext<ApplicationDbContext>(o => o.UseSqlite($"Data Source={Path.Combine(root, "test.db")}"));
 services.AddIdentityCore<ApplicationUser>().AddRoles<IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>();

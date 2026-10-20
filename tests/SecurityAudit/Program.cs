@@ -457,7 +457,7 @@ try
     await Download(adminClient, draftReference, false);
     await Download(anonymous, draftReference, false);
     Check(true, "Draft documents are owner-only");
-    Check((await ownerClient.GetStringAsync("/")).Contains("Continue your application") &&
+    Check((await ownerClient.GetStringAsync("/")).Contains("Continue application") &&
         (await ownerClient.GetStringAsync("/dashboard")).Contains("Draft Application"),
         "Applicant Home and Dashboard expose the active draft separately");
     Check((await ownerClient.GetStringAsync("/new-application")).Contains("You have an application in progress") &&
@@ -482,7 +482,7 @@ try
 
     var deletableReference = await uploads.SaveAsync("delete-with-draft.pdf", documentBytes);
     await draftService.SaveAsync(Principal(owner), new ApplicationDraftPayload { LicenceType = "Hawker Licence" }, 2);
-    await draftService.ReplaceDocumentAsync(Principal(owner), "Proof of Address", "delete-with-draft.pdf", deletableReference, null);
+    await draftService.ReplaceDocumentAsync(Principal(owner), "Proof of Address", "delete-with-draft.pdf", deletableReference, (string?)null);
     await draftService.DeleteAsync(Principal(owner));
     Check(!await db.ApplicationDrafts.AnyAsync(item => item.UserId == owner.Id) &&
         !File.Exists(Path.Combine(root, "App_Data", "protected-uploads", deletableReference.Split('/').Last())) &&
