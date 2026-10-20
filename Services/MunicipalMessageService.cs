@@ -6,10 +6,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BusinessLicensing_Practice.Services;
 
+/// <summary>
+/// Applies municipal review decisions and manages applicant-facing in-app
+/// communications, read receipts, audit events, and post-commit notifications.
+/// </summary>
 public class MunicipalMessageService(ApplicationDbContext db, UserManager<ApplicationUser> users,
     IServiceScopeFactory scopes, IApplicationNotificationService? notifications = null,
     ILogger<MunicipalMessageService>? logger = null)
 {
+    // Apply a review decision within the official's municipality and record the
+    // corresponding message and audit events.
     public async Task SaveReviewAsync(ClaimsPrincipal principal, int applicationId, string status, string content)
     {
         await using var scope = scopes.CreateAsyncScope();
@@ -70,7 +76,7 @@ public class MunicipalMessageService(ApplicationDbContext db, UserManager<Applic
                     ApplicationAuditEventTypes.ReviewMessageSent, "Review message sent to applicant.",
                     metadata: new Dictionary<string, object?> { ["message"] = newMessage });
         }
-        // Status and the message/notification commit atomically.
+        // Commit the status and in-app message atomically; external notification is attempted afterward.
         try
         {
             await reviewDb.SaveChangesAsync();

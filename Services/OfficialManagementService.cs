@@ -14,6 +14,10 @@ namespace BusinessLicensing_Practice.Services;
 public record OfficialSummary(string Id, string FullName, string Email, string Municipality, bool IsActive, bool NeedsSetup);
 public record OfficialInvitation(string UserId, string FullName, string Email, string Code);
 
+/// <summary>
+/// Manages municipal official accounts, municipality assignments, activation,
+/// and time-limited password-setup invitations.
+/// </summary>
 public class OfficialManagementService(IServiceScopeFactory scopes, IEmailService? emails = null)
 {
     private const string SetupPurpose = "MunicipalOfficialInitialSetup";
@@ -121,6 +125,7 @@ public class OfficialManagementService(IServiceScopeFactory scopes, IEmailServic
         Check(await users.UpdateSecurityStampAsync(user));
         await transaction.CommitAsync();
     }
+    // Generate an Identity token without logging or persisting its setup URL.
     public async Task<OfficialInvitation> GenerateInvitationAsync(ClaimsPrincipal principal, string id)
     {
         await using var scope = scopes.CreateAsyncScope();
@@ -184,6 +189,8 @@ public class OfficialManagementService(IServiceScopeFactory scopes, IEmailServic
         var user = await users.FindByIdAsync(id);
         return await EligibleAsync(users, user) && await users.VerifyUserTokenAsync(user!, TokenOptions.DefaultProvider, SetupPurpose, token);
     }
+    // Validate the invitation again before setting the initial password through
+    // Identity's reset-token workflow.
     public async Task CompleteSetupAsync(string? id, string? code, string password)
     {
         await using var scope = scopes.CreateAsyncScope();

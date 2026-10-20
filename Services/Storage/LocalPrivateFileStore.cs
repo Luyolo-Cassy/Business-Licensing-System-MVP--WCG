@@ -1,5 +1,7 @@
 namespace BusinessLicensing_Practice.Services.Storage;
 
+// Stores development objects below App_Data and verifies every resolved path stays
+// inside that private root.
 public sealed class LocalPrivateFileStore(IWebHostEnvironment environment) : IPrivateFileStore
 {
     private readonly string root = Path.GetFullPath(Path.Combine(environment.ContentRootPath, "App_Data"));
@@ -51,6 +53,8 @@ public sealed class LocalPrivateFileStore(IWebHostEnvironment environment) : IPr
         return Task.CompletedTask;
     }
 
+    // Migrate historical public uploads into private storage without overwriting
+    // an object that has already been moved.
     public int MoveLegacyUploads(string legacyRoot)
     {
         legacyRoot = Path.GetFullPath(legacyRoot);

@@ -10,6 +10,8 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 
+// Verify authorized review transitions, atomic in-app messages, read receipts,
+// and post-commit notifications against an isolated database.
 var database = Path.Combine(Path.GetTempPath(), $"municipal-messages-{Guid.NewGuid():N}.db");
 var notifications = new RecordingNotificationService();
 ServiceProvider CreateProvider()

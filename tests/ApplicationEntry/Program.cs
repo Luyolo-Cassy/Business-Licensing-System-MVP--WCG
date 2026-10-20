@@ -12,6 +12,8 @@ using PdfSharp.Pdf.IO;
 using System.Text.Json;
 
 var checks = 0;
+// Exercise shared validation boundaries and confirm that submitted data and its
+// generated PDF preserve the expected normalized values.
 void Check(bool condition, string name)
 {
     if (!condition) throw new Exception($"Failed: {name}");

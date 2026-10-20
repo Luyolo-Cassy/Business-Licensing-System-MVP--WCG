@@ -57,8 +57,11 @@ else
     private async Task Open(string key) { selectedKey = key; filter = new(); graph = key is not (ReportKeys.Pending or ReportKeys.ProcessingTime); await Load(); }
     private void Back() { selectedKey = null; result = null; error = null; graph = false; }
     private async Task Apply() => await Load(); private async Task Reset() { filter = new(); await Load(); }
+    // Load the role-scoped report first; chart rendering waits until Blazor has
+    // rendered the canvas element.
     private async Task Load() { loading = true; error = null; try { result = await Reports.GenerateAsync((await Authentication.GetAuthenticationStateAsync()).User, Audience, selectedKey!, filter); chartPending = graph; } catch (ArgumentException ex) { error = ex.Message; } catch (UnauthorizedAccessException) { error = "You no longer have access to this reporting scope."; } finally { loading = false; } }
     private void ShowTable() => graph = false; private void ShowGraph() { graph = true; chartPending = true; }
+    // Invoke Chart.js only after the target canvas exists in the browser DOM.
     protected override async Task OnAfterRenderAsync(bool firstRender) { if (chartPending && graph && result != null) { chartPending = false; await JS.InvokeVoidAsync("reportCharts.render", "sharedReportChart", result.Chart); } }
     private string ExportUrl(string format) { var q = new Dictionary<string, string?> { ["audience"] = Audience.ToString(), ["report"] = selectedKey, ["format"] = format, ["from"] = filter.From?.ToString("yyyy-MM-dd"), ["to"] = filter.To?.ToString("yyyy-MM-dd"), ["municipality"] = filter.Municipality, ["licenceType"] = filter.LicenceType, ["applicationType"] = filter.ApplicationType, ["status"] = filter.Status, ["outcome"] = filter.Outcome, ["grouping"] = filter.Grouping }; return "/reports/export?" + string.Join('&', q.Where(x => !string.IsNullOrWhiteSpace(x.Value)).Select(x => $"{Uri.EscapeDataString(x.Key)}={Uri.EscapeDataString(x.Value!)}")); }
 }

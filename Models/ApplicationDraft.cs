@@ -1,5 +1,7 @@
 namespace BusinessLicensing_Practice.Models;
 
+// Stores serialized wizard state for either a new application or a correction of
+// SourceApplicationId, together with privately stored temporary documents.
 public class ApplicationDraft
 {
     public int Id { get; set; }

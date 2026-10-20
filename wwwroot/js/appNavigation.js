@@ -1,3 +1,5 @@
+// Persists the desktop sidebar preference while tolerating browsers that block
+// session storage.
 (() => {
     const preferenceKey = "wcg-sidebar-collapsed";
 

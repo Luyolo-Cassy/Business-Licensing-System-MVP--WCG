@@ -11,6 +11,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
 var checks = 0;
+// Verify deterministic comparison rules, feature flags, stored fingerprints, and
+// server-side enforcement independently of the external AI provider.
 void Check(bool condition, string name) { if (!condition) throw new Exception("Failed: " + name); checks++; Console.WriteLine("PASS: " + name); }
 var bytes = new byte[] { 1, 2, 3 };
 var expected = new AiDocumentExpectedValues("Thandi", "Ndlovu", "Cape Foods (Pty) Ltd", "2024/123456/07", "10 Long Street", "", "Central", "Cape Town", "8001");

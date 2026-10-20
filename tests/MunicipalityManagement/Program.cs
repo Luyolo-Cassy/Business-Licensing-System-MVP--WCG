@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+// Verify catalogue additions, renames, activation, and routing integrity against
+// an isolated database that is discarded after the test run.
 var database = Path.Combine(Path.GetTempPath(), $"municipality-management-{Guid.NewGuid():N}.db");
 var services = new ServiceCollection();
 services.AddLogging();

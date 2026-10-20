@@ -17,6 +17,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PdfSharp.Fonts;
 
+// Verify immutable audit creation, administrator-only filtering, metadata safety,
+// and export behaviour in an isolated content root and database.
 GlobalFontSettings.FontResolver = new LiberationSansFontResolver();
 var root = Path.Combine(Path.GetTempPath(), $"audit-logs-{Guid.NewGuid():N}");
 Directory.CreateDirectory(root);

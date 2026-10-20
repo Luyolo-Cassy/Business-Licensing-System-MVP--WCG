@@ -1,5 +1,9 @@
 namespace BusinessLicensing_Practice.Services.Storage;
 
+/// <summary>
+/// Provides private object storage where callers use normalized logical keys and
+/// take ownership of any stream returned by OpenReadAsync.
+/// </summary>
 public interface IPrivateFileStore
 {
     Task SaveAsync(string objectKey, ReadOnlyMemory<byte> contents, string contentType,

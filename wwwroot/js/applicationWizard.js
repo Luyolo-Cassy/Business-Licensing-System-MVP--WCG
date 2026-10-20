@@ -1,3 +1,5 @@
+// Keeps wizard navigation accessible by scrolling to new steps and focusing the
+// first invalid field after Blazor has rendered it.
 window.applicationWizard = {
     scrollToStep() {
         const target = document.getElementById("application-wizard-top");

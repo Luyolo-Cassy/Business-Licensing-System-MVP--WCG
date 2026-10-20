@@ -19,6 +19,8 @@ public interface IAiDocumentValidationService
     Task<AiDocumentExtraction?> ExtractAsync(AiDocumentKind documentKind, string fileName, byte[] fileBytes, CancellationToken cancellationToken = default);
 }
 
+// Coordinates extraction, deterministic comparison, and versioned persistence
+// of document-validation outcomes.
 public sealed class AiDocumentValidationPolicy(IAiDocumentValidationService validator)
 {
     private const int PayloadVersion = 1;
@@ -33,6 +35,8 @@ public sealed class AiDocumentValidationPolicy(IAiDocumentValidationService vali
         return result with { StoredValue = Serialize(result.Status, kind, expected, fileBytes) };
     }
 
+    // Reuse a stored result only when its policy version, validator, document kind,
+    // and application-data fingerprint still match.
     public bool IsCurrent(string? stored, string documentType, AiDocumentExpectedValues expected, out AiDocumentValidationStatus status)
     {
         status = default;
@@ -54,6 +58,7 @@ public sealed class AiDocumentValidationPolicy(IAiDocumentValidationService vali
         kind = type switch { "Owner ID Document" => AiDocumentKind.OwnerIdentity, "Certificate of Incorporation" => AiDocumentKind.CertificateOfIncorporation, "Proof of Address" => AiDocumentKind.ProofOfAddress, _ => default };
         return type is "Owner ID Document" or "Certificate of Incorporation" or "Proof of Address";
     }
+    // Persist comparison metadata and fingerprints rather than extracted document content.
     private static string Serialize(AiDocumentValidationStatus outcome, AiDocumentKind kind, AiDocumentExpectedValues expected, byte[] bytes) => JsonSerializer.Serialize(new ValidationPayload(PayloadVersion, outcome.ToString(), kind.ToString(), ValidatorVersion(kind), InputFingerprint(kind, expected), Convert.ToHexString(SHA256.HashData(bytes))));
     private static string InputFingerprint(AiDocumentKind kind, AiDocumentExpectedValues v)
     {
@@ -65,6 +70,8 @@ public sealed class AiDocumentValidationPolicy(IAiDocumentValidationService vali
     private sealed record ValidationPayload(int Version, string Outcome, string Kind, string Validator, string InputFingerprint, string DocumentFingerprint);
 }
 
+// Applies deterministic, document-specific rules to the structured fields
+// returned by the AI provider.
 public static class AiDocumentComparisons
 {
     public static AiDocumentValidationResult Compare(AiDocumentKind kind, AiDocumentExtraction x, AiDocumentExpectedValues e)
@@ -102,10 +109,14 @@ public static class AiDocumentComparisons
     private static AiDocumentValidationResult Unable(string reason) => new(AiDocumentValidationStatus.UnableToVerify, reason);
 }
 
+// Requests structured extraction from Gemini. Provider, quota, transport, and
+// response-format failures become an inconclusive result for manual review.
 public sealed class GeminiDocumentValidationService(HttpClient client, IConfiguration configuration, ILogger<GeminiDocumentValidationService> logger) : IAiDocumentValidationService
 {
     private const string Model = "gemini-3.5-flash-lite";
     private const string Endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{Model}:generateContent";
+    // Extract fields only; deterministic policy code decides whether they match
+    // the application and avoids logging document content.
     public async Task<AiDocumentExtraction?> ExtractAsync(AiDocumentKind kind, string fileName, byte[] bytes, CancellationToken token = default)
     {
         var key = configuration["Gemini:ApiKey"]; if (string.IsNullOrWhiteSpace(key)) { Log("ConfigurationMissing", null, 0); return null; }

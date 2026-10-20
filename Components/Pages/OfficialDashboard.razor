@@ -230,6 +230,8 @@
 
     private async Task FiltersChanged() => await LoadApplications(1);
 
+    // Load one filtered page from the signed-in official's municipality; the
+    // service query remains responsible for enforcing that scope.
     private async Task LoadApplications(int page = 1)
     {
         if (string.IsNullOrWhiteSpace(municipality))

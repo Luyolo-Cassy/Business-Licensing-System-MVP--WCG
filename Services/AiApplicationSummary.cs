@@ -22,6 +22,8 @@ public interface IAiApplicationSummaryProvider
     Task<AiSummaryProviderResult> GenerateAsync(AiApplicationSummaryInput input, CancellationToken cancellationToken = default);
 }
 
+// Generates a concise structured review summary from application data; access
+// control remains the responsibility of ApplicationSummaryService.
 public sealed class GeminiApplicationSummaryService(HttpClient client, IConfiguration configuration) : IAiApplicationSummaryProvider
 {
     public const string ModelName = "gemini-3.5-flash-lite";
@@ -74,6 +76,8 @@ public sealed class GeminiApplicationSummaryService(HttpClient client, IConfigur
     private sealed record SummaryResponse(string Summary);
 }
 
+// Authorizes municipal officials and caches one generated summary per application
+// revision and summary format version.
 public sealed class ApplicationSummaryService(IServiceScopeFactory scopes, IAiApplicationSummaryProvider provider)
 {
     public const int CurrentFormatVersion = 1;
@@ -90,6 +94,8 @@ public sealed class ApplicationSummaryService(IServiceScopeFactory scopes, IAiAp
         return text == null ? new(AiApplicationSummaryStatus.Available) : new(AiApplicationSummaryStatus.Cached, text);
     }
 
+    // Capture the authorized revision before the external call, then recheck the
+    // setting, revision, and cache inside the write transaction to handle races.
     public async Task<AiApplicationSummaryResult> GenerateAsync(ClaimsPrincipal principal, int applicationId, CancellationToken cancellationToken = default)
     {
         AiApplicationSummaryInput input; int revision;
@@ -111,6 +117,7 @@ public sealed class ApplicationSummaryService(IServiceScopeFactory scopes, IAiAp
         await using var transaction = await writeDb.Database.BeginTransactionAsync(cancellationToken);
         var (official, current) = await AuthorizeAsync(writeDb, principal, applicationId);
         if (!await EnabledAsync(writeDb)) return new(AiApplicationSummaryStatus.Disabled);
+        // Another request may have populated the cache while generation was running.
         var existing = await CurrentTextAsync(writeDb, current);
         if (existing != null) return new(AiApplicationSummaryStatus.Cached, existing);
         if (current.RevisionNumber != revision) return new(AiApplicationSummaryStatus.Unavailable);

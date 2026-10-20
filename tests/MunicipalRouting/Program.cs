@@ -4,6 +4,8 @@ using BusinessLicensing_Practice.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 
+// Exercise precise, ambiguous, unsupported, and unavailable responses without
+// contacting the real geocoding or boundary services.
 void Check(bool condition, string message)
 {
     if (!condition) throw new Exception(message);

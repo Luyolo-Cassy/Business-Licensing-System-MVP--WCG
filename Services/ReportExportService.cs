@@ -8,8 +8,11 @@ using PdfSharp.Pdf;
 
 namespace BusinessLicensing_Practice.Services;
 
+// Converts an already authorized report result into downloadable spreadsheet or
+// PDF formats without querying application data again.
 public sealed class ReportExportService
 {
+    // Build a minimal Open XML workbook and escape cell values before writing XML.
     public byte[] Excel(ReportResult report)
     {
         using var stream = new MemoryStream();
@@ -25,6 +28,7 @@ public sealed class ReportExportService
         return stream.ToArray();
     }
 
+    // Render the report to PDF and repeat table headings after each page break.
     public byte[] Pdf(ReportResult report, ReportFilter filter, DateTime generatedUtc)
     {
         using var document = new PdfDocument();

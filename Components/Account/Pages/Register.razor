@@ -178,7 +178,7 @@
 
 
 
-        // Save Full Name
+        // Retain the applicant's display name separately from Identity credentials.
 
         user.FullName = Input.FullName;
 
@@ -218,7 +218,7 @@
 
 
 
-        // Create BusinessOwner role
+        // Assign every public registration to the applicant role.
 
         if (!await RoleManager.RoleExistsAsync("BusinessOwner"))
         {

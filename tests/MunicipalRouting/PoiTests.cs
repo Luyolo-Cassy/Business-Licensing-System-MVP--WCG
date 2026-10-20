@@ -4,6 +4,8 @@ using BusinessLicensing_Practice.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 
+// Verify that POI routing rejects truncated, conflicting, or insufficiently
+// precise candidate sets rather than choosing a plausible-looking location.
 internal static class PoiTests
 {
     public static async Task RunAsync()

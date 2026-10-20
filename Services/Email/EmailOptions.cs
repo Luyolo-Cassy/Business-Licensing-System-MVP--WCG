@@ -1,5 +1,6 @@
 namespace BusinessLicensing_Practice.Services.Email;
 
+// Holds SMTP delivery settings validated by the sender before a connection is made.
 public sealed class EmailOptions
 {
     public const string SectionName = "Email";

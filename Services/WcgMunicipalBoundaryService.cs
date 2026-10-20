@@ -3,6 +3,10 @@ using System.Text.Json;
 
 namespace BusinessLicensing_Practice.Services;
 
+/// <summary>
+/// Queries the Western Cape boundary layer for every local municipality that
+/// intersects an already validated geographic point.
+/// </summary>
 public sealed class WcgMunicipalBoundaryService(HttpClient client)
 {
     public async Task<List<MunicipalityMatch>> FindMunicipalitiesAsync(GeocodedPoint point, CancellationToken cancellationToken = default)

@@ -16,10 +16,16 @@ public record AuditLogResult(List<ApplicationAuditLog> Records, AuditLogOptions 
     public int TotalPages => Math.Max(1, (int)Math.Ceiling(TotalCount / (double)PageSize));
 }
 
+/// <summary>
+/// Creates immutable application audit snapshots and provides the filtered,
+/// paged audit view available to DEDAT administrators.
+/// </summary>
 public sealed class ApplicationAuditService(IServiceScopeFactory scopes)
 {
     public const int PageSize = Paging.PageSize;
 
+    // Add the audit row to the caller's unit of work so it commits atomically with
+    // the business operation being recorded.
     public static void Add(ApplicationDbContext db, Application application, ApplicationUser actor,
         string actorRole, string eventType, string summary, string? previousStatus = null,
         string? newStatus = null, IReadOnlyDictionary<string, object?>? metadata = null)

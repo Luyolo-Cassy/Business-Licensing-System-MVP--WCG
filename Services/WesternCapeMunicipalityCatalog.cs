@@ -8,6 +8,8 @@ public sealed record WesternCapeMunicipalityDefinition(
     string WcgCode,
     string WcgBoundaryName);
 
+// Defines the canonical boundary codes and routing names accepted from the WCG
+// geographic service, independently of administrator-editable display names.
 public static class WesternCapeMunicipalityCatalog
 {
     public static ImmutableArray<WesternCapeMunicipalityDefinition> Municipalities { get; } =

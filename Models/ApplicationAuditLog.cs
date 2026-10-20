@@ -1,5 +1,7 @@
 namespace BusinessLicensing_Practice.Models;
 
+// Captures an immutable, searchable snapshot of who performed a significant
+// application action, with optional JSON metadata for event-specific context.
 public class ApplicationAuditLog
 {
     public long Id { get; set; }

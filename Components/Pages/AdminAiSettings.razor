@@ -55,6 +55,7 @@
 
     protected override async Task OnInitializedAsync() => await Load();
 
+    // Load administrator-controlled AI feature flags from their singleton row.
     private async Task Load()
     {
         try

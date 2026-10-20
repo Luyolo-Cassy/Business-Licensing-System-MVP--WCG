@@ -101,6 +101,8 @@
         setupLink = value == null ? null : QueryHelpers.AddQueryString(Navigation.ToAbsoluteUri("Account/Setup-Official").ToString(),
             new Dictionary<string, string?> { ["userId"] = value.UserId, ["code"] = value.Code });
     }
+    // Create or update an official while the service enforces administrator access
+    // and valid municipality assignment.
     private async Task Save() => await Run(async () =>
     {
         var created = editingId == null;

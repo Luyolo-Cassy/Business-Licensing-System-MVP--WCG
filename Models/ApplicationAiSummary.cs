@@ -1,5 +1,7 @@
 namespace BusinessLicensing_Practice.Models;
 
+// Caches an official-facing AI summary for one application revision and records
+// the responsible official, model, and output format version.
 public class ApplicationAiSummary
 {
     public long Id { get; set; }

@@ -6,6 +6,10 @@ using PdfSharp.Pdf;
 
 namespace BusinessLicensing_Practice.Services
 {
+    /// <summary>
+    /// Produces the official application snapshot used by applicants and municipal
+    /// officials, including current and historical licence-specific answers.
+    /// </summary>
     public class ApplicationPdfService
     {
         private static readonly IReadOnlyDictionary<string, string> HistoricalQuestionLabels =
@@ -19,6 +23,8 @@ namespace BusinessLicensing_Practice.Services
         private static readonly XColor LightBlue = XColor.FromArgb(229, 241, 248);
         private static readonly XColor TextGrey = XColor.FromArgb(70, 70, 70);
 
+        // Render the application as ordered identity, business, licence, document,
+        // and declaration sections before adding the final page footer.
         public byte[] Generate(Application application)
         {
             using var document = new PdfDocument();
@@ -95,6 +101,8 @@ namespace BusinessLicensing_Practice.Services
             return stream.ToArray();
         }
 
+        // Treat absent or malformed historical answer data as empty so older
+        // applications remain printable.
         public static Dictionary<string, string> DeserializeAnswers(string? json)
         {
             if (string.IsNullOrWhiteSpace(json))
@@ -298,6 +306,7 @@ namespace BusinessLicensing_Practice.Services
                 return lines;
             }
 
+            // Start a new page before a row would overlap the reserved footer area.
             private void EnsureSpace(double requiredHeight)
             {
                 if (y + requiredHeight <= page.Height.Point - BottomMargin) return;

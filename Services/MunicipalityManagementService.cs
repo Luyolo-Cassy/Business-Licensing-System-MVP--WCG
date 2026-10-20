@@ -7,6 +7,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BusinessLicensing_Practice.Services;
 
+/// <summary>
+/// Allows DEDAT administrators to manage participating municipalities while
+/// preserving the canonical geographic identity used for application routing.
+/// </summary>
 public class MunicipalityManagementService(IServiceScopeFactory scopes)
 {
     public const string UnavailableRoutingMessage = "Applications for the municipality identified by your trading address are currently unavailable. Please contact support.";
@@ -125,7 +129,8 @@ public class MunicipalityManagementService(IServiceScopeFactory scopes)
             throw new ValidationException("The municipality no longer exists. Refresh the page.");
     }
 
-    // Called within the submission transaction, before any application or file is saved.
+    // Submission calls this inside its transaction so unknown or inactive routing
+    // targets are rejected before any application record or file reference is saved.
     public static async Task<Municipality> RequireActiveRoutingAsync(ApplicationDbContext db, string canonicalName)
     {
         var municipality = await db.Municipalities.AsNoTracking().SingleOrDefaultAsync(m => m.RoutingName == canonicalName);

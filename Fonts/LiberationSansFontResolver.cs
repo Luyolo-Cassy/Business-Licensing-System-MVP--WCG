@@ -2,6 +2,8 @@ using PdfSharp.Fonts;
 
 namespace BusinessLicensing_Practice.Fonts;
 
+// Resolves bundled Liberation Sans resources so generated PDFs use consistent
+// fonts across development and production hosts.
 public sealed class LiberationSansFontResolver : IFontResolver
 {
     public const string FamilyName = "Liberation Sans";

@@ -449,6 +449,8 @@ else
         "Licence Issued"
     };
 
+    // Reload the owned application and its municipal communications whenever the
+    // route identifier changes, without exposing another applicant's record.
     protected override async Task OnParametersSetAsync()
     {
         loadingApplication = true;
@@ -476,6 +478,8 @@ else
         finally { loadingApplication = false; }
     }
 
+    // Mark only messages rendered in this view as read so concurrently arriving
+    // communications remain unread.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!markMessagesRead) return;
@@ -559,6 +563,8 @@ else
         showReapplyModal = false;
     }
 
+    // Delegate withdrawal or reapplication to the service, which rechecks the
+    // persisted owner and workflow state before applying the transition.
     private async Task ChangeSubmission(bool reapply)
     {
         if (actionBusy) return;

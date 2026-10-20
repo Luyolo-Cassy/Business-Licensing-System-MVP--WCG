@@ -15,6 +15,8 @@ public static class ReportKeys
     public const string Trends = "trends";
 }
 
+// Captures optional user filters independently of the authorization scope that
+// ReportingService applies to every query.
 public sealed class ReportFilter
 {
     public DateTime? From { get; set; }
@@ -37,6 +39,8 @@ public sealed record ReportSummary(string Label, string Value);
 public sealed record ReportOptions(IReadOnlyList<string> Municipalities, IReadOnlyList<string> LicenceTypes,
     IReadOnlyList<string> ApplicationTypes, IReadOnlyList<string> Statuses, IReadOnlyList<string> Outcomes);
 
+// Supplies one shared representation for the on-screen table, chart, summaries,
+// and downloadable report exports.
 public sealed record ReportResult(string Key, string Title, string Description, string Scope,
     IReadOnlyList<ReportColumn> Columns, IReadOnlyList<ReportRow> Rows, ReportChart Chart,
     IReadOnlyList<ReportSummary> Summaries, ReportOptions Options, string? Insight = null,

@@ -4,6 +4,10 @@ using BusinessLicensing_Practice.Models;
 
 namespace BusinessLicensing_Practice.Data
 {
+    /// <summary>
+    /// Stores Identity accounts together with applications, drafts, documents,
+    /// municipal communications, audit events, and AI summary records.
+    /// </summary>
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
@@ -71,6 +75,8 @@ namespace BusinessLicensing_Practice.Data
                 .HasIndex(details => details.ApplicationId)
                 .IsUnique();
 
+            // Each applicant may have one ordinary draft, while each submitted application
+            // may have one correction draft. Both kinds own their temporary documents.
             builder.Entity<ApplicationDraft>(draft =>
             {
                 draft.HasIndex(item => item.UserId).IsUnique()
@@ -89,6 +95,8 @@ namespace BusinessLicensing_Practice.Data
                 .HasIndex(item => new { item.ApplicationDraftId, item.DocumentType })
                 .IsUnique();
 
+            // Audit rows retain searchable snapshots so later account or municipality
+            // changes do not alter the historical record.
             builder.Entity<ApplicationAuditLog>(audit =>
             {
                 audit.Property(item => item.ApplicationNumber).HasMaxLength(100).IsRequired();
@@ -108,6 +116,8 @@ namespace BusinessLicensing_Practice.Data
                 audit.HasIndex(item => item.EventType);
             });
 
+            // Cache at most one AI summary per application revision so a resubmission
+            // cannot reuse text generated for an older version of the application.
             builder.Entity<ApplicationAiSummary>(summary =>
             {
                 summary.Property(item => item.SummaryText).HasMaxLength(4000).IsRequired();

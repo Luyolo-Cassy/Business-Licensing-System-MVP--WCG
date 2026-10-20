@@ -4,6 +4,8 @@ using BusinessLicensing_Practice.Models;
 
 namespace BusinessLicensing_Practice.Services;
 
+// Rechecks saved validation evidence during submission and resubmission so
+// client-side wizard state cannot bypass a current document mismatch.
 public sealed class AiDocumentValidationWorkflow(AiSettingsService settings, AiDocumentValidationPolicy policy,
     ProtectedUploadService uploads)
 {
@@ -12,6 +14,8 @@ public sealed class AiDocumentValidationWorkflow(AiSettingsService settings, AiD
         p.PlaceOfBusinessAddressLine1, p.PlaceOfBusinessAddressLine2, p.PlaceOfBusinessSuburb,
         p.PlaceOfBusinessCity, p.PlaceOfBusinessPostalCode);
 
+    // Revalidate documents with stale fingerprints and block submission only
+    // when the current validation result confirms a mismatch.
     public async Task EnforceAsync(ApplicationDbContext db, ApplicationDraftPayload payload,
         IReadOnlyCollection<ApplicationDraftDocument> documents, CancellationToken cancellationToken = default)
     {

@@ -1,5 +1,7 @@
 namespace BusinessLicensing_Practice.Services
 {
+    // Centralizes the supported licence types, licence-specific questions, and
+    // required documents used by validation, the wizard, corrections, and PDFs.
     public static class LicenceApplicationCatalog
     {
         private static readonly IReadOnlyList<DocumentRequirement> StandardDocuments =
