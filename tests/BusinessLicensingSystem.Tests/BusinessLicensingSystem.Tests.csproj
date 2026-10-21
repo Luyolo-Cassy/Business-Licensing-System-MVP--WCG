@@ -20,4 +20,11 @@
   <ItemGroup>
     <ProjectReference Include="../../ProvincialBusinessLicensingSystem.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="../../wwwroot/images/WCG_logo.jpg">
+      <Link>wwwroot/images/WCG_logo.jpg</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
